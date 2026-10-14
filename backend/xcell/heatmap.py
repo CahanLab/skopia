@@ -37,7 +37,10 @@ def compute_heatmap_data(
                        or "category_then_position"
         obs_column: Obs column name for category-based ordering
         line_name: Line name for position/distance-based ordering
-        gene_ordering: "as_provided" or "peak_position"
+        gene_ordering: "as_provided", "peak_position" (where each row's
+            normalised profile peaks) or "similarity" (average-linkage
+            clustering of the normalised profiles, in dendrogram leaf
+            order); both stay within gene-set groups when rows are grouped
         n_bins: Number of bins to average cells into (0 = no binning)
         transform: Optional "log1p" transformation
         cell_indices: Optional subset of cell indices
@@ -48,6 +51,11 @@ def compute_heatmap_data(
         gene mask removed).
     """
     adata = adaptor.adata
+
+    if gene_ordering not in ("as_provided", "peak_position", "similarity"):
+        raise ValueError(
+            f"gene_ordering must be 'as_provided', 'peak_position' or 'similarity', got {gene_ordering!r}"
+        )
 
     # Filter to valid genes, then to the ones the active .var gene mask
     # leaves visible — the heatmap draws what the Gene Panel shows, so a
@@ -126,17 +134,23 @@ def compute_heatmap_data(
     rng[rng == 0] = 1
     mat = (mat - rmin) / rng
 
-    # Gene ordering by peak position
-    if gene_ordering == "peak_position" and mat.shape[1] > 0:
-        peaks = np.argmax(mat, axis=1)
+    # Gene ordering. Both orderings respect gene-set groups when the rows
+    # are grouped (and not aggregated into one row per set): a gene never
+    # leaves its set, it only moves within it.
+    if gene_ordering != "as_provided" and mat.shape[1] > 0 and mat.shape[0] > 1:
+        if gene_ordering == "peak_position":
+            peaks = np.argmax(mat, axis=1)
+            order_fn = lambda idx: np.argsort(peaks[idx], kind="stable")  # noqa: E731
+        else:
+            order_fn = lambda idx: _similarity_order(mat[idx])  # noqa: E731
         if (
             row_groups
             and any(g is not None for g in row_groups)
             and not aggregate_gene_sets
         ):
-            order = _sort_genes_within_groups(peaks, row_groups)
+            order = _order_within_groups(order_fn, row_groups)
         else:
-            order = np.argsort(peaks)
+            order = np.asarray(order_fn(np.arange(mat.shape[0])), dtype=int)
         mat = mat[order]
         row_labels = [row_labels[i] for i in order]
         if row_groups:
@@ -350,8 +364,26 @@ def _bin_cells(expr, n_bins, col_groups, n_cells):
 # ---------------------------------------------------------------------------
 
 
-def _sort_genes_within_groups(peaks, row_groups):
-    """Sort genes by peak position within each gene set group."""
+def _similarity_order(rows: np.ndarray) -> np.ndarray:
+    """Dendrogram leaf order of the rows (average linkage, euclidean).
+
+    The rows are already min-max normalised per gene, so euclidean distance
+    compares profile *shape* rather than expression level; NaN (a gene with
+    no expression in any bin) is treated as 0. Fewer than three rows have
+    nothing to cluster and keep their order.
+    """
+    n = rows.shape[0]
+    if n < 3:
+        return np.arange(n)
+    from scipy.cluster.hierarchy import leaves_list, linkage  # noqa: PLC0415
+
+    clean = np.nan_to_num(np.asarray(rows, dtype=np.float64), nan=0.0)
+    return np.asarray(leaves_list(linkage(clean, method="average", metric="euclidean")), dtype=int)
+
+
+def _order_within_groups(order_fn, row_groups):
+    """Apply ``order_fn`` (positions → permutation of them) inside each gene
+    set group, keeping the groups in first-appearance order."""
     seen: set[str | None] = set()
     group_order: list[str | None] = []
     for g in row_groups:
@@ -361,9 +393,7 @@ def _sort_genes_within_groups(peaks, row_groups):
 
     result: list[int] = []
     for gname in group_order:
-        group_indices = [i for i, g in enumerate(row_groups) if g == gname]
-        group_peaks = peaks[group_indices]
-        sorted_within = np.argsort(group_peaks)
-        result.extend(group_indices[j] for j in sorted_within)
+        group_indices = np.array([i for i, g in enumerate(row_groups) if g == gname], dtype=int)
+        result.extend(int(i) for i in group_indices[np.asarray(order_fn(group_indices), dtype=int)])
 
-    return np.array(result)
+    return np.array(result, dtype=int)

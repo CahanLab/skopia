@@ -6,6 +6,9 @@ import { SUBSET_SCOPED_OPS, scopedOutput, suggestSubsetName, isUsableSubsetName,
 import { pcSourceOptions } from '../lib/pcaSubsets'
 import { defaultGraphKey } from '../lib/graphChoice'
 import { FilterCellsQcPanel, FilterCellsDistributions } from './FilterCellsQcPanel'
+import { FilterGenesQcPanel, FilterGenesDistributions } from './FilterGenesQcPanel'
+import { percentOfCells } from '../lib/percentOfCells'
+import { DEFAULT_EXCLUDE_GENE_PATTERNS, excludeGenePatternsFor } from '../lib/excludeGenes'
 import { MESSAGES } from '../messages'
 
 const API_BASE = '/api'
@@ -203,22 +206,24 @@ const SCANPY_FUNCTIONS: Record<string, CategoryDef> = {
       },
       exclude_genes: {
         label: 'Exclude Genes',
-        description: 'Remove genes by name or regex pattern (e.g. ^mt- for mitochondrial, ^Gm\\d+ for predicted)',
+        description: 'Remove genes by name or regex pattern (e.g. ^mt- for mitochondrial, ^Gm\\d+ for predicted). The patterns are preset for the species the gene names suggest: mouse ^mt-, ^Gm\\d+, ^Rps, ^Rpl; human ^MT-, ^ENS, ^RPS, ^RPL, ^LINC.',
         prerequisites: [],
         params: [
           { name: 'gene_names', label: 'Gene names', type: 'textarea', default: null, description: 'One gene name per line (exact match)' },
-          { name: 'patterns', label: 'Regex patterns', type: 'text', default: '^mt-, ^Gm\\d+, ^Rps, ^Rpl', description: 'Comma-separated regex patterns (e.g. ^mt-,^Gm\\d+)' },
+          { name: 'patterns', label: 'Regex patterns', type: 'text', default: DEFAULT_EXCLUDE_GENE_PATTERNS, description: 'Comma-separated regex patterns (e.g. ^mt-,^Gm\\d+). Preset by species; edit freely.' },
         ],
       },
       filter_cells: {
         label: 'Filter Cells',
-        description: 'Remove cells based on counts or number of genes expressed',
+        description: 'Remove cells based on counts, number of genes expressed, or the share of counts from mitochondrial genes',
         prerequisites: [],
         params: [
           { name: 'min_counts', label: 'Min counts', type: 'number', default: null, description: 'Minimum total counts' },
           { name: 'max_counts', label: 'Max counts', type: 'number', default: null, description: 'Maximum total counts' },
           { name: 'min_genes', label: 'Min genes', type: 'number', default: 25, description: 'Minimum genes expressed' },
           { name: 'max_genes', label: 'Max genes', type: 'number', default: null, description: 'Maximum genes expressed' },
+          { name: 'min_pct_mt', label: 'Min % mito', type: 'number', default: null, description: 'Minimum % of counts from mitochondrial genes (a boolean .var["mt"] column, else genes named mt-/MT-)' },
+          { name: 'max_pct_mt', label: 'Max % mito', type: 'number', default: null, description: 'Maximum % of counts from mitochondrial genes' },
         ],
       },
       filter_genes: {
@@ -661,18 +666,8 @@ interface PrerequisiteStatus {
   missing: string[]
 }
 
-/**
- * A percentage of the dataset, as the whole number of cells scanpy is given.
- *
- * Floored at 1: a threshold that rounds to zero would keep every gene, which is
- * not what asking for a threshold means. An empty box is 0 — the parameter is
- * optional and omitting it is a real choice.
- */
-export function percentOfCells(value: unknown, nCells: number): number {
-  const pct = Number(value)
-  if (!Number.isFinite(pct) || pct <= 0) return 0
-  return Math.max(1, Math.round((pct / 100) * nCells))
-}
+// Lives in lib/percentOfCells.ts (the Filter Genes histogram needs its inverse).
+export { percentOfCells }
 
 /** One .obsm array that could act as this dataset's spatial coordinates. */
 interface SpatialKeyOption {
@@ -1047,8 +1042,9 @@ export default function ScanpyModal() {
       .catch(() => { setAvailableObsColumns([]); setAvailableNumericObsColumns([]) })
   }, [selectedFunction, functionDef, activeSlot, scanpyActionHistory])
 
-  // Filter Cells: per-cell counts/genes distributions for the threshold
-  // histograms. Refetched after any run — a filter changes the distributions.
+  // Filter Cells: per-cell counts/genes/% mito distributions for the
+  // threshold histograms. Refetched after any run — a filter changes the
+  // distributions.
   const [qcDist, setQcDist] = useState<FilterCellsDistributions | null>(null)
   const [qcError, setQcError] = useState<string | null>(null)
   useEffect(() => {
@@ -1060,6 +1056,42 @@ export default function ScanpyModal() {
       .then((res) => res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))
       .then((data) => { if (!stale) setQcDist(data) })
       .catch((err) => { if (!stale) setQcError(err instanceof Error ? err.message : String(err)) })
+    return () => { stale = true }
+  }, [selectedFunction, activeSlot, scanpyActionHistory])
+
+  // Filter Genes: the same, per gene.
+  const [geneQcDist, setGeneQcDist] = useState<FilterGenesDistributions | null>(null)
+  const [geneQcError, setGeneQcError] = useState<string | null>(null)
+  useEffect(() => {
+    if (selectedFunction !== 'filter_genes') return
+    let stale = false
+    setGeneQcDist(null)
+    setGeneQcError(null)
+    fetch(appendDataset(`${API_BASE}/scanpy/filter_genes/qc`))
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))
+      .then((data) => { if (!stale) setGeneQcDist(data) })
+      .catch((err) => { if (!stale) setGeneQcError(err instanceof Error ? err.message : String(err)) })
+    return () => { stale = true }
+  }, [selectedFunction, activeSlot, scanpyActionHistory])
+
+  // Exclude Genes: preset the patterns for the species the gene names
+  // suggest. Only replaces the stock (mouse) default, so a user-config
+  // override or an edit is never overwritten; resolves after the defaults
+  // effect above has run, which is why it checks the field rather than
+  // racing it.
+  useEffect(() => {
+    if (selectedFunction !== 'exclude_genes') return
+    let stale = false
+    fetch(appendDataset(`${API_BASE}/gene_sets/species_guess`))
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))
+      .then((data: { species: string | null }) => {
+        if (stale) return
+        setParamValues((prev) => {
+          const next = excludeGenePatternsFor(data.species, prev.patterns)
+          return next == null ? prev : { ...prev, patterns: next }
+        })
+      })
+      .catch(() => { /* no guess: the stock default stands */ })
     return () => { stale = true }
   }, [selectedFunction, activeSlot, scanpyActionHistory])
 
@@ -2586,6 +2618,22 @@ export default function ScanpyModal() {
             maxCounts={typeof paramValues.max_counts === 'number' ? paramValues.max_counts : null}
             minGenes={typeof paramValues.min_genes === 'number' ? paramValues.min_genes : null}
             maxGenes={typeof paramValues.max_genes === 'number' ? paramValues.max_genes : null}
+            minPctMt={typeof paramValues.min_pct_mt === 'number' ? paramValues.min_pct_mt : null}
+            maxPctMt={typeof paramValues.max_pct_mt === 'number' ? paramValues.max_pct_mt : null}
+            onChangeThreshold={(name, value) =>
+              handleParamChange(name, value == null ? '' : String(value))}
+          />
+        )}
+
+        {/* Filter Genes: per-gene distributions with draggable thresholds. */}
+        {selectedFunction === 'filter_genes' && (
+          <FilterGenesQcPanel
+            dist={geneQcDist}
+            error={geneQcError}
+            minCounts={typeof paramValues.min_counts === 'number' ? paramValues.min_counts : null}
+            maxCounts={typeof paramValues.max_counts === 'number' ? paramValues.max_counts : null}
+            minCellsPct={typeof paramValues.min_cells_pct === 'number' ? paramValues.min_cells_pct : null}
+            maxCells={typeof paramValues.max_cells === 'number' ? paramValues.max_cells : null}
             onChangeThreshold={(name, value) =>
               handleParamChange(name, value == null ? '' : String(value))}
           />

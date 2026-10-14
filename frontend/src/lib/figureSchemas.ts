@@ -70,7 +70,7 @@ export const FIGURE_SCHEMAS: Record<FigureKind, ParamField[]> = {
   ],
   expression_heatmap: [
     { name: 'cell_ordering', label: 'Cell order', type: 'select', options: [{ value: 'none', label: 'none' }, { value: 'category', label: 'by category' }, { value: 'line_position', label: 'by line position' }, { value: 'line_distance', label: 'by line distance' }, { value: 'category_then_position', label: 'category, then position' }] },
-    { name: 'gene_ordering', label: 'Gene order', type: 'select', options: [{ value: 'as_provided', label: 'as provided' }, { value: 'peak_position', label: 'by peak position' }] },
+    { name: 'gene_ordering', label: 'Gene order', type: 'select', options: [{ value: 'as_provided', label: 'as provided' }, { value: 'peak_position', label: 'by peak position' }, { value: 'similarity', label: 'by similarity (clustered)' }] },
     { name: 'aggregate_gene_sets', label: 'Aggregate gene sets', type: 'bool' },
     { name: 'n_bins', label: 'Bins', type: 'int', min: 0, max: 1000 },
   ],

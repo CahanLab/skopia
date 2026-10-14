@@ -14,6 +14,9 @@ scanpy:
   filter_cells:
     # Default is 15. Lower it if you want to keep low-quality cells by default.
     min_genes: 15
+    # Percentage of counts from mitochondrial genes (a boolean .var['mt']
+    # column, else genes named mt-/MT-). Unset by default.
+    # max_pct_mt: 10
 
   filter_genes:
     # A percentage of the dataset, not a cell count — 0.1% is the default, so a

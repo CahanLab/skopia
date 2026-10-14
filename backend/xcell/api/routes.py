@@ -2208,6 +2208,8 @@ class FilterCellsRequest(BaseModel):
     max_counts: int | None = None
     min_genes: int | None = None
     max_genes: int | None = None
+    min_pct_mt: float | None = None
+    max_pct_mt: float | None = None
     active_cell_indices: list[int] | None = None
 
 
@@ -2735,12 +2737,29 @@ def run_filter_genes(request: FilterGenesRequest, dataset: str | None = Query(No
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/scanpy/filter_cells/qc")
-def filter_cells_qc(dataset: str | None = Query(None)):
-    """Per-cell counts/genes distributions, for threshold histograms.
+@router.get("/scanpy/filter_genes/qc")
+def filter_genes_qc(dataset: str | None = Query(None)):
+    """Per-gene counts / cells-expressing distributions, for threshold histograms.
 
     Returns:
-        {'counts': [...], 'genes': [...]} — one value per cell, from .X
+        {'counts': [...], 'cells': [...], 'n_cells': int} — one value per gene, from .X
+    """
+    adaptor = get_adaptor(dataset)
+    try:
+        return adaptor.filter_genes_qc()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/scanpy/filter_cells/qc")
+def filter_cells_qc(dataset: str | None = Query(None)):
+    """Per-cell counts/genes/mitochondrial-% distributions, for threshold histograms.
+
+    Returns:
+        {'counts': [...], 'genes': [...], 'pct_mt': [...] | None, 'mt_source': {...} | None}
+        — one value per cell, from .X
     """
     adaptor = get_adaptor(dataset)
     try:
@@ -2765,6 +2784,8 @@ def run_filter_cells(request: FilterCellsRequest, dataset: str | None = Query(No
             max_counts=request.max_counts,
             min_genes=request.min_genes,
             max_genes=request.max_genes,
+            min_pct_mt=request.min_pct_mt,
+            max_pct_mt=request.max_pct_mt,
             active_cell_indices=request.active_cell_indices,
         )
     except Exception as e:

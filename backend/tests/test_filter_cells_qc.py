@@ -102,3 +102,90 @@ def test_qc_route_returns_distributions(monkeypatch):
     out = routes.filter_cells_qc(dataset=None)
     assert out['counts'][3] == 30.0
     assert out['genes'][0] == 3
+
+
+# --- mitochondrial fraction ------------------------------------------------
+
+def _adata_mt(var_names=('mt-Nd1', 'g1', 'g2', 'mt-Co1')) -> anndata.AnnData:
+    # per-cell mito %: c0 50 (2 of 4), c1 0, c2 100, c3 25 (5 of 20), c4 0 counts
+    X = np.array([
+        [1, 1, 1, 1],
+        [0, 5, 5, 0],
+        [3, 0, 0, 1],
+        [0, 15, 0, 5],
+        [0, 0, 0, 0],
+    ], dtype=np.float32)
+    return anndata.AnnData(
+        X=csr_matrix(X),
+        obs=pd.DataFrame(index=[f'c{i}' for i in range(5)]),
+        var=pd.DataFrame(index=list(var_names)),
+    )
+
+
+def test_qc_reports_mito_percent_from_mt_prefixed_genes():
+    a = DataAdaptor('dummy.h5ad', adata=_adata_mt())
+    qc = a.filter_cells_qc()
+    assert qc['pct_mt'] == [50.0, 0.0, 100.0, 25.0, 0.0]  # a zero-count cell is 0 %, not NaN
+    assert qc['mt_source'] == {'kind': 'pattern', 'name': '^mt-', 'n_genes': 2}
+    assert all(type(v) is float for v in qc['pct_mt'])
+
+
+def test_qc_mito_matches_human_prefix_case_insensitively():
+    a = DataAdaptor('dummy.h5ad', adata=_adata_mt(('MT-ND1', 'G1', 'G2', 'MT-CO1')))
+    qc = a.filter_cells_qc()
+    assert qc['pct_mt'][0] == 50.0
+    assert qc['mt_source']['n_genes'] == 2
+
+
+def test_qc_prefers_a_boolean_mt_var_column():
+    ad = _adata_mt(('a', 'b', 'c', 'd'))
+    ad.var['mt'] = [False, True, False, False]  # only g1 → c1 100 %, c3 75 %
+    a = DataAdaptor('dummy.h5ad', adata=ad)
+    qc = a.filter_cells_qc()
+    assert qc['pct_mt'] == [25.0, 50.0, 0.0, 75.0, 0.0]
+    assert qc['mt_source'] == {'kind': 'var_column', 'name': 'mt', 'n_genes': 1}
+
+
+def test_qc_without_mito_genes_reports_none():
+    a = _adaptor()  # g0..g3
+    qc = a.filter_cells_qc()
+    assert qc['pct_mt'] is None
+    assert qc['mt_source'] is None
+
+
+def test_max_pct_mt_filters_and_combines_with_other_bounds():
+    a = DataAdaptor('dummy.h5ad', adata=_adata_mt())
+    result = a.run_filter_cells(max_pct_mt=30, min_counts=1)
+    # c1 (0 %), c3 (25 %) pass; c0 50 %, c2 100 % fail max_pct_mt; c4 fails min_counts
+    assert list(a.adata.obs_names) == ['c1', 'c3']
+    assert result['n_cells_removed'] == 3
+    assert result['mt_source']['kind'] == 'pattern'
+
+
+def test_pct_mt_bounds_are_inclusive():
+    a = DataAdaptor('dummy.h5ad', adata=_adata_mt())
+    a.run_filter_cells(max_pct_mt=25, min_pct_mt=25)
+    assert list(a.adata.obs_names) == ['c3']
+
+
+def test_pct_mt_threshold_without_mito_genes_is_an_error():
+    a = _adaptor()
+    with pytest.raises(ValueError, match='mitochondrial'):
+        a.run_filter_cells(max_pct_mt=10)
+    assert a.adata.n_obs == 5
+
+
+def test_pct_mt_threshold_is_recorded_for_the_notebook():
+    a = DataAdaptor('dummy.h5ad', adata=_adata_mt())
+    a.run_filter_cells(max_pct_mt=30)
+    step = a.analysis_record.steps[-1]
+    assert step.action == 'filter_cells'
+    assert step.params['max_pct_mt'] == 30
+    assert step.result['mt_source'] == {'kind': 'pattern', 'name': '^mt-', 'n_genes': 2}
+
+
+def test_filter_cells_route_accepts_pct_mt(monkeypatch):
+    a = DataAdaptor('dummy.h5ad', adata=_adata_mt())
+    monkeypatch.setattr(routes, 'get_adaptor', lambda dataset=None: a)
+    out = routes.run_filter_cells(routes.FilterCellsRequest(max_pct_mt=30.0), dataset=None)
+    assert out['n_cells_after'] == 3

@@ -68,6 +68,8 @@ scanpy:
     max_counts: null
     min_genes: 10
     max_genes: null
+    min_pct_mt: null                # % of counts from mitochondrial genes (.var['mt'] or ^mt-)
+    max_pct_mt: null
   filter_genes:
     min_counts: null
     max_counts: null
@@ -272,7 +274,7 @@ cluster_gene_sets:
 # ---------------------------------------------------------------------------
 heatmap:
   cell_ordering: none               # none|category|line_position|line_distance|category_then_position
-  gene_ordering: as_provided        # as_provided|peak_position
+  gene_ordering: as_provided        # as_provided|peak_position|similarity
   aggregate_gene_sets: false
   n_bins: 300
 

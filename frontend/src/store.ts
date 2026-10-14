@@ -488,7 +488,7 @@ export interface HeatmapConfig {
   cellOrdering: 'none' | 'category' | 'line_position' | 'line_distance' | 'category_then_position'
   obsColumn: string | null
   lineName: string | null
-  geneOrdering: 'as_provided' | 'peak_position'
+  geneOrdering: 'as_provided' | 'peak_position' | 'similarity'
   aggregateGeneSets: boolean
   nBins: number
   // Restrict the heatmap to these cells (e.g. the subset a gene clustering
