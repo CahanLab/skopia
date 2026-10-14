@@ -6845,6 +6845,8 @@ class DataAdaptor:
             return 'category' if has_col else 'none'
         if ordering == 'category' and not has_col:
             return 'none'
+        if ordering == 'category_then_similarity' and not has_col:
+            return 'similarity'
         return ordering
 
     def _check_heatmap_params(self, inputs: dict[str, Any], params: dict[str, Any]) -> None:
@@ -6853,7 +6855,7 @@ class DataAdaptor:
         ordering = str(params.get('cell_ordering', 'none'))
         if ordering in ('line_position', 'line_distance', 'category_then_position') and not inputs.get('line_name'):
             raise ValueError(f"cell_ordering '{ordering}' needs a drawn line, and this figure has none")
-        if ordering in ('category', 'category_then_position') and not inputs.get('obs_column'):
+        if ordering in ('category', 'category_then_position', 'category_then_similarity') and not inputs.get('obs_column'):
             raise ValueError(f"cell_ordering '{ordering}' needs an .obs column, and this figure has none")
 
     def _figure_cells(self, inputs: dict[str, Any]) -> list[int] | None:

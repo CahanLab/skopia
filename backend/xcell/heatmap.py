@@ -9,6 +9,22 @@ Rollback: delete this file and remove the /api/heatmap route from routes.py.
 import numpy as np
 from typing import Any, TYPE_CHECKING
 
+CELL_ORDERINGS = (
+    "none",
+    "category",
+    "line_position",
+    "line_distance",
+    "category_then_position",
+    "similarity",
+    "category_then_similarity",
+)
+
+# Average linkage needs the full condensed distance matrix (n²/2 doubles:
+# 100 MB at 5k cells, 40 GB at 100k), so above this many cells the cells
+# are first collapsed to k-means centroids and the centroids are clustered.
+SIMILARITY_EXACT_MAX_CELLS = 5000
+SIMILARITY_CENTROIDS = 500
+
 if TYPE_CHECKING:
     from xcell.adaptor import DataAdaptor
 
@@ -34,6 +50,9 @@ def compute_heatmap_data(
         gene_set_groups: Gene set grouping: [{"name": "set1", "genes": ["g1", "g2"]}, ...]
         aggregate_gene_sets: If True, each row is a gene set mean instead of per-gene
         cell_ordering: "none", "category", "line_position", "line_distance",
+            "category_then_position", "similarity" (average-linkage clustering
+            of the cells on the selected genes, in dendrogram leaf order) or
+            "category_then_similarity" (the same inside each category block)
                        or "category_then_position"
         obs_column: Obs column name for category-based ordering
         line_name: Line name for position/distance-based ordering
@@ -52,6 +71,10 @@ def compute_heatmap_data(
     """
     adata = adaptor.adata
 
+    if cell_ordering not in CELL_ORDERINGS:
+        raise ValueError(
+            f"cell_ordering must be one of {', '.join(CELL_ORDERINGS)}, got {cell_ordering!r}"
+        )
     if gene_ordering not in ("as_provided", "peak_position", "similarity"):
         raise ValueError(
             f"gene_ordering must be 'as_provided', 'peak_position' or 'similarity', got {gene_ordering!r}"
@@ -71,6 +94,7 @@ def compute_heatmap_data(
             "n_bins": 0,
             "n_cells": 0,
             "n_genes_hidden": n_genes_hidden,
+            "cell_ordering_method": None,
         }
 
     # Data source
@@ -96,6 +120,16 @@ def compute_heatmap_data(
         expr = np.array(X[ordered_idx][:, gene_col_indices], dtype=np.float64)
 
     n_cells = expr.shape[0]
+
+    # Cell similarity: a permutation of the cells on the matrix as drawn,
+    # before binning so each bin averages cells that resemble each other.
+    # The category variant moves cells only within their block, like the
+    # gene orderings within gene-set groups.
+    cell_ordering_method = None
+    if cell_ordering == "similarity" or (cell_ordering == "category_then_similarity" and col_groups):
+        perm, cell_ordering_method = _similarity_order_cells(expr, col_groups)
+        expr = expr[perm]
+        ordered_idx = ordered_idx[perm]
 
     # Gene set aggregation
     if aggregate_gene_sets and gene_set_groups:
@@ -125,6 +159,7 @@ def compute_heatmap_data(
             "n_bins": effective_bins,
             "n_cells": n_cells,
             "n_genes_hidden": n_genes_hidden,
+            "cell_ordering_method": None,
         }
 
     # Per-row min-max normalization
@@ -171,6 +206,7 @@ def compute_heatmap_data(
         "n_bins": effective_bins,
         "n_cells": n_cells,
         "n_genes_hidden": n_genes_hidden,
+        "cell_ordering_method": cell_ordering_method,
     }
 
 
@@ -190,7 +226,7 @@ def _order_cells(
     if ordering == "none":
         return cell_idx, []
 
-    if ordering == "category" and obs_column:
+    if ordering in ("category", "category_then_similarity") and obs_column:
         return _order_by_category(adaptor.adata, cell_idx, obs_column)
 
     if ordering in ("line_position", "line_distance") and line_name:
@@ -379,6 +415,65 @@ def _similarity_order(rows: np.ndarray) -> np.ndarray:
 
     clean = np.nan_to_num(np.asarray(rows, dtype=np.float64), nan=0.0)
     return np.asarray(leaves_list(linkage(clean, method="average", metric="euclidean")), dtype=int)
+
+
+def _scale_per_gene(expr: np.ndarray) -> np.ndarray:
+    """Each gene to its own 0–1 range over the cells, so a highly expressed
+    gene does not dominate the distance; NaN as 0."""
+    x = np.nan_to_num(np.asarray(expr, dtype=np.float64), nan=0.0)
+    lo = x.min(axis=0, keepdims=True)
+    rng = x.max(axis=0, keepdims=True) - lo
+    rng[rng == 0] = 1
+    return (x - lo) / rng
+
+
+def _similarity_order_cells(expr: np.ndarray, col_groups: list[dict]) -> tuple[np.ndarray, str]:
+    """Permutation of the rows of ``expr`` (cells × genes) by similarity,
+    within each column group when there are any; with the method used
+    (``exact`` leaf order, or ``centroids`` when a block is over the cap)."""
+    feats = _scale_per_gene(expr)
+    blocks = [(g["start"], g["start"] + g["size"]) for g in col_groups] or [(0, feats.shape[0])]
+    perm = np.arange(feats.shape[0])
+    method = "exact"
+    for s, e in blocks:
+        local, m = _similarity_order_block(feats[s:e])
+        perm[s:e] = s + local
+        if m == "centroids":
+            method = m
+    return perm, method
+
+
+def _similarity_order_block(feats: np.ndarray) -> tuple[np.ndarray, str]:
+    n = feats.shape[0]
+    if n <= SIMILARITY_EXACT_MAX_CELLS:
+        return _similarity_order(feats), "exact"
+
+    # scikit-learn (a scanpy dependency) rather than scipy's kmeans2: its
+    # k-means++ init is vectorised (scipy's took a minute at 60k cells) and
+    # it never leaves a centroid empty.
+    from sklearn.cluster import KMeans  # noqa: PLC0415
+
+    k = min(SIMILARITY_CENTROIDS, n)
+    km = KMeans(n_clusters=k, n_init=1, random_state=0).fit(feats)
+    centroids, labels = km.cluster_centers_, km.labels_
+    present = np.flatnonzero(np.bincount(labels, minlength=k) > 0)
+    leaf = present[_similarity_order(centroids[present])]
+    out: list[np.ndarray] = []
+    for pos, c in enumerate(leaf):
+        members = np.flatnonzero(labels == c)
+        # Order a block's cells along the axis towards the next block (the
+        # last block continues the axis from the previous one) so the join
+        # between neighbouring blocks is between their nearest cells.
+        if pos + 1 < len(leaf):
+            axis = centroids[leaf[pos + 1]] - centroids[c]
+        elif pos > 0:
+            axis = centroids[c] - centroids[leaf[pos - 1]]
+        else:
+            axis = None
+        if axis is not None and members.size > 1 and np.any(axis):
+            members = members[np.argsort(feats[members] @ axis, kind="stable")]
+        out.append(members)
+    return np.concatenate(out), "centroids"
 
 
 def _order_within_groups(order_fn, row_groups):

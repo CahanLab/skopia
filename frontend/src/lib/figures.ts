@@ -81,6 +81,8 @@ export interface ExpressionHeatmapData {
   n_bins: number
   n_cells: number
   n_genes_hidden?: number
+  /** How a similarity cell ordering was computed; null for the other orderings. */
+  cell_ordering_method?: 'exact' | 'centroids' | null
 }
 
 /** Rows (cells binned within a group, or one row per group) × genome windows. */
