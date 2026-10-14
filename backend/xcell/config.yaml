@@ -273,7 +273,7 @@ cluster_gene_sets:
 # Heatmap config modal.
 # ---------------------------------------------------------------------------
 heatmap:
-  cell_ordering: none               # none|category|line_position|line_distance|category_then_position
+  cell_ordering: none               # none|category|line_position|line_distance|category_then_position|similarity|category_then_similarity
   gene_ordering: as_provided        # as_provided|peak_position|similarity
   aggregate_gene_sets: false
   n_bins: 300

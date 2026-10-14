@@ -485,7 +485,7 @@ export interface HeatmapConfig {
   // `name` is the row-group label (it carries the folder when folders are
   // mixed); `id` is what the config modal restores the selection from.
   selectedGeneSets: { id?: string; name: string; genes: string[] }[]
-  cellOrdering: 'none' | 'category' | 'line_position' | 'line_distance' | 'category_then_position'
+  cellOrdering: 'none' | 'category' | 'line_position' | 'line_distance' | 'category_then_position' | 'similarity' | 'category_then_similarity'
   obsColumn: string | null
   lineName: string | null
   geneOrdering: 'as_provided' | 'peak_position' | 'similarity'

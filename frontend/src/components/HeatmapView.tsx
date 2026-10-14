@@ -221,6 +221,14 @@ export default function HeatmapView() {
           {data.n_bins < data.n_cells && ` (${data.n_cells.toLocaleString()} cells)`}
           {heatmapConfig?.cellLabel && ` · ${heatmapConfig.cellLabel}`}
           {activeCellMask && ` · cell mask${activeSubsetName ? ` (${activeSubsetName})` : ''}`}
+          {data.cell_ordering_method === 'centroids' && (
+            <span
+              style={{ color: '#e9a23b' }}
+              title="Too many cells for exact hierarchical clustering: the cells were collapsed to 500 k-means centroids, the centroids were clustered, and each centroid's cells were laid out along the axis to the next one."
+            >
+              {' · cells clustered via centroids'}
+            </span>
+          )}
           {!!data.n_genes_hidden && (
             <span
               style={{ color: '#e9a23b' }}

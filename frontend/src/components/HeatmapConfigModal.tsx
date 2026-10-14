@@ -6,6 +6,7 @@
  *   - Gene sets to display
  *   - Cell ordering (category, line position, etc.)
  *   - Gene ordering (as provided, by peak position, by similarity)
+ *   - Cell ordering by similarity (clustered), alone or within category
  *   - Aggregate gene sets toggle
  *   - Number of cell bins
  *
@@ -101,7 +102,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
 
   // Set defaults if needed
   useEffect(() => {
-    if (cellOrdering === 'category' && !obsColumn && categoricalColumns.length > 0) {
+    if ((cellOrdering === 'category' || cellOrdering === 'category_then_similarity') && !obsColumn && categoricalColumns.length > 0) {
       setObsColumn(categoricalColumns[0])
     }
     if ((cellOrdering === 'line_position' || cellOrdering === 'line_distance' || cellOrdering === 'category_then_position') && !lineName && drawnLines.length > 0) {
@@ -147,8 +148,8 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
     onApply({
       selectedGeneSets: selected.map((gs) => ({ id: gs.id, name: groupLabel(gs, selected), genes: gs.genes })),
       cellOrdering,
-      obsColumn: (cellOrdering === 'category' || cellOrdering === 'category_then_position') ? obsColumn : null,
-      lineName: (cellOrdering === 'line_position' || cellOrdering === 'line_distance' || cellOrdering === 'category_then_position') ? lineName : null,
+      obsColumn: needsCategory ? obsColumn : null,
+      lineName: needsLine ? lineName : null,
       geneOrdering,
       aggregateGeneSets,
       nBins,
@@ -157,7 +158,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
     })
   }
 
-  const needsCategory = cellOrdering === 'category' || cellOrdering === 'category_then_position'
+  const needsCategory = cellOrdering === 'category' || cellOrdering === 'category_then_position' || cellOrdering === 'category_then_similarity'
   const needsLine = cellOrdering === 'line_position' || cellOrdering === 'line_distance' || cellOrdering === 'category_then_position'
 
   return (
@@ -247,7 +248,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
               <input type="radio" name="cellOrder" checked={cellOrdering === 'category'} onChange={() => setCellOrdering('category')} disabled={categoricalColumns.length === 0} />
               <span>Group by category</span>
             </label>
-            {needsCategory && cellOrdering !== 'category_then_position' && (
+            {cellOrdering === 'category' && (
               <select style={styles.inlineSelect} value={obsColumn || ''} onChange={(e) => setObsColumn(e.target.value || null)}>
                 {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -270,6 +271,19 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
                   {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
+            )}
+            <label style={styles.radioRow} title="Hierarchical clustering (average linkage) of the cells on the selected genes, each gene scaled to its own range; cells with the same expression pattern sit together. Above 5,000 cells the clustering runs on 500 k-means centroids.">
+              <input type="radio" name="cellOrder" checked={cellOrdering === 'similarity'} onChange={() => setCellOrdering('similarity')} />
+              <span>By similarity (clustered)</span>
+            </label>
+            <label style={styles.radioRow} title="Group by category, then cluster the cells by similarity inside each group.">
+              <input type="radio" name="cellOrder" checked={cellOrdering === 'category_then_similarity'} onChange={() => setCellOrdering('category_then_similarity')} disabled={categoricalColumns.length === 0} />
+              <span>Category, then similarity</span>
+            </label>
+            {cellOrdering === 'category_then_similarity' && (
+              <select style={{ ...styles.inlineSelect, marginLeft: '24px' }} value={obsColumn || ''} onChange={(e) => setObsColumn(e.target.value || null)}>
+                {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
             )}
             {needsLine && (
               <select style={{ ...styles.inlineSelect, marginLeft: '24px' }} value={lineName || ''} onChange={(e) => setLineName(e.target.value || null)}>
