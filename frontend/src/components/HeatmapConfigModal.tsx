@@ -5,7 +5,7 @@
  * Heatmap tab or clicks the Settings button. Lets the user choose:
  *   - Gene sets to display
  *   - Cell ordering (category, line position, etc.)
- *   - Gene ordering (as provided, by peak position)
+ *   - Gene ordering (as provided, by peak position, by similarity)
  *   - Aggregate gene sets toggle
  *   - Number of cell bins
  *
@@ -290,6 +290,10 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
             <label style={styles.radioRow}>
               <input type="radio" name="geneOrder" checked={geneOrdering === 'peak_position'} onChange={() => setGeneOrdering('peak_position')} />
               <span>By peak position</span>
+            </label>
+            <label style={styles.radioRow} title="Hierarchical clustering (average linkage) of each gene's normalised profile; genes with the same shape sit together. Within each gene set when sets are shown.">
+              <input type="radio" name="geneOrder" checked={geneOrdering === 'similarity'} onChange={() => setGeneOrdering('similarity')} />
+              <span>By similarity (clustered)</span>
             </label>
           </div>
         </div>

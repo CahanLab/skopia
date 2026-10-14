@@ -326,12 +326,16 @@ def _scanpy(fn: str, only: tuple[str, ...] | None = None):
 
 
 def _code_filter_cells(step: Step) -> list[str]:
-    """One sc.pp.filter_cells call per threshold.
+    """One sc.pp.filter_cells call per threshold, plus a mask for the
+    mitochondrial share.
 
     scanpy accepts exactly one of min_counts/max_counts/min_genes/max_genes
     per call, so a single splatted call raises in the exported notebook when
     the UI sent several. Sequential calls compute the same AND the adaptor
-    applies.
+    applies. The mitochondrial thresholds are not scanpy's at all: they are
+    emitted as the same per-cell percentage the adaptor computed, over the
+    genes the recorded ``mt_source`` names (a boolean .var column or the
+    ``^mt-`` name pattern), so the notebook drops exactly the cells xcell did.
     """
     order = ('min_counts', 'max_counts', 'min_genes', 'max_genes')
     lines = [
@@ -339,6 +343,25 @@ def _code_filter_cells(step: Step) -> list[str]:
         for k in order
         if step.params.get(k) is not None
     ]
+    lo, hi = step.params.get('min_pct_mt'), step.params.get('max_pct_mt')
+    if lo is not None or hi is not None:
+        source = step.result.get('mt_source') or {}
+        if source.get('kind') == 'var_column':
+            lines.append(f"mt = adata.var[{_lit(source['name'])}].to_numpy(dtype=bool)")
+        else:
+            pattern = source.get('name') or '^mt-'
+            lines.append(f"mt = np.asarray(adata.var_names.str.match({_lit(pattern)}, case=False))")
+        lines += [
+            'total = np.ravel(np.asarray(adata.X.sum(axis=1))).astype(float)',
+            'mt_counts = np.ravel(np.asarray(adata[:, mt].X.sum(axis=1))).astype(float)',
+            'pct_mt = np.divide(mt_counts, total, out=np.zeros_like(total), where=total > 0) * 100',
+        ]
+        conds = []
+        if lo is not None:
+            conds.append(f'(pct_mt >= {_lit(lo)})')
+        if hi is not None:
+            conds.append(f'(pct_mt <= {_lit(hi)})')
+        lines.append(f"adata = adata[{' & '.join(conds)}].copy()")
     return lines or [_call('sc.pp.filter_cells', step.params)]
 
 
@@ -416,7 +439,7 @@ REGISTRY: dict[str, ActionSpec] = {
         ),
     ),
     'filter_cells': ActionSpec(
-        label='Filter cells', fidelity=EXACT, imports=SCANPY,
+        label='Filter cells', fidelity=EXACT, imports=SCANPY + NUMPY,
         code=_code_filter_cells,
         summary=lambda p, r: (
             f"Filtered cells ({_splat(p) or 'no thresholds'}): "

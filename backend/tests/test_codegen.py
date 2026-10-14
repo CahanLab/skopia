@@ -432,3 +432,25 @@ def test_leiden_on_the_default_graph_is_unchanged():
     assert translate(step).code == [
         "sc.tl.leiden(adata, resolution=0.5, key_added='leiden')"
     ]
+
+
+# --- filter_cells mitochondrial threshold ---------------------------------
+
+def test_filter_cells_pct_mt_emits_a_mask_not_a_scanpy_call():
+    t = translate(_step('filter_cells', {'max_pct_mt': 10, 'min_genes': 200},
+                        {'mt_source': {'kind': 'pattern', 'name': '^mt-', 'n_genes': 13}}))
+    code = '\n'.join(t.code)
+    assert 'sc.pp.filter_cells(adata, min_genes=200)' in t.code
+    assert "str.match('^mt-', case=False)" in code
+    assert 'pct_mt <= 10' in code
+    assert 'import numpy as np' in t.imports
+    assert 'max_pct_mt' not in ' '.join(l for l in t.code if 'sc.pp.filter_cells' in l)
+
+
+def test_filter_cells_pct_mt_from_a_var_column_reads_that_column():
+    t = translate(_step('filter_cells', {'min_pct_mt': 1, 'max_pct_mt': 20},
+                        {'mt_source': {'kind': 'var_column', 'name': 'mt', 'n_genes': 13}}))
+    code = '\n'.join(t.code)
+    assert "adata.var['mt']" in code
+    assert 'pct_mt >= 1' in code and 'pct_mt <= 20' in code
+    assert not any('sc.pp.filter_cells' in l for l in t.code)

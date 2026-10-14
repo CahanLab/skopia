@@ -7578,17 +7578,77 @@ class DataAdaptor:
         genes = np.ravel(np.asarray((X > 0).sum(axis=1))).astype(np.int64)
         return counts, genes
 
+    # The var column scanpy's QC convention writes (``adata.var['mt']``) wins
+    # over the name pattern: it is what the user flagged, and it survives a
+    # symbol rename the pattern would not.
+    MT_VAR_COLUMN = 'mt'
+    MT_NAME_PATTERN = '^mt-'
+
+    def _mito_gene_mask(self) -> tuple[np.ndarray, dict[str, Any]] | None:
+        """Which genes are mitochondrial, and where that came from.
+
+        A boolean ``.var['mt']`` column with at least one True, else gene
+        names starting ``mt-`` in any case (``mt-Nd1``, ``MT-ND1``). None when
+        neither names a gene, so a caller can say "no mitochondrial genes"
+        rather than report 0 % everywhere.
+        """
+        var = self.adata.var
+        col = self.MT_VAR_COLUMN
+        if col in var.columns and var[col].dtype == bool:
+            mask = var[col].to_numpy(dtype=bool)
+            if mask.any():
+                return mask, {'kind': 'var_column', 'name': col, 'n_genes': int(mask.sum())}
+        mask = self.adata.var_names.str.match(self.MT_NAME_PATTERN, case=False)
+        mask = np.asarray(mask, dtype=bool)
+        if mask.any():
+            return mask, {'kind': 'pattern', 'name': self.MT_NAME_PATTERN, 'n_genes': int(mask.sum())}
+        return None
+
+    def _pct_mt(self, counts: np.ndarray, mt_mask: np.ndarray) -> np.ndarray:
+        """Per-cell percentage of counts from the masked genes; 0 for an empty cell."""
+        X = self.adata.X
+        mt_counts = np.ravel(np.asarray(X[:, mt_mask].sum(axis=1))).astype(np.float64)
+        with np.errstate(invalid='ignore', divide='ignore'):
+            pct = np.where(counts > 0, mt_counts / counts * 100.0, 0.0)
+        return pct
+
     def filter_cells_qc(self) -> dict[str, Any]:
         """The distributions Filter Cells thresholds against, per cell.
 
-        Lets the UI draw counts/genes histograms before anything is removed.
-        Values are plain python numbers; a non-finite sum (pathological .X)
-        becomes None rather than NaN, which is not JSON.
+        Lets the UI draw counts/genes/mitochondrial histograms before anything
+        is removed. Values are plain python numbers; a non-finite sum
+        (pathological .X) becomes None rather than NaN, which is not JSON.
+        ``pct_mt`` and ``mt_source`` are None when no gene is mitochondrial by
+        either rule (see ``_mito_gene_mask``).
         """
         counts, genes = self._filter_cells_metrics()
+        mito = self._mito_gene_mask()
+        pct_mt = None
+        mt_source = None
+        if mito is not None:
+            mt_mask, mt_source = mito
+            pct_mt = [float(v) if np.isfinite(v) else None for v in self._pct_mt(counts, mt_mask)]
         return {
             'counts': [float(v) if np.isfinite(v) else None for v in counts],
             'genes': [int(g) for g in genes],
+            'pct_mt': pct_mt,
+            'mt_source': mt_source,
+        }
+
+    def filter_genes_qc(self) -> dict[str, Any]:
+        """The distributions Filter Genes thresholds against, per gene.
+
+        The quantities ``sc.pp.filter_genes`` thresholds on — a gene's total
+        counts and how many cells express it — plus ``n_cells`` so the UI can
+        convert its percentage input to the count it sends.
+        """
+        X = self.adata.X
+        counts = np.ravel(np.asarray(X.sum(axis=0))).astype(np.float64)
+        cells = np.ravel(np.asarray((X > 0).sum(axis=0))).astype(np.int64)
+        return {
+            'counts': [float(v) if np.isfinite(v) else None for v in counts],
+            'cells': [int(c) for c in cells],
+            'n_cells': int(self.n_cells),
         }
 
     def run_filter_cells(
@@ -7597,24 +7657,31 @@ class DataAdaptor:
         max_counts: int | None = None,
         min_genes: int | None = None,
         max_genes: int | None = None,
+        min_pct_mt: float | None = None,
+        max_pct_mt: float | None = None,
         active_cell_indices: list[int] | None = None,
     ) -> dict[str, Any]:
-        """Filter cells based on counts or number of genes expressed.
+        """Filter cells based on counts, genes expressed, or mitochondrial share.
 
         All given thresholds apply together (a cell must satisfy every one),
         with scanpy's inclusive semantics. Not delegated to
-        ``sc.pp.filter_cells``, which accepts exactly one threshold per call;
-        the mask below is what its sequential calls would compute.
+        ``sc.pp.filter_cells``, which accepts exactly one threshold per call
+        and knows nothing of the mitochondrial fraction; the mask below is
+        what its sequential calls would compute.
 
         Args:
             min_counts: Minimum total counts for a cell
             max_counts: Maximum total counts for a cell
             min_genes: Minimum number of genes expressed in the cell
             max_genes: Maximum number of genes expressed in the cell
+            min_pct_mt: Minimum percentage of counts from mitochondrial genes
+            max_pct_mt: Maximum percentage of counts from mitochondrial genes
+                (genes per ``_mito_gene_mask``; an error when there are none)
             active_cell_indices: If provided, only evaluate these cells for filtering
 
         Returns:
-            Dict with before/after cell counts
+            Dict with before/after cell counts, and ``mt_source`` when a
+            mitochondrial threshold was applied
         """
         n_cells_before = self.n_cells
 
@@ -7627,8 +7694,13 @@ class DataAdaptor:
             kwargs['min_genes'] = min_genes
         if max_genes is not None:
             kwargs['max_genes'] = max_genes
+        if min_pct_mt is not None:
+            kwargs['min_pct_mt'] = min_pct_mt
+        if max_pct_mt is not None:
+            kwargs['max_pct_mt'] = max_pct_mt
 
         indices = None  # also read by _log_action below
+        mt_source = None
         if kwargs:
             indices = self._validate_cell_indices(active_cell_indices)
             counts, genes = self._filter_cells_metrics()
@@ -7641,6 +7713,20 @@ class DataAdaptor:
                 keep &= genes >= min_genes
             if max_genes is not None:
                 keep &= genes <= max_genes
+            if min_pct_mt is not None or max_pct_mt is not None:
+                mito = self._mito_gene_mask()
+                if mito is None:
+                    raise ValueError(
+                        "No mitochondrial genes found: no boolean .var['mt'] column and no "
+                        "gene name starting 'mt-' / 'MT-'. Flag them with Genes → Add boolean "
+                        "column, or clear the mitochondrial thresholds."
+                    )
+                mt_mask, mt_source = mito
+                pct_mt = self._pct_mt(counts, mt_mask)
+                if min_pct_mt is not None:
+                    keep &= pct_mt >= min_pct_mt
+                if max_pct_mt is not None:
+                    keep &= pct_mt <= max_pct_mt
             if indices is not None:
                 # Cells outside the active set are not evaluated and survive.
                 mask = np.ones(self.n_cells, dtype=bool)
@@ -7661,6 +7747,9 @@ class DataAdaptor:
             'n_cells_after': n_cells_after,
             'n_cells_removed': n_cells_before - n_cells_after,
         }
+        if mt_source is not None:
+            # The notebook needs to know which genes "mitochondrial" meant.
+            result['mt_source'] = mt_source
         self._log_action('filter_cells', kwargs, result, subset=indices)
         return result
 
