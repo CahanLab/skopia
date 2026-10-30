@@ -10,6 +10,7 @@ import { pollTaskLoop, TaskStatus } from '../lib/taskPolling'
 import { mirrorTargets } from '../lib/datasetSlots'
 import { MESSAGES } from '../messages'
 import type { CellSubsetInfo } from '../lib/cellSubsets'
+import type { ObsColumnInfo, ObsConvertTarget } from '../lib/obsManager'
 
 let _highlightIdSeq = 0
 function nextHighlightId(): string {
@@ -1696,6 +1697,46 @@ export async function deleteObsColumn(
   name: string, slot?: DatasetSlot,
 ): Promise<{ column: string; dropped_colors: boolean; subset_removed: string | null }> {
   return fetchJson(appendDataset(`${API_BASE}/obs/${encodeURIComponent(name)}`, slot), { method: 'DELETE' })
+}
+
+// --- .obs manager ------------------------------------------------------------
+
+export async function fetchObsColumns(slot?: DatasetSlot): Promise<{ n_cells: number; columns: ObsColumnInfo[] }> {
+  return fetchJson(appendDataset(`${API_BASE}/obs/columns`, slot))
+}
+
+function postJson<T>(path: string, body: unknown, slot?: DatasetSlot): Promise<T> {
+  return fetchJson<T>(appendDataset(`${API_BASE}${path}`, slot), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
+/** Delete several .obs columns as one step. Nothing is dropped if any is
+ * missing; `subsets_removed` names saved subsets that lost their column. */
+export function deleteObsColumns(
+  columns: string[], slot?: DatasetSlot,
+): Promise<{ deleted: string[]; dropped_colors: string[]; subsets_removed: string[] }> {
+  return postJson('/obs/delete_columns', { columns }, slot)
+}
+
+export function renameObsColumn(
+  column: string, newName: string, slot?: DatasetSlot,
+): Promise<{ column: string; new_name: string; moved_colors: boolean }> {
+  return postJson('/obs/rename_column', { column, new_name: newName }, slot)
+}
+
+export function duplicateObsColumn(
+  column: string, newName: string, slot?: DatasetSlot,
+): Promise<{ column: string; new_name: string; copied_colors: boolean }> {
+  return postJson('/obs/duplicate_column', { column, new_name: newName }, slot)
+}
+
+export function convertObsColumn(
+  column: string, to: ObsConvertTarget, trueValue?: string | null, slot?: DatasetSlot,
+): Promise<{ column: string; from_kind: string; kind: string; dtype: string }> {
+  return postJson('/obs/convert_column', { column, to, true_value: trueValue ?? null }, slot)
 }
 
 export async function deleteAnnotation(name: string, slot?: DatasetSlot): Promise<void> {

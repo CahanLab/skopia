@@ -757,6 +757,89 @@ def post_obs_crosstab(request: CrosstabRequest, dataset: str | None = Query(None
         raise HTTPException(status_code=400, detail=str(e))
 
 
+# --- .obs manager --------------------------------------------------------
+# Column names travel in the body, not the path: a name containing '/' would
+# otherwise never reach the handler. GET /obs/columns, like /obs/summaries,
+# shadows a column literally named 'columns' for GET /obs/{column}.
+
+
+@router.get("/obs/columns")
+def list_obs_columns(dataset: str | None = Query(None)):
+    """Every .obs column with its kind, unique/missing counts and a preview."""
+    adaptor = get_adaptor(dataset)
+    return adaptor.list_obs_columns()
+
+
+class DeleteObsColumnsRequest(BaseModel):
+    columns: list[str]
+
+
+@router.post("/obs/delete_columns")
+def delete_obs_columns(request: DeleteObsColumnsRequest, dataset: str | None = Query(None)):
+    """Delete several .obs columns as one step; nothing is dropped if any is missing."""
+    adaptor = get_adaptor(dataset)
+    try:
+        return adaptor.delete_obs_columns(request.columns)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class RenameObsColumnRequest(BaseModel):
+    column: str
+    new_name: str
+
+
+@router.post("/obs/rename_column")
+def rename_obs_column(request: RenameObsColumnRequest, dataset: str | None = Query(None)):
+    """Rename an .obs column, moving its colour list."""
+    adaptor = get_adaptor(dataset)
+    try:
+        return adaptor.rename_obs_column(request.column, request.new_name)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class DuplicateObsColumnRequest(BaseModel):
+    column: str
+    new_name: str
+
+
+@router.post("/obs/duplicate_column")
+def duplicate_obs_column(request: DuplicateObsColumnRequest, dataset: str | None = Query(None)):
+    """Copy an .obs column under a new name."""
+    adaptor = get_adaptor(dataset)
+    try:
+        return adaptor.duplicate_obs_column(request.column, request.new_name)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class ConvertObsColumnRequest(BaseModel):
+    column: str
+    #: 'categorical' | 'string' | 'numeric' | 'boolean'. A plain str so an
+    #: unknown target is the adaptor's 400 with the valid list, not a 422.
+    to: str
+    true_value: str | None = None
+
+
+@router.post("/obs/convert_column")
+def convert_obs_column(request: ConvertObsColumnRequest, dataset: str | None = Query(None)):
+    """Change an .obs column's type in place."""
+    adaptor = get_adaptor(dataset)
+    try:
+        return adaptor.convert_obs_column(request.column, request.to, request.true_value)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get("/obs/{column}")
 def get_obs_column(column: str, dataset: str | None = Query(None)):
     """Get cell metadata column values.

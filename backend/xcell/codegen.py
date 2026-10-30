@@ -415,6 +415,28 @@ def _code_diffmap(step: Step) -> list[str]:
     return [f'{ADAPTOR}.run_diffmap({args.lstrip(", ")})']
 
 
+def _code_convert_obs_column(step: Step) -> list[str]:
+    """The pandas expression convert_obs_column applies, per target type."""
+    p, r = step.params, step.result
+    col = f"{ADATA}.obs[{_lit(p.get('column'))}]"
+    to = p.get('to')
+    if to == 'categorical':
+        expr = f"{col}.astype('category')"
+    elif to == 'string':
+        expr = f"{col}.astype(str).where({col}.notna())"
+    elif to == 'numeric':
+        expr = (f"{col}.astype('int64')" if r.get('from_kind') == 'boolean'
+                else f"pd.to_numeric({col}.astype(object), errors='raise')")
+    elif to == 'boolean':
+        expr = f"{col}.astype(str) == {_lit(p.get('true_value'))}"
+    else:
+        return []
+    return [
+        f"{col} = {expr}",
+        f"{ADATA}.uns.pop({_lit(str(p.get('column')) + '_colors')}, None)",
+    ]
+
+
 # --- the registry ---------------------------------------------------------
 
 REGISTRY: dict[str, ActionSpec] = {
@@ -1017,6 +1039,53 @@ REGISTRY: dict[str, ActionSpec] = {
         label='Delete column', fidelity=EXACT, imports=(),
         code=lambda s: [f"del {ADATA}.obs[{_lit(s.params.get('column'))}]"],
         summary=lambda p, r: f"Deleted `.obs['{p.get('column')}']`.",
+    ),
+    'delete_obs_columns': ActionSpec(
+        label='Delete columns', fidelity=EXACT, imports=(),
+        code=lambda s: [
+            f"{ADATA}.obs = {ADATA}.obs.drop(columns={_lit(list(s.params.get('columns') or []))})",
+            f"for _c in {_lit(list(s.params.get('columns') or []))}:",
+            f"    {ADATA}.uns.pop(_c + '_colors', None)",
+        ],
+        summary=lambda p, r: (
+            f"Deleted {len(p.get('columns') or [])} `.obs` columns: "
+            f"{', '.join(f'`{c}`' for c in (p.get('columns') or []))}."
+        ),
+    ),
+    'rename_obs_column': ActionSpec(
+        label='Rename column', fidelity=EXACT, imports=(),
+        code=lambda s: [
+            f"{ADATA}.obs = {ADATA}.obs.rename(columns={{"
+            f"{_lit(s.params.get('column'))}: {_lit(s.params.get('new_name'))}}})",
+            f"if {_lit(str(s.params.get('column')) + '_colors')} in {ADATA}.uns:",
+            f"    {ADATA}.uns[{_lit(str(s.params.get('new_name')) + '_colors')}] = "
+            f"{ADATA}.uns.pop({_lit(str(s.params.get('column')) + '_colors')})",
+        ],
+        summary=lambda p, r: (
+            f"Renamed `.obs['{p.get('column')}']` to `.obs['{p.get('new_name')}']`."
+        ),
+    ),
+    'duplicate_obs_column': ActionSpec(
+        label='Duplicate column', fidelity=EXACT, imports=(),
+        code=lambda s: [
+            f"{ADATA}.obs[{_lit(s.params.get('new_name'))}] = "
+            f"{ADATA}.obs[{_lit(s.params.get('column'))}].copy()",
+            f"if {_lit(str(s.params.get('column')) + '_colors')} in {ADATA}.uns:",
+            f"    {ADATA}.uns[{_lit(str(s.params.get('new_name')) + '_colors')}] = "
+            f"list({ADATA}.uns[{_lit(str(s.params.get('column')) + '_colors')}])",
+        ],
+        summary=lambda p, r: (
+            f"Copied `.obs['{p.get('column')}']` to `.obs['{p.get('new_name')}']`."
+        ),
+    ),
+    'convert_obs_column': ActionSpec(
+        label='Convert column type', fidelity=EXACT, imports=('import pandas as pd',),
+        code=_code_convert_obs_column,
+        summary=lambda p, r: (
+            f"Converted `.obs['{p.get('column')}']` to {p.get('to')}"
+            + (f" (True = `{p.get('true_value')}`)" if p.get('true_value') is not None else '')
+            + (f", now {r.get('dtype')}." if r.get('dtype') else '.')
+        ),
     ),
     'create_annotation': ActionSpec(
         label='New annotation column', fidelity=EXACT, imports=('import pandas as pd',),

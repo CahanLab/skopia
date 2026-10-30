@@ -30,6 +30,7 @@ import { MESSAGES } from '../messages'
 import { OverflowMenu } from './GenePanel'
 import MergeLabelsModal from './MergeLabelsModal'
 import TransferLabelsModal from './TransferLabelsModal'
+import ObsManagerModal from './ObsManagerModal'
 
 const API_BASE = '/api'
 
@@ -1064,6 +1065,7 @@ export default function CellPanel() {
   const [subsetBusy, setSubsetBusy] = useState(false)
   const [subsetError, setSubsetError] = useState<string | null>(null)
   const [subsetDeleteConfirm, setSubsetDeleteConfirm] = useState<string | null>(null)
+  const [obsManagerOpen, setObsManagerOpen] = useState(false)
   // Which .obs column's Delete is awaiting confirmation.
   const [columnDeleteConfirm, setColumnDeleteConfirm] = useState<string | null>(null)
   const handleDeleteColumn = useCallback(async (name: string) => {
@@ -1542,9 +1544,14 @@ export default function CellPanel() {
     }
   }, [selectedCellIndices, setSchema, setEmbedding, setColorBy, setExpressionData, setInteractionMode, resetActiveCells, clearSelection, refresh, colorByGene, colorByGenes])
 
+  // First child of the panel in every branch, so a summaries refetch (which
+  // flips to the loading branch) keeps the open manager mounted, state intact.
+  const obsManager = obsManagerOpen ? <ObsManagerModal onClose={() => setObsManagerOpen(false)} /> : null
+
   if (isLoading) {
     return (
       <div style={styles.panel}>
+        {obsManager}
         <div style={styles.header}>
           <div style={styles.title}>Cells</div>
         </div>
@@ -1556,6 +1563,7 @@ export default function CellPanel() {
   if (error) {
     return (
       <div style={styles.panel}>
+        {obsManager}
         <div style={styles.header}>
           <div style={styles.title}>Cells</div>
         </div>
@@ -1566,8 +1574,20 @@ export default function CellPanel() {
 
   return (
     <div style={styles.panel}>
-      <div style={styles.header}>
+      {obsManager}
+      <div style={{ ...styles.header, display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={styles.title}>Cells</div>
+        <button
+          onClick={() => setObsManagerOpen(true)}
+          title="Manage .obs columns: types, counts, delete several, rename, duplicate, convert"
+          data-obs-manager-open
+          style={{
+            padding: '2px 8px', fontSize: '11px', backgroundColor: 'transparent', color: '#aaa',
+            border: '1px solid #0f3460', borderRadius: '4px', cursor: 'pointer',
+          }}
+        >
+          ⚙ .obs
+        </button>
       </div>
 
       <div style={styles.content}>
