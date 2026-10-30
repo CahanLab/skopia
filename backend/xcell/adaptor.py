@@ -735,6 +735,26 @@ SUBSET_OBS_PREFIX = 'subset_'
 # saved, so the keys being absent today does not make the name safe.
 RESERVED_SUBSET_NAMES = frozenset({'spatial', 'neighbors', 'pca', 'umap', 'leiden', 'hvg'})
 
+# Tool prefixes the .obs manager groups columns by. Order matters only where
+# one prefix extends another; none do today.
+OBS_PREFIX_GROUPS = (
+    'UCell_', 'LR_', 'SCN_', 'contour_', SUBSET_OBS_PREFIX, 'territory_',
+    'cnv', 'leiden', 'louvain', 'dpt_',
+)
+
+# Value pairs whose True side needs no asking when converting to boolean.
+_TRUE_WORDS = {'true': 'false', 'yes': 'no', '1': '0', '1.0': '0.0', 't': 'f', 'y': 'n'}
+
+
+def _recognised_true_value(values: list[str]) -> str | None:
+    """The member of a one- or two-value list that obviously means True."""
+    lowered = {v.lower(): v for v in values}
+    for t, f in _TRUE_WORDS.items():
+        if set(lowered) <= {t, f}:
+            # A column holding only 'no' maps to all False via the absent word.
+            return lowered.get(t, t)
+    return None
+
 # Drawn shapes and lines. They belong to an embedding (``embeddingName``) and
 # used to live only in the browser, reaching this key at export time; now the
 # browser's every sync writes it and a load reads it back, the way territories
@@ -3122,25 +3142,271 @@ class DataAdaptor:
         if column not in self.adata.obs.columns:
             raise KeyError(f"Column '{column}' not found in .obs")
 
-        self.adata.obs.drop(columns=[column], inplace=True)
-        dropped_colors = self.adata.uns.pop(f'{column}_colors', None) is not None
-        subset_removed = None
-        registry = self._subset_registry()
-        for name, entry in registry.items():
-            if entry.get('obs_key', SUBSET_OBS_PREFIX + name) == column:
-                subset_removed = name
-                break
-        if subset_removed is not None:
-            registry.pop(subset_removed)
-            self.adata.uns[CELL_SUBSETS_UNS] = registry
+        dropped_colors, subset_removed = self._drop_obs_column(column)
         result = {'column': column, 'dropped_colors': dropped_colors,
                   'subset_removed': subset_removed}
         self._log_action('delete_obs_column', {'column': column}, result)
         return result
 
+    def _drop_obs_column(self, column: str) -> tuple[bool, str | None]:
+        """Drop one column with its colour list and any subset registry entry.
+
+        Returns (dropped_colors, subset_removed). Unlogged: the single and the
+        bulk delete each record their own step.
+        """
+        self.adata.obs.drop(columns=[column], inplace=True)
+        dropped_colors = self.adata.uns.pop(f'{column}_colors', None) is not None
+        subset_removed = self._subset_owning_column(column)
+        if subset_removed is not None:
+            registry = self._subset_registry()
+            registry.pop(subset_removed)
+            self.adata.uns[CELL_SUBSETS_UNS] = registry
+        return dropped_colors, subset_removed
+
+    def _subset_owning_column(self, column: str) -> str | None:
+        """The saved subset whose membership column this is, if any."""
+        for name, entry in self._subset_registry().items():
+            if entry.get('obs_key', SUBSET_OBS_PREFIX + name) == column:
+                return name
+        return None
+
     def delete_annotation(self, name: str) -> None:
         """Older name for delete_obs_column; the /annotations route still calls it."""
         self.delete_obs_column(name)
+
+    # =========================================================================
+    # .obs manager: list columns, delete several, rename, duplicate, convert
+    # =========================================================================
+
+    @staticmethod
+    def _obs_kind(series: pd.Series) -> str:
+        dtype = series.dtype
+        if isinstance(dtype, pd.CategoricalDtype):
+            return 'categorical'
+        # bool before numeric: pandas counts bool as numeric.
+        if pd.api.types.is_bool_dtype(dtype):
+            return 'boolean'
+        if pd.api.types.is_integer_dtype(dtype):
+            return 'integer'
+        if pd.api.types.is_float_dtype(dtype):
+            return 'float'
+        if pd.api.types.is_string_dtype(dtype) or dtype == object:
+            return 'string'
+        return 'other'
+
+    @staticmethod
+    def _obs_prefix_group(name: str) -> str | None:
+        for prefix in OBS_PREFIX_GROUPS:
+            if name.startswith(prefix):
+                return prefix
+        return None
+
+    def list_obs_columns(self) -> dict[str, Any]:
+        """Every .obs column with its type, counts and a short preview.
+
+        Preview is the three most frequent values for categorical, boolean and
+        string columns, else min / median / max over the finite values (None
+        when there are none, since NaN and inf are not JSON).
+        """
+        obs = self.adata.obs
+        subset_by_column = {
+            entry.get('obs_key', SUBSET_OBS_PREFIX + name): name
+            for name, entry in self._subset_registry().items()
+        }
+        columns: list[dict[str, Any]] = []
+        for name in obs.columns:
+            series = obs[name]
+            kind = self._obs_kind(series)
+            n_missing = int(series.isna().sum())
+            try:
+                n_unique = int(series.nunique(dropna=True))
+            except TypeError:  # unhashable values in an object column
+                n_unique = None
+            if kind in ('integer', 'float'):
+                vals = series.to_numpy(dtype=float, na_value=np.nan)
+                finite = vals[np.isfinite(vals)]
+                preview: dict[str, Any] = (
+                    {'min': float(finite.min()), 'median': float(np.median(finite)),
+                     'max': float(finite.max())}
+                    if finite.size else {'min': None, 'median': None, 'max': None}
+                )
+            elif kind == 'other' or n_unique is None:
+                preview = {'top': []}
+            else:
+                counts = series.value_counts(dropna=True).head(3)
+                preview = {'top': [{'value': str(v), 'count': int(c)}
+                                   for v, c in counts.items() if c > 0]}
+            columns.append({
+                'name': str(name),
+                'dtype': str(series.dtype),
+                'kind': kind,
+                'n_unique': n_unique,
+                'n_missing': n_missing,
+                'preview': preview,
+                'has_colors': f'{name}_colors' in self.adata.uns,
+                'subset': subset_by_column.get(name),
+                'prefix_group': self._obs_prefix_group(str(name)),
+            })
+        return {'n_cells': int(self.adata.n_obs), 'columns': columns}
+
+    def delete_obs_columns(self, columns: list[str]) -> dict[str, Any]:
+        """Delete several .obs columns as one recorded step.
+
+        Every name is checked before anything is dropped, so a typo deletes
+        nothing rather than half the list.
+
+        Raises:
+            ValueError: if no columns are named
+            KeyError: if any column is missing
+        """
+        cols = list(dict.fromkeys(str(c) for c in columns or []))
+        if not cols:
+            raise ValueError('Name at least one column to delete.')
+        missing = [c for c in cols if c not in self.adata.obs.columns]
+        if missing:
+            raise KeyError(f"Columns not found in .obs: {missing}")
+        dropped_colors: list[str] = []
+        subsets_removed: list[str] = []
+        for c in cols:
+            had_colors, subset = self._drop_obs_column(c)
+            if had_colors:
+                dropped_colors.append(c)
+            if subset is not None:
+                subsets_removed.append(subset)
+        result = {'deleted': cols, 'dropped_colors': dropped_colors,
+                  'subsets_removed': subsets_removed}
+        self._log_action('delete_obs_columns', {'columns': cols}, result)
+        return result
+
+    def _check_new_obs_name(self, new_name: str) -> str:
+        name = str(new_name or '').strip()
+        if not name:
+            raise ValueError('The new column name is empty.')
+        if name in self.adata.obs.columns:
+            raise ValueError(f"A column named '{name}' already exists.")
+        # Saved subsets own that prefix; a column under it with no registry
+        # entry would refuse a later subset of the same name.
+        if name.startswith(SUBSET_OBS_PREFIX):
+            raise ValueError(
+                f"Names starting with '{SUBSET_OBS_PREFIX}' are kept for saved cell subsets; "
+                "save a subset from the Cells panel instead.")
+        return name
+
+    def rename_obs_column(self, column: str, new_name: str) -> dict[str, Any]:
+        """Rename an .obs column in place, carrying its colour list along.
+
+        A saved subset's membership column is refused: the subset finds its
+        column by name, so renaming it would orphan the subset.
+        """
+        if column not in self.adata.obs.columns:
+            raise KeyError(f"Column '{column}' not found in .obs")
+        subset = self._subset_owning_column(column)
+        if subset is not None:
+            raise ValueError(
+                f"'{column}' is the membership column of saved subset '{subset}'; "
+                "its name is derived from the subset, so it cannot be renamed.")
+        name = self._check_new_obs_name(new_name)
+        self.adata.obs.rename(columns={column: name}, inplace=True)
+        # A leftover palette under the new name belongs to some earlier column
+        # and would colour this one by accident.
+        self.adata.uns.pop(f'{name}_colors', None)
+        colors = self.adata.uns.pop(f'{column}_colors', None)
+        if colors is not None:
+            self.adata.uns[f'{name}_colors'] = colors
+        result = {'column': column, 'new_name': name, 'moved_colors': colors is not None}
+        self._log_action('rename_obs_column', {'column': column, 'new_name': name}, result)
+        return result
+
+    def duplicate_obs_column(self, column: str, new_name: str) -> dict[str, Any]:
+        """Copy an .obs column (and its colour list) under a new name."""
+        if column not in self.adata.obs.columns:
+            raise KeyError(f"Column '{column}' not found in .obs")
+        name = self._check_new_obs_name(new_name)
+        self.adata.obs[name] = self.adata.obs[column].copy()
+        self.adata.uns.pop(f'{name}_colors', None)
+        colors = self.adata.uns.get(f'{column}_colors')
+        if colors is not None:
+            self.adata.uns[f'{name}_colors'] = list(colors)
+        result = {'column': column, 'new_name': name, 'copied_colors': colors is not None}
+        self._log_action('duplicate_obs_column', {'column': column, 'new_name': name}, result)
+        return result
+
+    def convert_obs_column(
+        self, column: str, to: str, true_value: str | None = None,
+    ) -> dict[str, Any]:
+        """Change an .obs column's type in place.
+
+        ``to`` is 'categorical', 'string', 'numeric' or 'boolean'. Numeric is
+        refused, naming a value, when any present value does not parse;
+        boolean needs at most two distinct values, none missing, and either
+        a recognisable pair (true/false, yes/no, 1/0, ...) or ``true_value``
+        naming which one is True. The colour list is dropped on every
+        conversion: it described the old categories, if any.
+        """
+        if column not in self.adata.obs.columns:
+            raise KeyError(f"Column '{column}' not found in .obs")
+        targets = ('categorical', 'string', 'numeric', 'boolean')
+        if to not in targets:
+            raise ValueError(f"Cannot convert to '{to}'; choose one of {list(targets)}.")
+        subset = self._subset_owning_column(column)
+        if subset is not None:
+            raise ValueError(
+                f"'{column}' is the membership column of saved subset '{subset}' "
+                "and must stay boolean.")
+        series = self.adata.obs[column]
+        kind = self._obs_kind(series)
+        already = {'categorical': kind == 'categorical', 'string': kind == 'string',
+                   'numeric': kind in ('integer', 'float'), 'boolean': kind == 'boolean'}
+        if already[to]:
+            raise ValueError(f"'{column}' is already {kind}.")
+
+        params: dict[str, Any] = {'column': column, 'to': to}
+        if to == 'categorical':
+            new = series.astype('category')
+        elif to == 'string':
+            new = series.astype(str).where(series.notna())
+        elif to == 'numeric':
+            if kind == 'boolean':
+                new = series.astype('int64')
+            else:
+                parsed = pd.to_numeric(series.astype(object), errors='coerce')
+                bad = series.notna() & parsed.isna()
+                if bad.any():
+                    example = series[bad].iloc[0]
+                    raise ValueError(
+                        f"Cannot convert '{column}' to numeric: {int(bad.sum()):,} "
+                        f"value(s) do not parse as numbers, e.g. '{example}'.")
+                new = parsed
+        else:  # boolean
+            n_missing = int(series.isna().sum())
+            if n_missing:
+                raise ValueError(
+                    f"Cannot convert '{column}' to boolean: {n_missing:,} cell(s) have "
+                    "missing values, which a boolean column cannot hold.")
+            values = sorted({str(v) for v in series.unique()})
+            if len(values) > 2:
+                raise ValueError(
+                    f"Cannot convert '{column}' to boolean: it has {len(values)} "
+                    "distinct values, and a boolean column needs at most two.")
+            if true_value is None:
+                true_value = _recognised_true_value(values)
+                if true_value is None:
+                    raise ValueError(
+                        f"Say which of {values} means True (true_value).")
+            elif str(true_value) not in values:
+                raise ValueError(
+                    f"true_value '{true_value}' is not a value of '{column}' ({values}).")
+            true_value = str(true_value)
+            params['true_value'] = true_value
+            new = series.astype(str) == true_value
+
+        self.adata.obs[column] = new
+        self.adata.uns.pop(f'{column}_colors', None)
+        new_kind = self._obs_kind(self.adata.obs[column])
+        result = {'column': column, 'from_kind': kind, 'kind': new_kind,
+                  'dtype': str(self.adata.obs[column].dtype)}
+        self._log_action('convert_obs_column', params, result)
+        return result
 
     def rename_obs_label(self, column: str, old_label: str, new_label: str) -> dict[str, Any]:
         """Rename a single category value in a categorical or string .obs column.

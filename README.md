@@ -223,6 +223,7 @@ The included `test_data/toy_spatial.h5ad` dataset is a small spatial transcripto
 - **Rename a category label** by double-clicking the label in the expanded category list. Press Enter to commit (or Escape to cancel). Works on Leiden clusters, Contourize results, user annotations — any categorical metadata.
 - **Merge two or more labels** by clicking the `⋯` menu in a column header and choosing **Merge labels…**. Pick the labels to merge, type a new name (or reuse an existing one to fold them in), then click Merge.
 - Selected cells can be masked or deleted
+- **Manage `.obs` columns** with the `⚙ .obs` button beside the Cells title: a table of every column with its type, unique and missing counts, and a preview (top three values, or min · median · max). Tick columns (shift-click ticks a range) to delete or export several at once; click a row to rename, duplicate or convert it to categorical, string, numeric or boolean. A saved subset's column can be deleted, which removes the subset, but not renamed or converted.
 
 ### Adjusting the Embedding (optional)
 
@@ -1032,7 +1033,7 @@ carries its own provenance and re-opening it continues the history.
 ## Features
 
 - **Interactive scatter plot** — deck.gl-powered visualization with pan, zoom, lasso selection
-- **Cell Manager** — browse/color by metadata, mask/delete cells
+- **Cell Manager** — browse/color by metadata, mask/delete cells; the `.obs` manager lists every column's type and counts and deletes, renames, duplicates or converts columns
 - **Gene Manager** — search genes, create gene sets, import gene lists
 - **Scanpy integration** — run preprocessing, cell analysis (PCA, Neighbors, UMAP, Leiden), gene analysis, spatial analysis (contourize), and differential expression directly in the browser. Long-running operations (gene neighbors, spatial neighbors, spatial autocorrelation, contourize, line gene association) can be cancelled mid-run without corrupting session data.
 - **Cell type classification** — annotate cells with [PySingleCellNet](https://github.com/CahanLab/PySingleCellNet) (optional dependency; `pixi install -e pyscn`). Apply a trained classifier, or train one from a labelled `.obs` column. Gene coverage against the classifier is checked *before* the run, since unmatched genes are silently zero-filled and would otherwise yield confident-looking nonsense. Results land as a colored cell-type call, a per-cell confidence, an optional Singular/Ambiguous/None/Rand quality call, and a full cells × types score matrix you can color by or plot as an embedding.
