@@ -5,7 +5,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-30
+
 - **Fixed: the analysis record's report start could only move forward.** *Start report here* set the report to begin after the last recorded step, so pressing it in a finished session left every step outside the report, greyed out, with no way back short of *Clear*, and an export then wrote an empty document. Each step now has *Start here*, which begins the report at that step; *Include all steps* puts every step back; a *Report starts here* marker shows the boundary; the old button is renamed *Report new steps only*; and an export whose report covers none of the recorded steps is refused with that explanation rather than written empty. `PUT /api/record/report_start {index}`.
+
 ## [0.4.0] - 2026-10-30
 
 - **Add menu replaces Draw, and text labels on embeddings (toolbar → Add).** The toolbar's *Draw* button is now *Add*, its menu grouped as **Shape** (Lasso, Polygon), **Line** (Pencil, Smooth Curve, Segmented Line) and **Text**. In Text mode a click on the plot places a label and a click on a label opens an editor for its text (multi-line), size, color, bold, italic, alignment, rotation, and an optional background box with color and opacity; a drag moves it. Positions are in the embedding's data coordinates (sizes in screen pixels), so labels stay on their cells under pan and zoom and travel with Adjust's rotate, flip and quilt moves (only the anchor moves; labels stay upright). A label belongs to the embedding and column pair it was placed on, is stored per dataset in `uns['xcell_text_annotations_json']`, and is restored on load, so exports carry it; deleting a cell subset with its derived embeddings drops the labels on them. The next label starts in the last one's style. `GET/POST /api/text_annotations`. Labels are not yet drawn into snapshots or the Figures system. Design note: `docs/superpowers/specs/2026-10-30-add-menu-pca-hits-obs-manager-design.md`.
@@ -548,7 +551,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 ### Fixed
 - Gene set export now includes genes from all categories and folders (previously only exported the legacy flat list, which was often empty).
 
-[Unreleased]: https://github.com/CahanLab/xcell/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/CahanLab/xcell/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/CahanLab/xcell/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/CahanLab/xcell/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/CahanLab/xcell/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/CahanLab/xcell/releases/tag/v0.2.0
