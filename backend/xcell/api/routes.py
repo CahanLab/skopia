@@ -5103,6 +5103,19 @@ def mark_record_start(dataset: str | None = Query(None)):
     return {"report_start": get_adaptor(dataset).analysis_record.mark_start()}
 
 
+class ReportStartRequest(BaseModel):
+    index: int
+
+
+@router.put("/record/report_start")
+def set_record_report_start(request: ReportStartRequest, dataset: str | None = Query(None)):
+    """Start the report at a given step; 0 brings every step back in."""
+    try:
+        return {"report_start": get_adaptor(dataset).analysis_record.set_report_start(request.index)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 class StepNoteRequest(BaseModel):
     note: str = ""
 
@@ -5232,6 +5245,16 @@ def export_analysis_record(request: RecordExportRequest, dataset: str | None = Q
 
     adaptor = get_adaptor(dataset)
     record = adaptor.analysis_record
+    # A report whose start was moved past every step renders as an empty
+    # document. Say why rather than write it.
+    left_out = sum(1 for s in record.steps[:record.report_start] if s.action != 'load_dataset')
+    if left_out and report_counts(record)['total'] == 0:
+        raise HTTPException(
+            status_code=400,
+            detail=(f"All {left_out} recorded step{'s' if left_out != 1 else ''} are outside the "
+                    "report, so it would be empty. Use 'Include all steps', or 'Start here' "
+                    "on the step the report should begin with."),
+        )
     opts = {
         "include_figures": request.include_figures,
         "include_code": request.include_code,

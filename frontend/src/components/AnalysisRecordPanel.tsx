@@ -188,6 +188,12 @@ export default function AnalysisRecordPanel() {
     load()
   }
 
+  // Move the report's first step; 0 brings every step back in.
+  const setReportStart = async (index: number) => {
+    await post('/api/record/report_start', { index }, 'PUT')
+    load()
+  }
+
   const clearRecord = async () => {
     if (!window.confirm('Clear the recorded steps? The loaded dataset stays; only the history is dropped.')) return
     await post('/api/record', undefined, 'DELETE')
@@ -315,12 +321,30 @@ export default function AnalysisRecordPanel() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={sectionLabel}>Steps</span>
             <span style={{ display: 'flex', gap: 6 }}>
-              <button onClick={markStart} style={ghost} title="Everything after this point becomes the report; nothing is discarded">
-                Start report here
+              {(data?.report_start ?? 0) > 0 && (
+                <button onClick={() => setReportStart(0)} style={{ ...ghost, color: dark.accent }}
+                  title="Put every recorded step back in the report">
+                  Include all steps
+                </button>
+              )}
+              <button onClick={markStart} style={ghost}
+                title="Only steps you run from now on go in the report. The steps above stay in the history, and Include all steps or Start here brings them back.">
+                Report new steps only
               </button>
               <button onClick={clearRecord} style={{ ...ghost, color: dark.alert }}>Clear</button>
             </span>
           </div>
+
+          {counts && counts.total === 0 && steps.some((s) => !s.in_report && s.action !== 'load_dataset') && (
+            <div style={{
+              marginBottom: 6, padding: '6px 10px', borderRadius: 4, fontSize: 11,
+              background: 'rgba(233,162,59,0.15)', color: dark.warn,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+            }}>
+              <span>Every recorded step is outside the report, so an export would be empty.</span>
+              <button onClick={() => setReportStart(0)} style={{ ...ghost, color: dark.accent }}>Include all steps</button>
+            </div>
+          )}
 
           <div style={{ border: `1px solid ${dark.border}`, borderRadius: 4, overflow: 'hidden' }}>
             {steps.length === 0 && (
@@ -333,8 +357,14 @@ export default function AnalysisRecordPanel() {
               const isOpenRow = expanded.has(step.index)
               const figs = figuresByStep.get(step.index) ?? []
               return (
+                <div key={step.index}>
+                {step.index === data?.report_start && step.index > 0 && (
+                  <div style={{
+                    padding: '2px 10px', fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.5,
+                    color: dark.accent, borderTop: `1px solid ${dark.accent}`, background: 'rgba(78,205,196,0.08)',
+                  }}>Report starts here</div>
+                )}
                 <div
-                  key={step.index}
                   style={{
                     borderTop: step.index === 0 ? 'none' : `1px solid ${dark.border}`,
                     padding: '8px 10px',
@@ -407,6 +437,15 @@ export default function AnalysisRecordPanel() {
                           >
                             {step.note ? 'Edit note' : 'Add note'}
                           </button>
+                          {step.index !== data?.report_start && (
+                            <button
+                              onClick={() => setReportStart(step.index)}
+                              style={{ ...ghost, fontSize: 10, padding: '1px 4px' }}
+                              title="Begin the report at this step; earlier steps stay in the history"
+                            >
+                              Start here
+                            </button>
+                          )}
                           {step.code.length > 0 && (
                             <button
                               onClick={() => setExpanded((prev) => {
@@ -431,6 +470,7 @@ export default function AnalysisRecordPanel() {
                       )}
                     </div>
                   </div>
+                </div>
                 </div>
               )
             })}

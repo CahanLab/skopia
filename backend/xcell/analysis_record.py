@@ -189,6 +189,19 @@ class AnalysisRecord:
         self.report_start = len(self.steps)
         return self.report_start
 
+    def set_report_start(self, index: int) -> int:
+        """Start the report at step ``index``: 0 covers everything, and
+        ``len(steps)`` (what mark_start does) covers only what comes next.
+
+        Raises:
+            ValueError: an index outside 0..len(steps).
+        """
+        if not 0 <= index <= len(self.steps):
+            raise ValueError(
+                f'Report start {index} is outside the record (0 to {len(self.steps)}).')
+        self.report_start = index
+        return self.report_start
+
     def steps_for_report(self) -> list[Step]:
         return self.steps[self.report_start:]
 

@@ -72,6 +72,29 @@ def test_mark_start_trims_the_report_to_what_follows():
     assert len(r.steps) == 2  # nothing was discarded
 
 
+def test_report_start_can_move_back_to_any_step():
+    """Marking the start is not a one-way door: an earlier step, or all of
+    them, can be brought back into the report."""
+    r = _record()
+    for a in ('a', 'b', 'c'):
+        r.add_step(a, {}, {})
+    r.mark_start()
+    assert r.steps_for_report() == []
+    r.set_report_start(1)
+    assert [s.action for s in r.steps_for_report()] == ['b', 'c']
+    r.set_report_start(0)
+    assert [s.action for s in r.steps_for_report()] == ['a', 'b', 'c']
+
+
+def test_report_start_out_of_range_is_refused():
+    r = _record()
+    r.add_step('a', {}, {})
+    for bad in (-1, 2):
+        with pytest.raises(ValueError):
+            r.set_report_start(bad)
+    assert r.report_start == 0
+
+
 def test_clearing_keeps_the_load_step():
     """Without a source step the notebook has nothing to open."""
     r = _record()
