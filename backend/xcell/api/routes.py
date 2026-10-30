@@ -1861,6 +1861,48 @@ def get_lines(dataset: str | None = Query(None)):
     return {"lines": adaptor.get_lines()}
 
 
+class TextAnnotationData(BaseModel):
+    """One text annotation placed on an embedding, in its data coordinates."""
+    id: str
+    embeddingName: str
+    dimX: int = 0
+    dimY: int = 1
+    x: float
+    y: float
+    text: str
+    fontSize: float = 14
+    color: str = '#ffffff'
+    fontWeight: str = 'normal'
+    fontStyle: str = 'normal'
+    background: str | None = None
+    backgroundOpacity: float = 0.6
+    anchor: str = 'middle'
+    angle: float = 0
+    visible: bool = True
+
+
+class SetTextAnnotationsRequest(BaseModel):
+    annotations: list[TextAnnotationData]
+
+
+@router.post("/text_annotations")
+def set_text_annotations(request: SetTextAnnotationsRequest, dataset: str | None = Query(None)):
+    """Replace the dataset's text annotations (stored in .uns, so exports carry them)."""
+    adaptor = get_adaptor(dataset)
+    try:
+        adaptor.set_text_annotations([a.model_dump() for a in request.annotations])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"status": "ok", "count": len(request.annotations)}
+
+
+@router.get("/text_annotations")
+def get_text_annotations(dataset: str | None = Query(None)):
+    """The dataset's stored text annotations."""
+    adaptor = get_adaptor(dataset)
+    return {"annotations": adaptor.get_text_annotations()}
+
+
 @router.get("/lines/debug/{line_name}")
 def debug_line_projection(line_name: str, dataset: str | None = Query(None)):
     """Debug endpoint to inspect line projection data.

@@ -24,8 +24,11 @@ parameters such as color and size).
   headers in one dropdown rather than nested flyouts; one click fewer and no
   hover-intent bugs.)*
 - Shape and Line tools behave exactly as today (`interactionMode === 'draw'`,
-  `drawTool`). Text is a new `drawTool` value `'text'`, so Escape, 3D hiding
-  and the active-button colour come for free.
+  `drawTool`). Text is its own `interactionMode` value `'text'` *(as built;
+  the first draft made it a `drawTool`, but ScatterPlot treats every
+  drawTool other than pencil/lasso as a click-to-add-vertex line tool, so a
+  separate mode keeps the line code untouched)*. The main Add button
+  re-enters whichever of draw/text was picked last.
 
 ### Text annotations
 - **Data model** *(call)*: `TextAnnotation = { id, embeddingName, x, y, text,
@@ -49,9 +52,15 @@ parameters such as color and size).
   annotation moves it. Delete/Backspace (outside an input) removes it.
 - **Defaults**: the style of the last annotation committed becomes the
   default for the next one *(call)*.
-- **Rendering**: deck.gl `TextLayer` in the 2D scatter, only annotations
-  whose `embeddingName` matches the shown embedding; hidden ones skipped.
-  Background via the TextLayer's `background` + `getBackgroundColor`.
+- **Rendering** *(as built)*: an SVG overlay component
+  (`TextAnnotationOverlay`) mounted inside ScatterPlot, like the stored-shape
+  overlay, rather than a deck.gl TextLayer: SVG gives per-label hit testing
+  for click and drag, the box, rotation and multi-line text for free. Only
+  notes on the shown embedding and column pair (`dimX`/`dimY`, as lines
+  record) are drawn. Labels move with Adjust transforms (anchor only).
+- **Storage** *(as built)*: a note on an embedding missing from `.obsm` is
+  kept rather than refused, or one removed embedding would fail every later
+  save of the whole list.
 - **Out of scope**: text in 3D view (Add is hidden in 3D already), arrows /
   callout lines, rich text.
 

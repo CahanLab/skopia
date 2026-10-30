@@ -1,5 +1,6 @@
+import { DEFAULT_TEXT_STYLE, type TextAnnotation, type TextStyle } from './lib/textAnnotations'
 import { create } from 'zustand'
-import { transformPoints, shapeOverlapsHull, type ShapeAffine } from './utils/shapeTransform'
+import { transformPoint, transformPoints, pointInPolygon, shapeOverlapsHull, type ShapeAffine } from './utils/shapeTransform'
 import { sortGeneSetInCategory } from './lib/geneSetOps'
 import { sectionForCut } from './lib/territoryGeometry'
 import { pickSecondEmbedding, pickPreferredEmbedding } from './lib/pickSecondEmbedding'
@@ -512,7 +513,7 @@ export interface GeneMaskConfig {
 export type { PCASubsetSummary } from './lib/pcaSubsets'
 
 // Interaction mode for the scatter plot
-export type InteractionMode = 'pan' | 'lasso' | 'draw' | 'adjust' | 'quilt'
+export type InteractionMode = 'pan' | 'lasso' | 'draw' | 'text' | 'adjust' | 'quilt'
 
 // Color scale options for expression data
 export type ColorScale = 'viridis' | 'plasma' | 'magma' | 'inferno' | 'cividis' | 'coolwarm' | 'blues' | 'reds' | 'sunset' | 'ocean' | 'grape' | 'mint'
@@ -603,6 +604,9 @@ export interface DatasetState {
   // Set once the slot's shapes have been read from the backend. The on-change
   // sync waits for it, or an empty store would overwrite the file's shapes.
   linesHydrated: boolean
+  // Text placed on embeddings; hydrated from the backend like drawnLines.
+  textAnnotations: TextAnnotation[]
+  textHydrated: boolean
   hiddenColumns: Set<string>
   columnDisplayNames: Record<string, string>
   obsSummariesVersion: number
@@ -745,6 +749,8 @@ export function createDefaultDatasetState(
     displayPreferences: { ...defaultDisplayPreferences(), ...displayOverrides },
     drawnLines: [],
     linesHydrated: false,
+    textAnnotations: [],
+    textHydrated: false,
     hiddenColumns: new Set<string>(),
     columnDisplayNames: {},
     obsSummariesVersion: 0,
@@ -911,6 +917,9 @@ interface AppState {
   // Drawn lines/shapes for trajectory analysis
   drawnLines: DrawnLine[]
   activeLineId: string | null  // Currently selected line for editing/smoothing
+  textAnnotations: TextAnnotation[]
+  activeTextId: string | null  // The text annotation open in the editor
+  textStyleDefaults: TextStyle  // Style of the last note committed; seeds the next
   embeddingDims: Record<string, { x: number; y: number; z?: number }>  // per-embedding chosen .obsm columns to view (default 0,1)
   lineSmoothingParams: LineSmoothingParams
   drawTool: DrawTool  // Currently selected draw tool
@@ -1040,6 +1049,8 @@ interface AppState {
   //                         from another dataset renders nothing
   //   activeLineId          an id into per-dataset drawnLines; an id from
   //                         elsewhere matches no line and is inert
+  //   activeTextId          the same, for per-dataset textAnnotations
+  //   textStyleDefaults     a style, names nothing in any dataset
   //   activeTaskId          drives a progress indicator, nothing numerical
   //   activeFigure          a figure composes panels *across* datasets — that
   //                         is what the figure builder is for
@@ -1199,6 +1210,13 @@ interface AppState {
   removeLine: (id: string) => void
   // Replace a slot's shapes wholesale (hydration from the backend) and mark it hydrated.
   setDrawnLines: (slot: DatasetSlot, lines: DrawnLine[]) => void
+  // Replace a slot's text annotations wholesale (hydration) and mark it hydrated.
+  setTextAnnotations: (slot: DatasetSlot, notes: TextAnnotation[]) => void
+  // Add a note, or replace the one with the same id.
+  upsertTextAnnotation: (slot: DatasetSlot, note: TextAnnotation) => void
+  removeTextAnnotation: (slot: DatasetSlot, id: string) => void
+  setActiveTextId: (id: string | null) => void
+  setTextStyleDefaults: (style: TextStyle) => void
   setActiveLine: (id: string | null) => void
   setEmbeddingDims: (embeddingName: string, x: number, y: number, z?: number) => void
   renameLine: (id: string, name: string) => void
@@ -1414,6 +1432,7 @@ export const useStore = create<AppState>((set, get) => {
       bivariateSortReversed: ds.bivariateSortReversed,
       displayPreferences: ds.displayPreferences,
       drawnLines: ds.drawnLines,
+      textAnnotations: ds.textAnnotations,
       hiddenColumns: ds.hiddenColumns,
       columnDisplayNames: ds.columnDisplayNames,
       obsSummariesVersion: ds.obsSummariesVersion,
@@ -1493,6 +1512,9 @@ export const useStore = create<AppState>((set, get) => {
     bivariateSortReversed: false,
     drawnLines: [],
     activeLineId: null,
+    textAnnotations: [],
+    activeTextId: null,
+    textStyleDefaults: DEFAULT_TEXT_STYLE,
     embeddingDims: {},
     lineSmoothingParams: {
       windowSize: 5,
@@ -2440,6 +2462,41 @@ export const useStore = create<AppState>((set, get) => {
       })
     },
 
+    setTextAnnotations: (slot, notes) =>
+      set((state) => {
+        const ds = state.datasets[slot]
+        if (!ds) return {}
+        const datasets = { ...state.datasets, [slot]: { ...ds, textAnnotations: notes, textHydrated: true } }
+        return slot === state.activeSlot ? { datasets, textAnnotations: notes } : { datasets }
+      }),
+
+    upsertTextAnnotation: (slot, note) =>
+      set((state) => {
+        const ds = state.datasets[slot]
+        if (!ds) return {}
+        const exists = ds.textAnnotations.some((t) => t.id === note.id)
+        const notes = exists
+          ? ds.textAnnotations.map((t) => (t.id === note.id ? note : t))
+          : [...ds.textAnnotations, note]
+        const datasets = { ...state.datasets, [slot]: { ...ds, textAnnotations: notes } }
+        return slot === state.activeSlot ? { datasets, textAnnotations: notes } : { datasets }
+      }),
+
+    removeTextAnnotation: (slot, id) =>
+      set((state) => {
+        const ds = state.datasets[slot]
+        if (!ds) return {}
+        const notes = ds.textAnnotations.filter((t) => t.id !== id)
+        const datasets = { ...state.datasets, [slot]: { ...ds, textAnnotations: notes } }
+        const activeTextId = state.activeTextId === id ? null : state.activeTextId
+        return slot === state.activeSlot
+          ? { datasets, textAnnotations: notes, activeTextId }
+          : { datasets, activeTextId }
+      }),
+
+    setActiveTextId: (id) => set({ activeTextId: id }),
+    setTextStyleDefaults: (style) => set({ textStyleDefaults: style }),
+
     setDrawnLines: (slot, lines) =>
       set((state) => {
         const ds = state.datasets[slot]
@@ -2625,7 +2682,22 @@ export const useStore = create<AppState>((set, get) => {
             smoothedPoints: l.smoothedPoints ? transformPoints(l.smoothedPoints, affine) : null,
           }
         })
-        return changed ? { drawnLines: next } : {}
+        // Text follows the cells it labels. Only its anchor moves: a label
+        // stays upright and unmirrored, which is what a reader wants after
+        // the embedding is rotated or flipped.
+        let textChanged = false
+        const nextText = state.textAnnotations.map((t) => {
+          if (t.embeddingName !== embeddingName) return t
+          if (viewDims && ((t.dimX ?? 0) !== viewDims.x || (t.dimY ?? 1) !== viewDims.y)) return t
+          if (hull && !pointInPolygon(t.x, t.y, hull)) return t
+          textChanged = true
+          const [x, y] = transformPoint([t.x, t.y], affine)
+          return { ...t, x, y }
+        })
+        return {
+          ...(changed ? { drawnLines: next } : {}),
+          ...(textChanged ? { textAnnotations: nextText } : {}),
+        }
       })),
 
     // Import modal actions (global)

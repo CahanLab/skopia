@@ -879,8 +879,8 @@ export default function ShapeManager() {
             {currentEmbeddingLines.length === 0 && (
               <div style={styles.emptyState}>
                 {hasAnyLines
-                  ? `No shapes on "${selectedEmbedding}". Use the Draw tool to create one.`
-                  : 'No shapes yet. Use the Draw tool to create a line or shape.'}
+                  ? `No shapes on "${selectedEmbedding}". Use Add → Shape or Line to create one.`
+                  : 'No shapes yet. Use Add → Shape or Line to create one.'}
               </div>
             )}
             {currentEmbeddingLines.map((line) => (
