@@ -155,6 +155,20 @@ export const MESSAGES = {
       `A PC subset named "${suffix}" already exists.`,
     clearedToast: (n: number) =>
       `PCA recomputed — cleared ${n.toLocaleString()} derived PC subset${n === 1 ? '' : 's'}.`,
+    hitGenesLabel: 'Highlight genes:',
+    hitGenesPlaceholder: 'Genes to find in the top-loading lists (comma, space or newline separated)',
+    fromGeneSet: 'From gene set…',
+    clearGenes: 'Clear',
+    orderLabel: 'Order PCs:',
+    orderPc: 'PC number',
+    orderHits: 'Most gene-set hits',
+    colHits: 'Hits',
+    hitSummary: (found: number, total: number, topN: number, nPcs: number) =>
+      `${found} of ${total} gene${total === 1 ? '' : 's'} appear in the top ${topN} of at least one PC; ` +
+      `${nPcs} PC${nPcs === 1 ? ' has' : 's have'} hits`,
+    notFound: (genes: string[], max: number) =>
+      `Not in any displayed list: ${genes.slice(0, max).join(', ')}` +
+      (genes.length > max ? ` … and ${genes.length - max} more` : ''),
     neighborsSourceLabel: 'PC source',
     neighborsSourceDescription:
       'Which PC embedding to use. Create derived subsets via PCA Loadings.',
