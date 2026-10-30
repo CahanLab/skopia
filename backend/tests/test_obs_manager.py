@@ -190,6 +190,17 @@ def test_rename_refuses_an_existing_name_and_an_empty_one():
     assert 'cell_type' in a.adata.obs.columns
 
 
+def test_new_names_may_not_take_the_subset_prefix():
+    # A subset_<x> column with no registry entry would block a later subset
+    # named x and look like membership to anything reading by prefix.
+    a = _adaptor()
+    with pytest.raises(ValueError, match='subset_'):
+        a.rename_obs_column('cell_type', 'subset_mine')
+    with pytest.raises(ValueError, match='subset_'):
+        a.duplicate_obs_column('is_doublet', 'subset_mine')
+    assert 'subset_mine' not in a.adata.obs.columns
+
+
 def test_rename_refuses_a_saved_subsets_column():
     a = _adaptor()
     a.create_cell_subset('chondro', list(range(0, N, 2)))

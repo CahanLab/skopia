@@ -3273,6 +3273,12 @@ class DataAdaptor:
             raise ValueError('The new column name is empty.')
         if name in self.adata.obs.columns:
             raise ValueError(f"A column named '{name}' already exists.")
+        # Saved subsets own that prefix; a column under it with no registry
+        # entry would refuse a later subset of the same name.
+        if name.startswith(SUBSET_OBS_PREFIX):
+            raise ValueError(
+                f"Names starting with '{SUBSET_OBS_PREFIX}' are kept for saved cell subsets; "
+                "save a subset from the Cells panel instead.")
         return name
 
     def rename_obs_column(self, column: str, new_name: str) -> dict[str, Any]:

@@ -126,6 +126,7 @@ describe('names and conversions', () => {
     expect(newNameProblem('  ', ['a'])).toMatch(/Enter/)
     expect(newNameProblem('a', ['a'])).toMatch(/already exists/)
     expect(newNameProblem(' b ', ['a'])).toBeNull()
+    expect(newNameProblem('subset_x', ['a'])).toMatch(/saved cell subsets/)
   })
 
   it('offers boolean only for two-valued complete columns and nothing for a subset column', () => {

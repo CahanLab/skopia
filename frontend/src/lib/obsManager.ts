@@ -129,6 +129,7 @@ export function newNameProblem(name: string, existing: readonly string[]): strin
   const n = name.trim()
   if (!n) return 'Enter a name.'
   if (existing.includes(n)) return `A column named '${n}' already exists.`
+  if (n.startsWith('subset_')) return "Names starting with 'subset_' are kept for saved cell subsets."
   return null
 }
 

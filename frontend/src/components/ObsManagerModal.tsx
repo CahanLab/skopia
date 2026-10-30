@@ -253,6 +253,9 @@ export default function ObsManagerModal({ onClose }: { onClose: () => void }) {
 
   const handleConvert = () => focused && convertTo && run(async () => {
     const out = await convertObsColumn(focused.name, convertTo, convertTo === 'boolean' ? trueValue : null)
+    // The column's kind changed, so the target just used is usually no longer
+    // offered; leaving it set kept the True = picker and Convert live.
+    setConvertTo('')
     // The column's values changed shape; drop the cached colour data so the
     // colour-by hook refetches it.
     if (colorColumn === focused.name) useStore.getState().setColorBy(null)
