@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { isParamVisible } from '../lib/paramVisibility'
 import { useStore, ScanpyActionRecord, PCASubsetSummary, userConfigGet } from '../store'
 import { appendDataset, pollTask, cancelTask, runDiffExp, fetchGeneMask, usePcaLoadings, fetchPcaSubsets, createPcaSubset, deletePcaSubset, createCellSubset, refreshCellSubsets } from '../hooks/useData'
@@ -10,6 +10,8 @@ import { FilterGenesQcPanel, FilterGenesDistributions } from './FilterGenesQcPan
 import { percentOfCells } from '../lib/percentOfCells'
 import { DEFAULT_EXCLUDE_GENE_PATTERNS, excludeGenePatternsFor } from '../lib/excludeGenes'
 import { MESSAGES } from '../messages'
+import { flattenGeneSets } from './GenePanel'
+import { parseGeneInput, computeLoadingHits, orderPcs, isHit, formatHitCount, geneSetInputText, type PcOrder } from '../lib/pcaLoadingHits'
 
 const API_BASE = '/api'
 
@@ -921,6 +923,10 @@ export default function ScanpyModal() {
   const [pcaTopN, setPcaTopN] = useState<number>(10)
   const [pcaCheckedPCs, setPcaCheckedPCs] = useState<Set<number>>(new Set())
   const [pcaSuffix, setPcaSuffix] = useState<string>('')
+  // Gene-set hits in the loadings table. Order is a view preference; the gene
+  // text is cleared on a dataset switch (below).
+  const [pcaHitGenesText, setPcaHitGenesText] = useState<string>('')
+  const [pcaOrder, setPcaOrder] = useState<PcOrder>('pc')
   const [pcaCreateBusy, setPcaCreateBusy] = useState<boolean>(false)
 
   // Combine neighbor graphs state
@@ -990,6 +996,29 @@ export default function ScanpyModal() {
     setPcaCheckedPCs(new Set())
     setPcaSuffix('')
   }, [pcaLoadings?.n_pcs, activeSlot])
+
+  // A gene list typed for one dataset is not carried into another; a PCA
+  // re-run on the same dataset keeps it, since the question is unchanged.
+  useEffect(() => {
+    setPcaHitGenesText('')
+  }, [activeSlot])
+
+  const geneSetCategories = useStore((s) => s.geneSetCategories)
+  const pcaHitGeneSets = useMemo(
+    () => (selectedFunction === 'pca_loadings'
+      ? flattenGeneSets(geneSetCategories).filter((g) => g.genes.length + (g.genesDown?.length ?? 0) > 0)
+      : []),
+    [geneSetCategories, selectedFunction],
+  )
+  const pcaHitGenes = useMemo(() => parseGeneInput(pcaHitGenesText), [pcaHitGenesText])
+  const pcaHits = useMemo(
+    () => (pcaLoadings ? computeLoadingHits(pcaLoadings.pcs, pcaHitGenes) : null),
+    [pcaLoadings, pcaHitGenes],
+  )
+  const pcaRowsOrdered = useMemo(
+    () => (pcaLoadings && pcaHits ? orderPcs(pcaLoadings.pcs, pcaHits.byPc, pcaOrder) : []),
+    [pcaLoadings, pcaHits, pcaOrder],
+  )
 
   // Get current function definition
   const categoryDef = SCANPY_FUNCTIONS[selectedCategory]
@@ -2143,7 +2172,67 @@ export default function ScanpyModal() {
                 onChange={(e) => setPcaTopN(Math.max(1, parseInt(e.target.value) || 1))}
                 style={{ width: '70px', padding: '4px 6px', fontSize: '12px', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #1a1a2e', borderRadius: '4px' }}
               />
+              <div style={{ flex: 1 }} />
+              <label style={{ fontSize: '12px', color: '#aaa' }}>
+                {MESSAGES.pcaLoadings.orderLabel}
+              </label>
+              <select
+                value={pcaOrder}
+                onChange={(e) => setPcaOrder(e.target.value as PcOrder)}
+                style={{ padding: '4px 6px', fontSize: '12px', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #1a1a2e', borderRadius: '4px' }}
+              >
+                <option value="pc">{MESSAGES.pcaLoadings.orderPc}</option>
+                <option value="hits">{MESSAGES.pcaLoadings.orderHits}</option>
+              </select>
             </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+              <label style={{ fontSize: '12px', color: '#aaa' }}>
+                {MESSAGES.pcaLoadings.hitGenesLabel}
+              </label>
+              <select
+                value=""
+                disabled={pcaHitGeneSets.length === 0}
+                onChange={(e) => {
+                  const set = pcaHitGeneSets.find((g) => g.id === e.target.value)
+                  if (set) setPcaHitGenesText(geneSetInputText(set))
+                }}
+                style={{ padding: '4px 6px', fontSize: '12px', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #1a1a2e', borderRadius: '4px', maxWidth: '220px' }}
+              >
+                <option value="">{MESSAGES.pcaLoadings.fromGeneSet}</option>
+                {pcaHitGeneSets.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name} ({g.genes.length + (g.genesDown?.length ?? 0)})</option>
+                ))}
+              </select>
+              {pcaHitGenesText && (
+                <button
+                  onClick={() => setPcaHitGenesText('')}
+                  style={{ padding: '3px 8px', fontSize: '11px', backgroundColor: 'transparent', color: '#888', border: '1px solid #0f3460', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  {MESSAGES.pcaLoadings.clearGenes}
+                </button>
+              )}
+            </div>
+            <textarea
+              value={pcaHitGenesText}
+              onChange={(e) => setPcaHitGenesText(e.target.value)}
+              placeholder={MESSAGES.pcaLoadings.hitGenesPlaceholder}
+              rows={2}
+              spellCheck={false}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '4px 6px', fontSize: '12px', fontFamily: 'inherit', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #1a1a2e', borderRadius: '4px', resize: 'vertical', marginBottom: '6px' }}
+            />
+            {pcaLoadings && pcaHits && pcaHits.nGenes > 0 && (
+              <div style={{ marginBottom: '8px' }}>
+                <div style={{ fontSize: '11px', color: '#4ecdc4' }}>
+                  {MESSAGES.pcaLoadings.hitSummary(pcaHits.found.length, pcaHits.nGenes, pcaLoadings.top_n, pcaHits.nPcsWithHits)}
+                </div>
+                {pcaHits.notFound.length > 0 && (
+                  <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }} title={pcaHits.notFound.join(', ')}>
+                    {MESSAGES.pcaLoadings.notFound(pcaHits.notFound, 40)}
+                  </div>
+                )}
+              </div>
+            )}
 
             {pcaLoadings && pcaLoadings.n_genes_loaded < pcaLoadings.n_genes_total && (
               <div style={{ fontSize: '11px', color: '#888', marginBottom: '8px', fontStyle: 'italic' }}>
@@ -2176,24 +2265,44 @@ export default function ScanpyModal() {
                       <th style={{ padding: '6px 8px', color: '#aaa', textAlign: 'left', width: '36px' }}></th>
                       <th style={{ padding: '6px 8px', color: '#aaa', textAlign: 'right', width: '48px' }}>{MESSAGES.pcaLoadings.colPC}</th>
                       <th style={{ padding: '6px 8px', color: '#aaa', textAlign: 'right', width: '64px' }}>{MESSAGES.pcaLoadings.colVariance}</th>
+                      {pcaHits && pcaHits.nGenes > 0 && (
+                        <th style={{ padding: '6px 8px', color: '#aaa', textAlign: 'right', width: '72px' }}>{MESSAGES.pcaLoadings.colHits}</th>
+                      )}
                       <th style={{ padding: '6px 8px', color: '#aaa', textAlign: 'left' }}>{MESSAGES.pcaLoadings.colPositive}</th>
                       <th style={{ padding: '6px 8px', color: '#aaa', textAlign: 'left' }}>{MESSAGES.pcaLoadings.colNegative}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {pcaLoadings.pcs.map((pc) => {
+                    {pcaRowsOrdered.map((pc) => {
                       const pcNum = pc.index + 1
                       const checked = pcaCheckedPCs.has(pcNum)
                       const varPct = pc.variance_ratio != null ? `${(pc.variance_ratio * 100).toFixed(1)}%` : '—'
+                      const hits = pcaHits?.byPc.get(pcNum)
+                      const showHits = !!pcaHits && pcaHits.nGenes > 0
+                      const renderGenes = (genes: typeof pc.positive) => genes.map((g, i) => {
+                        const hit = !!pcaHits && isHit(pcaHits.query, g.gene)
+                        return (
+                          <span key={g.gene} title={`loading=${g.loading.toFixed(4)}`}>
+                            <span
+                              data-pca-hit={hit ? g.gene : undefined}
+                              style={hit ? { color: '#4ecdc4', fontWeight: 700, backgroundColor: 'rgba(78, 205, 196, 0.18)', borderRadius: '3px', padding: '0 3px' } : undefined}
+                            >
+                              {g.gene}
+                            </span>
+                            {i < genes.length - 1 ? ', ' : ''}
+                          </span>
+                        )
+                      })
                       return (
                         <tr
                           key={pc.index}
+                          data-pc={pcNum}
                           style={{
                             borderBottom: '1px solid #0a0f1a',
                             backgroundColor: checked ? 'rgba(78, 205, 196, 0.12)' : 'transparent',
                           }}
                         >
-                          <td style={{ padding: '4px 8px', textAlign: 'center' }}>
+                          <td style={{ padding: '4px 8px', textAlign: 'center', boxShadow: hits && hits.total > 0 ? 'inset 3px 0 0 #4ecdc4' : undefined }}>
                             <input
                               type="checkbox"
                               checked={checked}
@@ -2209,24 +2318,21 @@ export default function ScanpyModal() {
                           </td>
                           <td style={{ padding: '4px 8px', textAlign: 'right', color: '#ccc' }}>{pcNum}</td>
                           <td style={{ padding: '4px 8px', textAlign: 'right', color: '#ccc' }}>{varPct}</td>
+                          {showHits && (
+                            <td data-pca-hits style={{ padding: '4px 8px', textAlign: 'right', whiteSpace: 'nowrap', color: hits && hits.total > 0 ? '#4ecdc4' : '#555', fontWeight: hits && hits.total > 0 ? 600 : undefined }}>
+                              {hits ? formatHitCount(hits) : '0'}
+                            </td>
+                          )}
                           <td style={{ padding: '4px 8px', color: '#ccc' }}>
                             {pc.positive.length === 0
                               ? <span style={{ color: '#555' }}>—</span>
-                              : pc.positive.map((g, i) => (
-                                  <span key={g.gene} title={`loading=${g.loading.toFixed(4)}`}>
-                                    {g.gene}{i < pc.positive.length - 1 ? ', ' : ''}
-                                  </span>
-                                ))
+                              : renderGenes(pc.positive)
                             }
                           </td>
                           <td style={{ padding: '4px 8px', color: '#ccc' }}>
                             {pc.negative.length === 0
                               ? <span style={{ color: '#555' }}>—</span>
-                              : pc.negative.map((g, i) => (
-                                  <span key={g.gene} title={`loading=${g.loading.toFixed(4)}`}>
-                                    {g.gene}{i < pc.negative.length - 1 ? ', ' : ''}
-                                  </span>
-                                ))
+                              : renderGenes(pc.negative)
                             }
                           </td>
                         </tr>
