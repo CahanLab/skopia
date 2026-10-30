@@ -617,9 +617,13 @@ Typical workflow for "find DEGs by expression state in a region": lasso a region
 - Set **Top N genes** and click **Run**
 - You can also use lasso selection: select cells → **Set as Group 1** / **Set as Group 2** → click **Compare** in the comparison bar
 
+### Text labels on an embedding
+
+**Add → Text**, then click the plot to place a label. Click a label to edit it: text (Shift+Enter for a new line), size in screen pixels, color, bold, italic, alignment, rotation, and an optional box behind it with its own color and opacity. Drag a label to move it; **Delete** in the editor removes it, **Revert** undoes the edits made since it was opened. A label is pinned to its place in the embedding's coordinates, so it stays on its cells when you pan, zoom, rotate or flip (Adjust), and it is shown only on the embedding and the two columns it was placed on. Labels are saved with the dataset in `uns['xcell_text_annotations_json']` and come back when an exported h5ad is reopened. The next label starts with the style of the last one.
+
 ### 10. Trajectory Analysis
 
-- Draw lines on the scatter plot
+- Draw lines on the scatter plot (**Add → Line**: Pencil, Smooth Curve, Segmented Line; **Add → Shape**: Lasso, Polygon)
 - Click the gear icon on a shape in the **Shapes** panel to open **Line Tools**
 - Under **Gene Association**, configure:
   - **Test against**: position along line or distance from line

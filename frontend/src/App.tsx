@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { useStore, createDefaultCategories, DatasetSlot } from './store'
 import { mergeHydratedCategories } from './lib/geneSetHydration'
 import { meanOf, convexHull, type ShapeAffine } from './utils/shapeTransform'
-import { useSchema, useEmbedding, useColorBy, useDataActions, exportAnnotations, useExpressionTransformEffect, useBivariateTransformEffect, useHighlightSync, useSpatialScale, useSlotEmbedding, useSecondEmbedding, appendDataset, fetchGeneMask, fetchLines, syncLinesToBackend, refreshCellSubsets } from './hooks/useData'
+import { useSchema, useEmbedding, useColorBy, useDataActions, exportAnnotations, useExpressionTransformEffect, useBivariateTransformEffect, useHighlightSync, useSpatialScale, useSlotEmbedding, useSecondEmbedding, appendDataset, fetchGeneMask, fetchLines, syncLinesToBackend, fetchTextAnnotations, syncTextAnnotationsToBackend, refreshCellSubsets } from './hooks/useData'
 import { pickSecondEmbedding } from './lib/pickSecondEmbedding'
 import EmbeddingPlot from './components/EmbeddingPlot'
 import DatasetPane from './components/DatasetPane'
@@ -59,6 +59,14 @@ import { MESSAGES } from './messages'
 import { buildCrumbs } from './lib/pathCrumbs'
 import { isDiffmapKey, diffmapAxisLabel } from './lib/diffusion'
 import { assertJsonResponse } from './lib/foreignServer'
+
+// The Add dropdown: section headers group the tools by what they make.
+const addMenuStyles: Record<string, React.CSSProperties> = {
+  section: { borderTop: '1px solid #0f3460', padding: '4px 12px 2px', fontSize: '10px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  item: { padding: '8px 12px', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' },
+  icon: { fontSize: '16px', width: '20px', textAlign: 'center' },
+  desc: { fontSize: '10px', color: '#888' },
+}
 
 const styles = {
   container: {
@@ -858,10 +866,13 @@ export default function App() {
     setInteractionMode(interactionMode === 'lasso' ? 'pan' : 'lasso')
   }, [interactionMode, setInteractionMode])
 
+  // Add covers shapes, lines (both 'draw' mode) and text ('text' mode); the
+  // main button re-enters whichever was picked last.
+  const [addMode, setAddMode] = useState<'draw' | 'text'>('draw')
   const toggleDrawMode = useCallback(() => {
-    setInteractionMode(interactionMode === 'draw' ? 'pan' : 'draw')
+    setInteractionMode(interactionMode === 'draw' || interactionMode === 'text' ? 'pan' : addMode)
     setShowDrawMenu(false)
-  }, [interactionMode, setInteractionMode])
+  }, [interactionMode, setInteractionMode, addMode])
 
   // Close dropdown menus on outside click
   useEffect(() => {
@@ -1048,6 +1059,26 @@ export default function App() {
     return () => clearTimeout(t)
   }, [drawnLines, linesHydrated])
 
+  // Text annotations: the same read-once, write-on-change cycle as shapes.
+  const textHydrated = useStore((s) => s.datasets[s.activeSlot]?.textHydrated ?? false)
+  const textAnnotations = useStore((s) => s.textAnnotations)
+  useEffect(() => {
+    if (!slotsResolved || !schema || textHydrated) return
+    const slot = useStore.getState().activeSlot
+    fetchTextAnnotations(slot)
+      .then((notes) => useStore.getState().setTextAnnotations(slot, notes))
+      .catch((err) => console.warn('Could not load text annotations:', err))
+  }, [slotsResolved, schema, textHydrated])
+  useEffect(() => {
+    if (!textHydrated) return
+    const slot = useStore.getState().activeSlot
+    const t = setTimeout(() => {
+      syncTextAnnotationsToBackend(textAnnotations, slot)
+        .catch((err) => console.warn('Could not save text annotations:', err))
+    }, 500)
+    return () => clearTimeout(t)
+  }, [textAnnotations, textHydrated])
+
   const handleExportH5ad = useCallback(async () => {
     try {
       // Flush the shapes before exporting so the file carries the latest.
@@ -1056,6 +1087,9 @@ export default function App() {
           console.warn('Failed to send lines to backend, continuing with export')
         })
       }
+      await syncTextAnnotationsToBackend(useStore.getState().textAnnotations).catch(() => {
+        console.warn('Failed to send text annotations to backend, continuing with export')
+      })
 
       // Now export h5ad
       const response = await fetch(appendDataset('/api/export/h5ad'))
@@ -1485,21 +1519,21 @@ export default function App() {
                 <button
                   style={{
                     ...styles.toolButton,
-                    ...(interactionMode === 'draw' ? { ...styles.toolButtonActive, backgroundColor: '#4ecdc4' } : {}),
+                    ...(interactionMode === 'draw' || interactionMode === 'text' ? { ...styles.toolButtonActive, backgroundColor: '#4ecdc4' } : {}),
                     borderRadius: '4px 0 0 4px',
                     borderRight: 'none',
                   }}
                   onClick={toggleDrawMode}
-                  title="Draw shapes for trajectory analysis (Escape to exit)"
+                  title="Add shapes, lines, or text to the embedding (Escape to exit)"
                 >
-                  <span>&#9998;</span> Draw
+                  <span>&#9998;</span> Add
                 </button>
                 <button
                   style={{
                     padding: '6px 4px',
                     fontSize: '8px',
-                    backgroundColor: interactionMode === 'draw' ? '#4ecdc4' : '#0f3460',
-                    color: interactionMode === 'draw' ? '#000' : '#aaa',
+                    backgroundColor: interactionMode === 'draw' || interactionMode === 'text' ? '#4ecdc4' : '#0f3460',
+                    color: interactionMode === 'draw' || interactionMode === 'text' ? '#000' : '#aaa',
                     border: '1px solid #1a1a2e',
                     borderLeft: '1px solid rgba(255,255,255,0.1)',
                     cursor: 'pointer',
@@ -1508,7 +1542,7 @@ export default function App() {
                     alignItems: 'center',
                   }}
                   onClick={(e) => { e.stopPropagation(); setShowDrawMenu(!showDrawMenu) }}
-                  title="Select draw tool"
+                  title="Choose a shape, line, or text tool"
                 >
                   {'\u25BC'}
                 </button>
@@ -1527,37 +1561,56 @@ export default function App() {
                     }}
                   >
                     {([
-                      ['pencil', '\u270F', 'Pencil', 'Click and drag to draw freehand'],
-                      ['lasso', '\u2B2F', 'Lasso', 'Click and drag to draw closed shape'],
-                      ['polygon', '\u2B21', 'Polygon', 'Click to add vertices, double-click to close'],
-                      ['segmented', '\u2571', 'Segmented Line', 'Click to add points, double-click to finish'],
-                      ['smooth_curve', '\u223F', 'Smooth Curve', 'Click to add control points, double-click to finish'],
-                    ] as const).map(([tool, icon, label, desc]) => (
-                      <div
-                        key={tool}
-                        onClick={() => {
-                          setDrawTool(tool)
-                          setShowDrawMenu(false)
-                          if (interactionMode !== 'draw') setInteractionMode('draw')
-                        }}
-                        style={{
-                          padding: '8px 12px',
-                          cursor: 'pointer',
-                          fontSize: '13px',
-                          color: drawTool === tool ? '#4ecdc4' : '#ccc',
-                          backgroundColor: drawTool === tool ? '#0f3460' : 'transparent',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                        }}
-                      >
-                        <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>{icon}</span>
-                        <div>
-                          <div>{label}</div>
-                          <div style={{ fontSize: '10px', color: '#888' }}>{desc}</div>
-                        </div>
+                      ['Shape', [
+                        ['lasso', '\u2B2F', 'Lasso', 'Click and drag to draw a closed shape'],
+                        ['polygon', '\u2B21', 'Polygon', 'Click to add vertices, double-click to close'],
+                      ]],
+                      ['Line', [
+                        ['pencil', '\u270F', 'Pencil', 'Click and drag to draw freehand'],
+                        ['smooth_curve', '\u223F', 'Smooth Curve', 'Click to add control points, double-click to finish'],
+                        ['segmented', '\u2571', 'Segmented Line', 'Click to add points, double-click to finish'],
+                      ]],
+                    ] as const).map(([section, tools]) => (
+                      <div key={section}>
+                        <div style={addMenuStyles.section}>{section}</div>
+                        {tools.map(([tool, icon, label, desc]) => {
+                          const current = addMode === 'draw' && drawTool === tool
+                          return (
+                            <div
+                              key={tool}
+                              onClick={() => {
+                                setDrawTool(tool)
+                                setAddMode('draw')
+                                setShowDrawMenu(false)
+                                if (interactionMode !== 'draw') setInteractionMode('draw')
+                              }}
+                              style={{ ...addMenuStyles.item, color: current ? '#4ecdc4' : '#ccc', backgroundColor: current ? '#0f3460' : 'transparent' }}
+                            >
+                              <span style={addMenuStyles.icon}>{icon}</span>
+                              <div>
+                                <div>{label}</div>
+                                <div style={addMenuStyles.desc}>{desc}</div>
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
                     ))}
+                    <div style={addMenuStyles.section}>Text</div>
+                    <div
+                      onClick={() => {
+                        setAddMode('text')
+                        setShowDrawMenu(false)
+                        if (interactionMode !== 'text') setInteractionMode('text')
+                      }}
+                      style={{ ...addMenuStyles.item, color: addMode === 'text' ? '#4ecdc4' : '#ccc', backgroundColor: addMode === 'text' ? '#0f3460' : 'transparent' }}
+                    >
+                      <span style={addMenuStyles.icon}>T</span>
+                      <div>
+                        <div>Text</div>
+                        <div style={addMenuStyles.desc}>Click to place a label; click one to edit its size, color, box</div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

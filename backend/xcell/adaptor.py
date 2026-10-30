@@ -742,6 +742,16 @@ RESERVED_SUBSET_NAMES = frozenset({'spatial', 'neighbors', 'pca', 'umap', 'leide
 # nested uns.
 LINES_UNS = 'xcell_lines_json'
 
+# Text placed on an embedding (labels, callouts). Same storage reasoning as
+# LINES_UNS; positions are in the embedding's data coordinates so a note stays
+# on its place under pan and zoom.
+TEXT_ANNOTATIONS_UNS = 'xcell_text_annotations_json'
+_TEXT_DEFAULTS: dict[str, Any] = {
+    'dimX': 0, 'dimY': 1, 'fontSize': 14, 'color': '#ffffff', 'fontWeight': 'normal',
+    'fontStyle': 'normal', 'background': None, 'backgroundOpacity': 0.6,
+    'anchor': 'middle', 'angle': 0, 'visible': True,
+}
+
 # Diffusion maps and the pseudotimes computed on them. An .obsm array carries
 # neither its eigenvalues nor the graph it came from, and scanpy's own
 # uns['diffmap_evals'] has room for one map; DPT needs both, for any map.
@@ -856,6 +866,7 @@ class DataAdaptor:
             self.adata, source_kind = load_dataset_file(self.filepath)
         self._normalized_adata: anndata.AnnData | None = None
         self._drawn_lines: list[dict[str, Any]] = self._restore_lines()
+        self._text_annotations: list[dict[str, Any]] = self._restore_text_annotations()
         self._action_history: list[dict[str, Any]] = []  # Track scanpy operations
         self._embedding_undo_stacks: dict[str, list[np.ndarray]] = {}  # Undo stacks for quilt transforms
         # Gene mask state — None means no mask is active.
@@ -3659,6 +3670,67 @@ class DataAdaptor:
         """The stored drawn shapes."""
         return self._drawn_lines
 
+    @staticmethod
+    def _text_annotation_or_none(item: Any) -> dict[str, Any] | None:
+        """An annotation with defaults filled, or None if it cannot be drawn."""
+        if not isinstance(item, dict):
+            return None
+        if not item.get('embeddingName') or not str(item.get('text') or '').strip():
+            return None
+        try:
+            x, y = float(item['x']), float(item['y'])
+        except (KeyError, TypeError, ValueError):
+            return None
+        if not (np.isfinite(x) and np.isfinite(y)):
+            return None
+        return {**_TEXT_DEFAULTS, **item, 'x': x, 'y': y}
+
+    def _restore_text_annotations(self) -> list[dict[str, Any]]:
+        """Read text annotations out of .uns; skip bad entries, never fail the load."""
+        raw = self.adata.uns.get(TEXT_ANNOTATIONS_UNS)
+        if not raw:
+            return []
+        try:
+            stored = json.loads(raw)
+        except (TypeError, ValueError):
+            return []
+        out = []
+        for i, item in enumerate(stored if isinstance(stored, list) else []):
+            fixed = self._text_annotation_or_none(item)
+            if fixed is not None:
+                fixed.setdefault('id', f'text_restored_{i}')
+                out.append(fixed)
+        return out
+
+    def set_text_annotations(self, items: list[dict[str, Any]]) -> None:
+        """Store the browser's text annotations, in memory and in .uns.
+
+        Unlike a restore, a set refuses bad input: the browser sent it, so the
+        user should hear about it rather than lose a note silently. A note on
+        an embedding that is not in .obsm is kept, not refused: refusing would
+        fail every later save of the whole list once any embedding is removed,
+        and such a note is simply never drawn.
+
+        Raises:
+            ValueError: a non-finite position or empty text.
+        """
+        fixed = []
+        for item in items:
+            one = self._text_annotation_or_none(item)
+            if one is None:
+                raise ValueError(
+                    f"Text annotation '{item.get('id', '')}' needs text and finite x/y")
+            fixed.append(one)
+        self._text_annotations = fixed
+        if fixed:
+            self.adata.uns[TEXT_ANNOTATIONS_UNS] = json.dumps(fixed)
+        else:
+            self.adata.uns.pop(TEXT_ANNOTATIONS_UNS, None)
+
+    def get_text_annotations(self) -> list[dict[str, Any]]:
+        """The stored text annotations."""
+        return self._text_annotations
+
     def _lines_on(self, embeddings: set[str]) -> list[dict[str, Any]]:
         return [line for line in self._drawn_lines if line.get('embeddingName') in embeddings]
 
@@ -5295,6 +5367,10 @@ class DataAdaptor:
             if dropped_lines:
                 self.set_lines([line for line in self._drawn_lines
                                 if line.get('embeddingName') not in gone_embeddings])
+            kept_text = [t for t in self._text_annotations
+                         if t.get('embeddingName') not in gone_embeddings]
+            if len(kept_text) != len(self._text_annotations):
+                self.set_text_annotations(kept_text)
             dropped_territories = self._territories_on(gone_embeddings)
             if dropped_territories:
                 stored = self.get_territories()

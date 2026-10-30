@@ -12,6 +12,7 @@ import { boundsOf, fitView } from '../lib/viewFit'
 import { cellsInPolygon, packPositions } from '../lib/embeddingCoverage'
 import { appendDataset } from '../hooks/useData'
 import { faceColor, polygonPath } from '../lib/territoryGeometry'
+import TextAnnotationOverlay from './TextAnnotationOverlay'
 
 interface ScatterPlotProps {
   slot?: DatasetSlot
@@ -1459,6 +1460,16 @@ export default function ScatterPlot({
           </text>
         ))}
       </svg>
+
+      <TextAnnotationOverlay
+        slot={slot}
+        embeddingName={embedding.name}
+        dimX={embedding.dim_x ?? 0}
+        dimY={embedding.dim_y ?? 1}
+        target={[(viewState.target as number[])[0], (viewState.target as number[])[1]]}
+        zoom={typeof viewState.zoom === 'number' ? viewState.zoom : (viewState.zoom?.[0] ?? 0)}
+        active={interactionMode === 'text'}
+      />
 
       {/* Live rotation badge — anchored just above-right of the pivot ring. */}
       {activeRotationDeg !== null && rotatePivotScreen.current && containerRef.current && (() => {

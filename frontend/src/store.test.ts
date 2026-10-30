@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useStore, createDefaultDatasetState, Schema } from './store'
+import { DEFAULT_TEXT_STYLE } from './lib/textAnnotations'
 
 // A comparison is a statement about *one* dataset: "these cells versus those
 // cells, in this matrix". Cell indices, the split view's second geometry, and
@@ -695,5 +696,55 @@ describe('a diffusion map opens past its stationary column', () => {
     useStore.getState().setSelectedEmbedding('X_pca')
     expect(useStore.getState().embeddingDims['X_diffmap_flat']).toBeUndefined()
     expect(useStore.getState().embeddingDims['X_pca']).toBeUndefined()
+  })
+})
+
+describe('text annotations are per slot', () => {
+  const note = (id: string, x = 0, y = 0) => ({
+    ...DEFAULT_TEXT_STYLE, id, embeddingName: 'X_umap', dimX: 0, dimY: 1, x, y, text: id, visible: true,
+  })
+
+  it('hydration marks the slot and mirrors only the active one', () => {
+    useStore.getState().setTextAnnotations('secondary', [note('s')])
+    let st = useStore.getState()
+    expect(st.datasets.secondary.textHydrated).toBe(true)
+    expect(st.textAnnotations).toEqual([])
+    useStore.getState().setTextAnnotations('primary', [note('p')])
+    st = useStore.getState()
+    expect(st.textAnnotations.map((t) => t.id)).toEqual(['p'])
+  })
+
+  it('upsert adds, then replaces by id', () => {
+    useStore.getState().upsertTextAnnotation('primary', note('a'))
+    useStore.getState().upsertTextAnnotation('primary', { ...note('a'), text: 'edited' })
+    const st = useStore.getState()
+    expect(st.datasets.primary.textAnnotations.map((t) => t.text)).toEqual(['edited'])
+    expect(st.textAnnotations.map((t) => t.text)).toEqual(['edited'])
+  })
+
+  it('removing the open note closes the editor', () => {
+    useStore.getState().upsertTextAnnotation('primary', note('a'))
+    useStore.getState().setActiveTextId('a')
+    useStore.getState().removeTextAnnotation('primary', 'a')
+    expect(useStore.getState().activeTextId).toBeNull()
+    expect(useStore.getState().textAnnotations).toEqual([])
+  })
+
+  it('moves with an embedding transform; a quilt hull moves only notes inside it', () => {
+    useStore.getState().upsertTextAnnotation('primary', note('in', 1, 1))
+    useStore.getState().upsertTextAnnotation('primary', note('out', 10, 10))
+    const hull: [number, number][] = [[0, 0], [2, 0], [2, 2], [0, 2]]
+    useStore.getState().transformShapesForEmbedding(
+      'X_umap', { centroid: [0, 0], rotationDegrees: 0, translateX: 5, translateY: 0 }, hull)
+    const byId = Object.fromEntries(useStore.getState().textAnnotations.map((t) => [t.id, [t.x, t.y]]))
+    expect(byId.in).toEqual([6, 1])
+    expect(byId.out).toEqual([10, 10])
+  })
+
+  it('a fresh load resets text hydration', () => {
+    useStore.getState().setTextAnnotations('primary', [note('p')])
+    useStore.getState().loadDatasetIntoSlot('primary', PRIMARY)
+    expect(useStore.getState().datasets.primary.textHydrated).toBe(false)
+    expect(useStore.getState().textAnnotations).toEqual([])
   })
 })

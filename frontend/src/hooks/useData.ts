@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useState, useRef } from 'react'
 import type { OraResult, EnrichmentSummary, CachedLibrary, AnyEnrichmentResult, BatchCollection } from '../lib/enrichment'
 import type { FigureRecord, FigureSummary, FigureData } from '../lib/figures'
+import type { TextAnnotation } from '../lib/textAnnotations'
 import { mergePcaSubsetLists } from '../lib/pcaSubsets'
 import { useStore, DatasetSlot, Schema, EmbeddingData, ObsColumnData, DrawnLine, ExpressionData, BivariateExpressionData, DiffExpResult, LineAssociationResult, GeneMaskConfig, PCASubsetSummary, HighlightLayer, HighlightThresholdMode } from '../store'
 import { defaultThresholds } from '../utils/histogram'
@@ -1929,6 +1930,22 @@ export async function fetchLines(slot?: DatasetSlot): Promise<DrawnLine[]> {
   const data = await fetchJson<{ lines: Array<Omit<DrawnLine, 'projections'>> }>(
     appendDataset(`${API_BASE}/lines`, slot))
   return (data.lines || []).map((l) => ({ ...l, projections: [] }))
+}
+
+/** Send the slot's text annotations to the backend, which keeps them in the h5ad. */
+export async function syncTextAnnotationsToBackend(notes: TextAnnotation[], slot?: DatasetSlot) {
+  await fetchJson(appendDataset(`${API_BASE}/text_annotations`, slot), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ annotations: notes }),
+  })
+}
+
+/** The text annotations stored with the dataset. */
+export async function fetchTextAnnotations(slot?: DatasetSlot): Promise<TextAnnotation[]> {
+  const data = await fetchJson<{ annotations: TextAnnotation[] }>(
+    appendDataset(`${API_BASE}/text_annotations`, slot))
+  return data.annotations || []
 }
 
 export async function runLineAssociation(params: LineAssociationParams, slot?: DatasetSlot): Promise<LineAssociationResult> {
