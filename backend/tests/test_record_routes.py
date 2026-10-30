@@ -127,6 +127,38 @@ def test_marking_the_start_trims_the_report_without_losing_history():
     assert body['counts']['total'] == 1     # but only log1p is in the report
 
 
+def test_report_start_can_be_moved_back_over_the_api():
+    a = _install()
+    a.run_normalize_total(target_sum=1e4)
+    a.run_log1p()
+    c = _client()
+    c.post('/api/record/mark')
+    assert c.get('/api/record').json()['counts']['total'] == 0
+    r = c.put('/api/record/report_start', json={'index': 0})
+    assert r.status_code == 200 and r.json()['report_start'] == 0
+    body = c.get('/api/record').json()
+    assert body['counts']['total'] == 2
+    assert all(s['in_report'] for s in body['steps'])
+
+
+def test_report_start_out_of_range_is_a_400():
+    _install()
+    r = _client().put('/api/record/report_start', json={'index': 99})
+    assert r.status_code == 400
+
+
+def test_export_refuses_a_report_with_every_step_left_out(tmp_path):
+    """The user saw an empty file; tell them why instead of writing one."""
+    a = _install()
+    a.run_normalize_total(target_sum=1e4)
+    c = _client()
+    c.post('/api/record/mark')
+    r = c.post('/api/record/export', json={'output_dir': str(tmp_path), 'format': 'md'})
+    assert r.status_code == 400
+    assert 'outside the report' in r.json()['detail']
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_clearing_keeps_the_load_step():
     a = _install()
     a.run_log1p()
