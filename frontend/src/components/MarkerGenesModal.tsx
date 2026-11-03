@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { markerGenesParams, maskedCategoryCounts, runnableGroupCount, selectionFromModal, runSignature } from '../lib/markerGenes'
 import { indicesFromMask } from '../lib/cellSubsets'
-import { DEFAULT_DOTPLOT_OPTIONS } from '../lib/markerSelection'
+import { DEFAULT_DOTPLOT_OPTIONS, type MarkerRestriction } from '../lib/markerSelection'
+import RestrictionPicker from './RestrictionPicker'
 import { useStore, cfgDefault, ObsColumnData } from '../store'
 import { useObsSummaries, runMarkerGenes, selectMarkerGenes, MarkerGenesGroupResult, appendDataset } from '../hooks/useData'
 
@@ -255,6 +256,7 @@ export default function MarkerGenesModal() {
   // Gene subset state
   const [booleanColumns, setBooleanColumns] = useState<{ name: string; n_true: number; n_total: number }[]>([])
   const [geneSubset, setGeneSubset] = useState<string>('')
+  const [restrictTo, setRestrictTo] = useState<MarkerRestriction | null>(null)
 
   // Fetch boolean columns when modal opens
   useEffect(() => {
@@ -329,7 +331,7 @@ export default function MarkerGenesModal() {
   // ranking (debounced), never re-run the test.
   useEffect(() => {
     if (!runIsCurrent || !resultKey) return
-    const selection = selectionFromModal(topN, minInGroupFraction, maxOutGroupFraction, minFoldChange)
+    const selection = selectionFromModal(topN, minInGroupFraction, maxOutGroupFraction, minFoldChange, restrictTo)
     const wanted = JSON.stringify(selection)
     if (wanted === lastSelection.current) return
     const handle = window.setTimeout(async () => {
@@ -347,7 +349,7 @@ export default function MarkerGenesModal() {
       }
     }, 300)
     return () => window.clearTimeout(handle)
-  }, [runIsCurrent, resultKey, topN, minInGroupFraction, maxOutGroupFraction, minFoldChange, activeSlot])
+  }, [runIsCurrent, resultKey, topN, minInGroupFraction, maxOutGroupFraction, minFoldChange, restrictTo, activeSlot])
 
   // Snapshot the pre-checked categories when modal opens (to avoid re-triggering on every toggle)
   const preCheckedRef = useRef<Set<string> | null>(null)
@@ -427,7 +429,7 @@ export default function MarkerGenesModal() {
       setResultTruncated(response.truncated)
       const stored = Object.values(response.n_stored_per_group)
       setStoredPerGroup(stored.length ? Math.max(...stored) : null)
-      lastSelection.current = JSON.stringify(selectionFromModal(topN, minInGroupFraction, maxOutGroupFraction, minFoldChange))
+      lastSelection.current = JSON.stringify(selectionFromModal(topN, minInGroupFraction, maxOutGroupFraction, minFoldChange, restrictTo))
       // Auto-expand first group
       if (response.results.length > 0) {
         setExpandedGroups(new Set([response.results[0].group]))
@@ -437,7 +439,7 @@ export default function MarkerGenesModal() {
     } finally {
       setIsRunning(false)
     }
-  }, [markerGenesColumn, selectedGroups, categories.length, topN, geneSubset, minInGroupFraction, maxOutGroupFraction, minFoldChange, activeSlot, activeCellMask, activeSubsetName])
+  }, [markerGenesColumn, selectedGroups, categories.length, topN, geneSubset, minInGroupFraction, maxOutGroupFraction, minFoldChange, restrictTo, activeSlot, activeCellMask, activeSubsetName])
 
   const handleAddToGeneSets = useCallback(() => {
     if (!results || !markerGenesColumn) return
@@ -460,14 +462,14 @@ export default function MarkerGenesModal() {
   // and the thresholds travel as the selection, resolved server-side.
   const handlePlot = useCallback(() => {
     if (!resultKey || !markerGenesColumn) return
-    const sel = selectionFromModal(topN, minInGroupFraction, maxOutGroupFraction, minFoldChange)
+    const sel = selectionFromModal(topN, minInGroupFraction, maxOutGroupFraction, minFoldChange, restrictTo)
     setHeatmapConfig({
       selectedGeneSets: [],
       plotType: 'heatmap',
       markerSource: {
         key: resultKey, label: markerGenesColumn, topN: sel.top_n,
         minPctIn: sel.min_pct_in ?? null, maxPctOut: sel.max_pct_out ?? null, minLog2fc: sel.min_log2fc ?? null, maxPadj: null,
-        rankBy: 'score', restrictTo: null,
+        rankBy: 'score', restrictTo,
       },
       dotplot: DEFAULT_DOTPLOT_OPTIONS,
       cellOrdering: 'category',
@@ -481,7 +483,7 @@ export default function MarkerGenesModal() {
     })
     setCenterPanelView('heatmap')
     setMarkerGenesModalOpen(false)
-  }, [resultKey, markerGenesColumn, topN, minInGroupFraction, maxOutGroupFraction, minFoldChange, setHeatmapConfig, setCenterPanelView, setMarkerGenesModalOpen])
+  }, [resultKey, markerGenesColumn, topN, minInGroupFraction, maxOutGroupFraction, minFoldChange, restrictTo, setHeatmapConfig, setCenterPanelView, setMarkerGenesModalOpen])
 
   const toggleResultGroup = useCallback((group: string) => {
     setExpandedGroups((prev) => {
@@ -501,7 +503,7 @@ export default function MarkerGenesModal() {
 
   if (!isMarkerGenesModalOpen || !markerGenesColumn) return null
 
-  const filtersActive = [minInGroupFraction, maxOutGroupFraction, minFoldChange].some((v) => Number.isFinite(parseFloat(v)))
+  const filtersActive = [minInGroupFraction, maxOutGroupFraction, minFoldChange].some((v) => Number.isFinite(parseFloat(v))) || restrictTo !== null
   // The cap only matters when a filter could have wanted rows beyond it, or
   // Top N asks for more than was kept.
   const capMatters = resultTruncated && (filtersActive || (storedPerGroup !== null && topN > storedPerGroup))
@@ -642,6 +644,10 @@ export default function MarkerGenesModal() {
                   onChange={(e) => setMinFoldChange(e.target.value)}
                   style={{ ...styles.input, width: '100px' }}
                 />
+              </div>
+              <div style={{ ...styles.inputRow, marginBottom: 0 }} title="Keeps only marker genes in this set or column; the test is not re-run, and a gene outside the stored ranking cannot appear">
+                <span style={{ ...styles.label, marginBottom: 0, flex: 1 }}>Show only:</span>
+                <RestrictionPicker value={restrictTo} onChange={setRestrictTo} columns={booleanColumns} style={{ ...styles.input, width: 'auto', maxWidth: '220px' }} />
               </div>
             </div>
           )}

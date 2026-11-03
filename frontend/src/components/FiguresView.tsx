@@ -6,7 +6,7 @@ import {
 import {
   FIGURE_KIND_LABELS, figureFilename, svgToPngBlob, canvasToPngBlob, blobToBase64, downloadBlob, paramsToBarplotConfig,
   type FigureRecord, type FigureSummary, type FigureData, type EnrichmentHeatmapData, type EnrichmentNetworkData,
-  type CrosstabData, type ExpressionHeatmapData, type CnvHeatmapData, type ExpressionDotplotData,
+  type CrosstabData, type ExpressionHeatmapData, type CnvHeatmapData, type ExpressionDotplotData, inputsSummary,
 } from '../lib/figures'
 import { FIGURE_SCHEMAS, coerceParams, type ParamField } from '../lib/figureSchemas'
 import { standaloneSvg, downloadText } from '../lib/svgExport'
@@ -402,7 +402,7 @@ export default function FiguresView() {
                   ))}
                 </div>
               ) : <div style={{ marginTop: '4px' }}>No input steps matched in the record.</div>}
-              <div style={{ marginTop: '6px' }}>Inputs: {JSON.stringify(record.inputs)}</div>
+              <div style={{ marginTop: '6px' }}>Inputs: {inputsSummary(record.inputs as Record<string, unknown>)}</div>
               <div>Created {record.created_at}{record.updated_at !== record.created_at ? ` · edited ${record.updated_at}` : ''}</div>
             </div>
           </>

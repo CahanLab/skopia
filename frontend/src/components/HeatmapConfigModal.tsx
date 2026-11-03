@@ -16,10 +16,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { orderSelectedSets, groupLabel, folderSelectionState, restoreSelectedIds } from '../lib/heatmapGroups'
 import { DEFAULT_DOTPLOT_OPTIONS, type DotplotOptions, type MarkerSource } from '../lib/markerSelection'
-import { useStore, HeatmapConfig, GeneSet, GeneSetCategoryType, cfgDefault } from '../store'
-import { fetchMarkerRuns, type MarkerRunSummary } from '../hooks/useData'
+import { useStore, HeatmapConfig, GeneSetCategoryType, cfgDefault } from '../store'
+import { getAllGeneSets, CATEGORY_ORDER, type FlatGeneSet } from '../lib/flatGeneSets'
+import RestrictionPicker from './RestrictionPicker'
+import { type MarkerRestriction } from '../lib/markerSelection'
+import { fetchMarkerRuns, appendDataset, type MarkerRunSummary } from '../hooks/useData'
 
-const CATEGORY_ORDER: GeneSetCategoryType[] = ['manual', 'gene_clusters', 'similar_genes', 'diff_exp', 'spatial', 'marker_genes', 'line_association', 'enrichment']
 const CATEGORY_NAMES: Record<GeneSetCategoryType, string> = {
   manual: 'Manual',
   gene_clusters: 'Gene Clusters',
@@ -31,29 +33,7 @@ const CATEGORY_NAMES: Record<GeneSetCategoryType, string> = {
   enrichment: 'Enrichment',
 }
 
-interface FlatGeneSet {
-  id: string
-  name: string
-  genes: string[]
-  category: GeneSetCategoryType
-  folderName?: string
-}
 
-function getAllGeneSets(categories: Record<GeneSetCategoryType, { geneSets: GeneSet[]; folders: { name: string; geneSets: GeneSet[] }[] }>): FlatGeneSet[] {
-  const all: FlatGeneSet[] = []
-  for (const catType of CATEGORY_ORDER) {
-    const cat = categories[catType]
-    for (const gs of cat.geneSets) {
-      all.push({ ...gs, category: catType })
-    }
-    for (const folder of cat.folders) {
-      for (const gs of folder.geneSets) {
-        all.push({ ...gs, category: catType, folderName: folder.name })
-      }
-    }
-  }
-  return all
-}
 
 /** A folder header with a tri-state checkbox: none, some or all of its sets picked. */
 function FolderRow({ name, state, onToggle }: { name: string; state: 'none' | 'some' | 'all'; onToggle: () => void }) {
@@ -99,6 +79,16 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
   const nActive = activeCellMask ? activeCellMask.reduce((n, b) => n + (b ? 1 : 0), 0) : 0
 
   const allGeneSets = getAllGeneSets(geneSetCategories)
+
+  // The boolean .var columns the restriction picker offers (same source as the marker modal).
+  useEffect(() => {
+    let live = true
+    fetch(appendDataset('/api/var/boolean_columns', activeSlot))
+      .then((r) => r.json())
+      .then((cols: { name: string; n_true: number }[]) => { if (live) setBooleanColumns(cols) })
+      .catch(() => { if (live) setBooleanColumns([]) })
+    return () => { live = false }
+  }, [activeSlot])
   const nonEmptySets = allGeneSets.filter((gs) => gs.genes.length > 0)
 
   // Initialize from existing config or defaults
@@ -126,6 +116,8 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
   const [minLog2fc, setMinLog2fc] = useState(config?.markerSource?.minLog2fc != null ? String(config.markerSource.minLog2fc) : '')
   const [maxPadj, setMaxPadj] = useState(config?.markerSource?.maxPadj != null ? String(config.markerSource.maxPadj) : '')
   const [rankBy, setRankBy] = useState<'score' | 'log2fc'>(config?.markerSource?.rankBy ?? 'score')
+  const [restrictTo, setRestrictTo] = useState<MarkerRestriction | null>(config?.markerSource?.restrictTo ?? null)
+  const [booleanColumns, setBooleanColumns] = useState<{ name: string; n_true: number }[]>([])
 
   // Refetched whenever the marker modal closes: a run made from the link
   // below must show up without leaving the panel.
@@ -213,7 +205,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
     const markerSource: MarkerSource | null = usingMarkers && markerRun ? {
       key: markerRun.key, label: markerRun.obs_column, topN: Math.max(1, markerTopN),
       minPctIn: numOrNull(minPctIn), maxPctOut: numOrNull(maxPctOut), minLog2fc: numOrNull(minLog2fc), maxPadj: numOrNull(maxPadj),
-      rankBy, restrictTo: null,
+      rankBy, restrictTo,
     } : null
 
     onApply({
@@ -321,6 +313,10 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
                       <option value="score">Wilcoxon score</option>
                       <option value="log2fc">log2 fold change</option>
                     </select>
+                  </label>
+                  <label style={styles.thresholdRow} title="Keeps only marker genes in this set or column; the test is not re-run, and a gene outside the stored ranking cannot appear">
+                    <span style={{ flex: 1 }}>Show only</span>
+                    <RestrictionPicker value={restrictTo} onChange={setRestrictTo} columns={booleanColumns} style={{ ...styles.inlineSelect, marginLeft: 0 }} />
                   </label>
                   <div style={{ ...styles.hint, marginTop: '6px' }}>
                     Stored ranking: {markerRun?.store_top_n ?? '?'} genes per group.{' '}
