@@ -55,22 +55,33 @@ summaries print.
 
 **Adaptor.** `select_marker_genes(key, restrict_to=None, **selection)` and
 `marker_gene_set_groups(key, restrict_to=None, **selection)` resolve the
-spec to names: a `genes` list as is (names absent from the dataset simply
-match nothing); a `var_column` through `_resolve_gene_mask(str)` (must be a
-boolean `.var` column, else `ValueError`). The resolved names go to
-`select_markers(genes=...)`. The select route and `_plot_rows` pass the spec
-through unchanged. Selection is a read and is never logged.
+spec to names with `_restriction_genes(spec) -> set[str] | None`: a
+`genes` list as is (names absent from the dataset simply match nothing); a
+`var_column` as the names where the column is true. Neither source is
+intersected with the session's gene mask: a restriction is an allowed
+list, and the plot path drops mask-hidden genes afterwards as it does for
+any row (`n_genes_hidden`), so both sources behave the same under a mask.
+An all-false column is an empty selection, not an error. "Boolean column"
+means what the picker's source, `get_var_boolean_columns`, already offers
+(bool dtype, or numeric holding only 0/1); the predicate is factored out of
+that method and reused, and any other column is refused with `ValueError`
+("not a boolean .var column"). The resolved names go to
+`select_markers(genes=...)`. `heatmap_groups_from_markers` pops
+`restrict_to` out of the spread selection before calling. The select route
+and `_plot_rows` pass the spec through unchanged. Selection is a read and
+is never logged.
 
 **Routes.** `MarkerSelection` gains `restrict_to: MarkerRestriction | None`
 where `MarkerRestriction(BaseModel)` has `label: str`, `genes: list[str] |
 None = None`, `var_column: str | None = None`; a validator refuses both or
-neither sources. `MarkerSourceSpec` inherits it, so `/api/heatmap/data` and
+neither sources, and an empty `genes` list ("the restriction names no
+genes"). `MarkerSourceSpec` inherits it, so `/api/heatmap/data` and
 `/api/dotplot/data` take it inside `markers`.
 
 **Figures.** Both expression kinds gain an input `marker_restrict`
 (the spec or `None`), valid only with `marker_key`; `_validate_figure_inputs`
-checks the shape and, for `var_column`, that the column exists and is
-boolean. `_figure_row_groups` passes it to `marker_gene_set_groups`. A
+checks the shape (the same rules as the request model) and, for
+`var_column`, that the column exists and is boolean by the predicate above. `_figure_row_groups` passes it to `marker_gene_set_groups`. A
 `var_column` that no longer exists at draw time is `FigureInputMissing`
 ("Column 'x' no longer exists"), like a vanished marker run. The default
 title reads "… markers markers_leiden in TFs …". `config.yaml` needs no new
@@ -84,7 +95,12 @@ draws from the same run step.
 `markerSummary` appends `in <label>`; `heatmapFigureFromConfig` /
 `dotplotFigureFromConfig` put `marker_restrict` in inputs (wire shape) and
 `defaultTitle` includes it. `normalizeHeatmapConfig` leaves an absent field
-`null`.
+`null`. The stored restriction is a snapshot, like a figure's gene sets:
+editing or deleting the Gene Panel set afterwards does not change what a
+saved config draws. The picker matches the snapshot to its options by
+label; when no option matches (set renamed or deleted, column gone) it
+shows a synthetic `<label> (saved)` option that keeps the snapshot, and
+re-picking an option takes that option's current genes.
 
 **Restriction picker.** One small component, `RestrictionPicker`, used in
 both places: a `<select>` whose options are *None*, then the Gene Panel's
@@ -96,16 +112,20 @@ settings fetch them the same way (`GET /api/var/boolean_columns`).
 
 **Find Marker Genes modal.** A "Show only:" row under the Advanced Filters
 with the picker. Changing it re-selects through the debounced select call
-like the other filters. The summary line reads "… in TFs"; the cap warning
-(`capMatters`) also fires when a restriction is active, since a restriction
-is a filter that could have wanted rows beyond the cap. *Plot…* carries the
+like the other filters, so it enters the selection signature and the
+debounce. A restriction counts as an active filter: the summary line reads
+"… in TFs", each group shows "k genes of n passing", and the cap warning
+(`capMatters`) fires, since a restriction could have wanted rows beyond
+the cap. *Plot…* carries the
 restriction into `markerSource`.
 
 **Expression settings.** The same row inside the marker rows section, below
 Rank by. The toolbar summary shows it through `markerSummary`.
 
 **Figures tab.** The restriction is visible in the Inputs line and the
-title; it is not editable there (non-goal).
+title; it is not editable there (non-goal). The Inputs line stops dumping
+raw JSON: gene lists (`gene_sets`, `marker_restrict.genes`) print as
+`<name> (<n> genes)`, other inputs as `key: value`.
 
 ## Tests
 
