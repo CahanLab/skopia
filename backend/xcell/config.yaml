@@ -247,6 +247,27 @@ figures:
     gene_ordering: as_provided
     aggregate_gene_sets: false
     n_bins: 50
+    marker_top_n: 10                # when the rows come from a stored marker run: top N per group after the filters
+    marker_min_pct_in: null         # fraction of the group's cells expressing (0..1); null = no filter
+    marker_max_pct_out: null        # fraction of the other cells expressing; null = no filter
+    marker_min_log2fc: null
+    marker_max_padj: null
+    marker_rank_by: score           # score (scanpy's Wilcoxon order) | log2fc
+  expression_dotplot:
+    marker_top_n: 10
+    marker_min_pct_in: null
+    marker_max_pct_out: null
+    marker_min_log2fc: null
+    marker_max_padj: null
+    marker_rank_by: score
+    color_by: mean                  # mean (over all cells in the group, scanpy's default) | mean_expressing
+    standard_scale: none            # none | gene (each gene's means rescaled to 0..1 across groups)
+    expression_cutoff: 0.0          # a cell counts as expressing above this value
+    gene_ordering: as_provided      # as_provided | peak_group
+    swap_axes: false                # false: groups as rows, genes as columns (scanpy); true: genes as rows
+    colormap: viridis               # viridis | reds | rdbu
+    vmax: null                      # colour limit; null = data max
+    dot_max: null                   # fraction that fills the largest dot; null = 1.0
   cnv_heatmap:
     row_mode: cells                 # cells (binned within each group) | groups (one mean row per group)
     max_rows: 400                   # rows across all groups; each group gets rows in proportion, at least one

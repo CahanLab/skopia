@@ -344,3 +344,104 @@ def test_codegen_replay_binds_figures_by_id_even_when_ids_differ():
             exec(line, ns)
     assert b.get_figure(pre['id'])['title'] != 'T'            # the pre-existing figure was left alone
     assert [x['id'] for x in b.list_figures()] == [pre['id']]  # the replayed one was created, edited, deleted
+
+
+# --- marker runs as a row source; dot plot figures -------------------------------
+
+def _with_markers():
+    a = DataAdaptor('x.h5ad', adata=_adata_c())
+    key = a.run_marker_genes(obs_column='grp', top_n=3, store_top_n=10)['key']
+    return a, key
+
+
+def test_heatmap_figure_from_a_marker_key_resolves_the_groups():
+    a, key = _with_markers()
+    f = a.create_figure('expression_heatmap', inputs={'gene_sets': [], 'marker_key': key, 'obs_column': 'grp'})
+    assert f['inputs']['marker_key'] == key and f['input_ids'][key] == a._marker_run_uid(key)
+    assert f['params']['marker_top_n'] == 10 and f['params']['marker_min_pct_in'] is None
+    d = a.figure_data(f['id'])
+    assert d['row_groups'][:1] == ['a'] and set(d['row_groups']) == {'a', 'b', 'c'}
+    assert d['row_labels'][0] in ('Col1a1', 'Col1a2', 'Col3a1')
+    assert 'markers' in f['title'] or 'marker' in f['title'].lower()
+    marker_step = next(s for s in a.analysis_record.steps if s.action == 'marker_genes')
+    assert marker_step.index in f['provenance']['steps']
+    with pytest.raises(ValueError, match='marker_key'):
+        a.create_figure('expression_heatmap', inputs={'gene_sets': [], 'marker_key': 'nope'})
+    with pytest.raises(ValueError, match='gene_sets'):
+        a.create_figure('expression_heatmap', inputs={'gene_sets': [], 'marker_key': None})
+
+
+def test_marker_params_override_changes_rows_without_a_rerun(monkeypatch):
+    import scanpy as sc
+    a, key = _with_markers()
+    f = a.create_figure('expression_heatmap', inputs={'gene_sets': [], 'marker_key': key, 'obs_column': 'grp'},
+                        params={'marker_top_n': 2})
+    monkeypatch.setattr(sc.tl, 'rank_genes_groups', lambda *a_, **k: (_ for _ in ()).throw(AssertionError('re-ran')))
+    assert len(a.figure_data(f['id'])['row_labels']) == 6
+    assert len(a.figure_data(f['id'], params_override={'marker_top_n': 1})['row_labels']) == 3
+    few = a.figure_data(f['id'], params_override={'marker_min_pct_in': 0.99})
+    assert len(few['row_labels']) <= 6
+    g = a.update_figure(f['id'], params={'marker_top_n': 1, 'marker_rank_by': 'log2fc'})
+    assert g['params']['marker_top_n'] == 1 and len(a.figure_data(f['id'])['row_labels']) == 3
+    with pytest.raises(ValueError):
+        a.update_figure(f['id'], params={'marker_rank_by': 'pval'})
+
+
+def test_a_deleted_or_replaced_marker_run_is_a_missing_input():
+    a, key = _with_markers()
+    f = a.create_figure('expression_heatmap', inputs={'gene_sets': [], 'marker_key': key})
+    a.delete_marker_run(key)
+    with pytest.raises(FigureInputMissing):
+        a.figure_data(f['id'])
+    # a re-run lands on the freed key with a new uid: still not this figure's input
+    assert a.run_marker_genes(obs_column='grp', top_n=3)['key'] == key
+    with pytest.raises(FigureInputMissing, match='replaced'):
+        a.figure_data(f['id'])
+
+
+def test_dotplot_figure_create_data_update():
+    a, key = _with_markers()
+    sets = [{'name': 'immune', 'genes': ['Ptprc', 'Cd3e', 'Cd19']}]
+    f = a.create_figure('expression_dotplot', inputs={'gene_sets': sets, 'obs_column': 'grp', 'transform': 'log1p'})
+    assert f['params'] == {
+        'marker_top_n': 10, 'marker_min_pct_in': None, 'marker_max_pct_out': None, 'marker_min_log2fc': None,
+        'marker_max_padj': None, 'marker_rank_by': 'score', 'color_by': 'mean', 'standard_scale': 'none',
+        'expression_cutoff': 0.0, 'gene_ordering': 'as_provided', 'swap_axes': False, 'colormap': 'viridis',
+        'vmax': None, 'dot_max': None,
+    }
+    d = a.figure_data(f['id'])
+    assert d['kind'] == 'expression_dotplot' and d['genes'] == ['Ptprc', 'Cd3e', 'Cd19'] and d['categories'] == ['a', 'b', 'c']
+    assert d['pct'][0][1] > d['pct'][0][0]
+    scaled = a.figure_data(f['id'], params_override={'standard_scale': 'gene'})
+    assert max(scaled['mean'][0]) == pytest.approx(1.0)
+    g = a.create_figure('expression_dotplot', inputs={'gene_sets': sets, 'marker_key': key, 'obs_column': 'grp',
+                                                      'cell_subset': 'half'}, params={'marker_top_n': 1})
+    dg = a.figure_data(g['id'])
+    assert dg['row_groups'][:1] == ['a'] and dg['row_groups'][-1] == 'immune' and dg['n_cells'] == 40
+    assert 'Dot plot' in g['title']
+    u = a.update_figure(f['id'], params={'swap_axes': True, 'dot_max': 0.8})
+    assert u['params']['swap_axes'] is True and u['params']['dot_max'] == 0.8
+    with pytest.raises(ValueError):
+        a.update_figure(f['id'], params={'color_by': 'median'})
+    with pytest.raises(ValueError):
+        a.update_figure(f['id'], params={'dot_max': 0})
+
+
+def test_dotplot_figure_requires_a_categorical_column():
+    a = DataAdaptor('x.h5ad', adata=_adata_c())
+    sets = [{'name': 'immune', 'genes': ['Ptprc']}]
+    with pytest.raises(ValueError, match='obs_column'):
+        a.create_figure('expression_dotplot', inputs={'gene_sets': sets})
+    with pytest.raises(ValueError, match='obs_column'):
+        a.create_figure('expression_dotplot', inputs={'gene_sets': sets, 'obs_column': 'nope'})
+    f = a.create_figure('expression_dotplot', inputs={'gene_sets': sets, 'obs_column': 'grp'})
+    del a.adata.obs['grp']
+    with pytest.raises(FigureInputMissing):
+        a.figure_data(f['id'])
+
+
+def test_every_figure_param_has_a_config_default():
+    from xcell import config as user_config
+    cfg = user_config.get_user_config()['figures']
+    for kind in DataAdaptor.FIGURE_KINDS:
+        assert set(cfg[kind]) == set(DataAdaptor._FIGURE_PARAM_KEYS[kind]), kind
