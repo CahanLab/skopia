@@ -79,3 +79,27 @@ describe('runnableGroupCount', () => {
     expect(runnableGroupCount(picked, new Map([['a', 40], ['b', 2], ['c', 0]]))).toBe(2)
   })
 })
+
+describe('selectionFromModal', () => {
+  it('maps the modal inputs onto the stored-table thresholds, fold change as log2', async () => {
+    const { selectionFromModal } = await import('./markerGenes')
+    expect(selectionFromModal(25, '', '', '')).toEqual({ top_n: 25 })
+    expect(selectionFromModal(10, '0.25', '0.5', '4')).toEqual({ top_n: 10, min_pct_in: 0.25, max_pct_out: 0.5, min_log2fc: 2 })
+    expect(selectionFromModal(10, 'x', '', '0')).toEqual({ top_n: 10 })
+  })
+})
+
+describe('runSignature', () => {
+  it('changes with the column, the groups, the gene subset and the mask, not with the thresholds', async () => {
+    const { runSignature } = await import('./markerGenes')
+    const mask = [true, false]
+    const a = runSignature({ ...base, activeCellIndices: null }, null)
+    expect(runSignature({ ...base, topN: 5, minFoldChange: '2' }, null)).toBe(a)
+    expect(runSignature({ ...base, selectedGroups: new Set(['0', '1']) }, null)).not.toBe(a)
+    expect(runSignature({ ...base, geneSubset: 'highly_variable' }, null)).not.toBe(a)
+    expect(runSignature({ ...base, obsColumn: 'cell_type' }, null)).not.toBe(a)
+    expect(runSignature(base, mask)).not.toBe(a)
+    expect(runSignature(base, mask)).toBe(runSignature(base, mask))
+    expect(runSignature(base, [true, false])).not.toBe(runSignature(base, mask))
+  })
+})
