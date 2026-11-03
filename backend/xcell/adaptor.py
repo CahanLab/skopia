@@ -6947,19 +6947,44 @@ class DataAdaptor:
         self._log_action('marker_genes_delete', {'key': key}, {'deleted': key})
         return {'deleted': key}
 
-    def select_marker_genes(self, key: str, **selection: Any) -> dict[str, Any]:
-        """Top N after filters from the stored table — a read, never logged."""
+    def _restriction_genes(self, spec: dict[str, Any] | None) -> set[str] | None:
+        """The allowed names of a restriction ``{label, genes} | {label,
+        var_column}``; ``None`` for no restriction. The session gene mask is
+        not applied: a restriction is an allowed list, and the plot path drops
+        hidden genes afterwards like any other row. A column must be one the
+        gene-mask picker offers (``get_var_boolean_columns``); an absent column
+        is a ``KeyError`` so a figure can report it as a missing input."""
+        if spec is None:
+            return None
+        if not isinstance(spec, dict):
+            raise ValueError('restrict_to must be {label, genes} or {label, var_column}')
+        genes, col = spec.get('genes'), spec.get('var_column')
+        if (genes is None) == (col is None):
+            raise ValueError('restrict_to names exactly one of genes or var_column')
+        if genes is not None:
+            if not isinstance(genes, list) or not genes:
+                raise ValueError('the restriction names no genes')
+            return {str(g) for g in genes}
+        if col not in self.adata.var.columns:
+            raise KeyError(f"Column '{col}' not found in .var")
+        return set(self.column_to_gene_names(str(col)))
+
+    def select_marker_genes(self, key: str, restrict_to: dict[str, Any] | None = None, **selection: Any) -> dict[str, Any]:
+        """Top N after filters from the stored table — a read, never logged.
+        ``restrict_to`` keeps only the stored rows in an annotation."""
         from xcell import marker_genes as mg  # noqa: PLC0415
         record = self.get_marker_run(key, include_table=True)
-        out = mg.select_markers(record, **selection)
+        out = mg.select_markers(record, genes=self._restriction_genes(restrict_to), **selection)
         out.update({'key': key, 'uid': record.get('uid'), 'obs_column': record.get('obs_column'),
-                    'n_cells_tested': (record.get('params') or {}).get('n_cells_tested')})
+                    'n_cells_tested': (record.get('params') or {}).get('n_cells_tested'),
+                    'restrict_to': restrict_to})
         return out
 
-    def marker_gene_set_groups(self, key: str, **selection: Any) -> list[dict[str, Any]]:
+    def marker_gene_set_groups(self, key: str, restrict_to: dict[str, Any] | None = None,
+                               **selection: Any) -> list[dict[str, Any]]:
         """The selection as heatmap / dot plot row groups: one per group that
         kept any gene, named by the group, in the run's group order."""
-        sel = self.select_marker_genes(key, **selection)
+        sel = self.select_marker_genes(key, restrict_to=restrict_to, **selection)
         return [{'name': r['group'], 'genes': [g['gene'] for g in r['genes']]} for r in sel['results'] if r['genes']]
 
     def dotplot_data(self, genes: list[str], gene_set_groups: list[dict[str, Any]] | None, obs_column: str, *,

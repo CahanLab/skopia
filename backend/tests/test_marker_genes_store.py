@@ -273,6 +273,46 @@ def test_select_reads_without_rerunning_the_test(monkeypatch):
     assert [s.action for s in a.analysis_record.steps].count("marker_genes") == 1
 
 
+def test_adaptor_restricts_from_a_gene_list_and_a_boolean_column():
+    a = _adaptor()
+    key = a.run_marker_genes(obs_column='grp', top_n=3, store_top_n=10)['key']
+    full = a.select_marker_genes(key, top_n=2)
+    first = full['results'][0]['genes'][0]['gene']
+    sel = a.select_marker_genes(key, top_n=2, restrict_to={'label': 'one', 'genes': [first, 'zzz']})
+    assert [g['gene'] for g in sel['results'][0]['genes']] == [first] and sel['restricted'] is True
+    assert sel['restrict_to'] == {'label': 'one', 'genes': [first, 'zzz']}
+    a.adata.var['flag'] = [g == first for g in a.adata.var_names]          # bool dtype
+    a.adata.var['flag01'] = a.adata.var['flag'].astype(int)                  # numeric 0/1 counts too
+    for col in ('flag', 'flag01'):
+        sel = a.select_marker_genes(key, top_n=2, restrict_to={'label': col, 'var_column': col})
+        assert [g['gene'] for g in sel['results'][0]['genes']] == [first]
+    a.adata.var['n_cells'] = np.arange(a.adata.n_vars)
+    with pytest.raises(ValueError, match='boolean'):
+        a.select_marker_genes(key, restrict_to={'label': 'x', 'var_column': 'n_cells'})
+    with pytest.raises(KeyError):
+        a.select_marker_genes(key, restrict_to={'label': 'x', 'var_column': 'ghost'})
+    with pytest.raises(ValueError, match='names no genes'):
+        a.select_marker_genes(key, restrict_to={'label': 'x', 'genes': []})
+    with pytest.raises(ValueError):
+        a.select_marker_genes(key, restrict_to={'label': 'x', 'genes': ['g00'], 'var_column': 'flag'})
+    # a stored ranking holds weak markers too, so a restriction keeps the gene
+    # in every group whose stored rows have it; the plot path dedupes later
+    groups = a.marker_gene_set_groups(key, top_n=2, restrict_to={'label': 'one', 'genes': [first]})
+    assert groups[0] == {'name': full['results'][0]['group'], 'genes': [first]}
+    assert all(g['genes'] == [first] for g in groups)
+
+
+def test_select_route_takes_restrict_to(monkeypatch):
+    a = _adaptor()
+    key = a.run_marker_genes(obs_column='grp', top_n=3, store_top_n=10)['key']
+    c = _client(a, monkeypatch)
+    first = c.post(f'/api/marker_genes/runs/{key}/select', json={'top_n': 1}).json()['results'][0]['genes'][0]['gene']
+    r = c.post(f'/api/marker_genes/runs/{key}/select', json={'top_n': 5, 'restrict_to': {'label': 'one', 'genes': [first]}})
+    assert r.status_code == 200 and [g['gene'] for g in r.json()['results'][0]['genes']] == [first]
+    assert c.post(f'/api/marker_genes/runs/{key}/select', json={'restrict_to': {'label': 'x', 'genes': []}}).status_code == 422
+    assert c.post(f'/api/marker_genes/runs/{key}/select', json={'restrict_to': {'label': 'x'}}).status_code == 422
+
+
 def test_select_route_and_run_list_route(monkeypatch):
     a = _adaptor()
     client = _client(a, monkeypatch)

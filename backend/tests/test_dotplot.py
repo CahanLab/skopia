@@ -164,5 +164,9 @@ def test_route_with_gene_sets_and_with_markers(monkeypatch):
     res = client.post('/api/dotplot/data', json={'markers': {'key': key, 'top_n': 1}, 'obs_column': 'grp'})
     assert res.status_code == 200, res.text
     assert res.json()['genes'][:2] == ['g00', 'g01']
+    res = client.post('/api/dotplot/data', json={'markers': {'key': key, 'top_n': 1, 'restrict_to': {'label': 'one', 'genes': ['g01']}},
+                                                 'obs_column': 'grp'})
+    assert res.status_code == 200, res.text
+    assert res.json()['genes'] == ['g01'] and len(res.json()['row_groups']) == 1
     assert client.post('/api/dotplot/data', json={'genes': ['g00'], 'obs_column': 'depth'}).status_code == 400
     assert client.post('/api/dotplot/data', json={'markers': {'key': 'nope'}, 'obs_column': 'grp'}).status_code == 404
