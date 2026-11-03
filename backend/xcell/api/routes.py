@@ -2319,8 +2319,11 @@ class HeatmapGeneSetGroup(BaseModel):
 
 class HeatmapRequest(BaseModel):
     """Request model for heatmap data computation."""
-    genes: list[str]
+    genes: list[str] = []
     gene_set_groups: list[HeatmapGeneSetGroup] | None = None
+    # A stored marker run plus the selection on it: its groups become row
+    # groups ahead of gene_set_groups, so genes may be empty.
+    markers: MarkerSourceSpec | None = None
     aggregate_gene_sets: bool = False
     cell_ordering: str = "none"
     obs_column: str | None = None
@@ -2342,14 +2345,10 @@ def get_heatmap_data(request: HeatmapRequest, dataset: str | None = Query(None))
 
     adaptor = get_adaptor(dataset)
     try:
-        gene_set_groups = None
-        if request.gene_set_groups:
-            gene_set_groups = [
-                {"name": g.name, "genes": g.genes} for g in request.gene_set_groups
-            ]
+        genes, gene_set_groups = _plot_rows(adaptor, request.genes, request.gene_set_groups, request.markers)
         return compute_heatmap_data(
             adaptor,
-            genes=request.genes,
+            genes=genes,
             gene_set_groups=gene_set_groups,
             aggregate_gene_sets=request.aggregate_gene_sets,
             cell_ordering=request.cell_ordering,
@@ -2360,8 +2359,22 @@ def get_heatmap_data(request: HeatmapRequest, dataset: str | None = Query(None))
             transform=request.transform,
             cell_indices=request.cell_indices,
         )
-    except (ValueError, KeyError) as e:
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+def _plot_rows(adaptor, genes: list[str], gene_set_groups: list[HeatmapGeneSetGroup] | None,
+               markers: MarkerSourceSpec | None) -> tuple[list[str], list[dict] | None]:
+    """Rows for an expression plot: the marker run's groups (resolved from the
+    stored ranking) ahead of the literal sets, genes deduplicated in that order."""
+    groups = adaptor.heatmap_groups_from_markers(markers.model_dump() if markers else None)
+    groups += [{"name": g.name, "genes": list(g.genes)} for g in (gene_set_groups or [])]
+    ordered = [g for grp in groups for g in grp["genes"]] + list(genes)
+    seen: set[str] = set()
+    unique = [g for g in ordered if not (g in seen or seen.add(g))]
+    return unique, (groups or None)
 
 
 # =========================================================================

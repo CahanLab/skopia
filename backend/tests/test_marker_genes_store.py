@@ -305,3 +305,43 @@ def test_the_notebook_summary_names_the_stored_run():
     a.run_marker_genes(obs_column="grp", top_n=3)
     t = translate(a.analysis_record.steps[-1])
     assert "markers_grp" in t.summary and "enrichment" not in t.summary
+
+
+# ---------------------------------------------------------------------------
+# Heatmap from a marker run
+# ---------------------------------------------------------------------------
+
+def test_heatmap_route_accepts_a_marker_source(monkeypatch):
+    a = _adaptor()
+    client = _client(a, monkeypatch)
+    key = a.run_marker_genes(obs_column="grp", top_n=1)["key"]
+    res = client.post("/api/heatmap/data", json={
+        "genes": [], "markers": {"key": key, "top_n": 2},
+        "cell_ordering": "category", "obs_column": "grp", "n_bins": 0,
+    })
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["row_groups"][:2] == ["a", "a"]
+    assert set(body["row_groups"]) == {"a", "b", "c"}
+    assert body["row_labels"][0] == "g00"
+    assert len(body["row_labels"]) <= 6
+    assert [c["name"] for c in body["column_groups"]] == ["a", "b", "c"]
+
+
+def test_heatmap_route_mixes_marker_groups_with_gene_sets(monkeypatch):
+    a = _adaptor()
+    client = _client(a, monkeypatch)
+    key = a.run_marker_genes(obs_column="grp", top_n=1)["key"]
+    res = client.post("/api/heatmap/data", json={
+        "genes": ["g05"], "gene_set_groups": [{"name": "extra", "genes": ["g05"]}],
+        "markers": {"key": key, "top_n": 1},
+    })
+    assert res.status_code == 200, res.text
+    assert res.json()["row_groups"][-1] == "extra"
+
+
+def test_heatmap_route_refuses_an_unknown_marker_key(monkeypatch):
+    a = _adaptor()
+    client = _client(a, monkeypatch)
+    res = client.post("/api/heatmap/data", json={"genes": [], "markers": {"key": "nope", "top_n": 2}})
+    assert res.status_code == 404
