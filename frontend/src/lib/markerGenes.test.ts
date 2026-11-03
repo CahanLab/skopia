@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { markerGenesParams, maskedCategoryCounts, runnableGroupCount } from './markerGenes'
+import { markerGenesParams, maskedCategoryCounts, runnableGroupCount, selectionFromModal } from './markerGenes'
 
 // The marker-genes request as the modal builds it. The gene subset travels
 // only when one is chosen: an empty choice means "all genes", and a stale
@@ -101,5 +101,20 @@ describe('runSignature', () => {
     expect(runSignature(base, mask)).not.toBe(a)
     expect(runSignature(base, mask)).toBe(runSignature(base, mask))
     expect(runSignature(base, [true, false])).not.toBe(runSignature(base, mask))
+  })
+})
+
+describe('selectionFromModal restriction', () => {
+  it('adds restrict_to in wire shape only when given', () => {
+    expect(selectionFromModal(5, '', '', '', { label: 'TFs', genes: ['Sox2'] }).restrict_to).toEqual({ label: 'TFs', genes: ['Sox2'] })
+    expect('restrict_to' in selectionFromModal(5, '', '', '')).toBe(false)
+  })
+})
+
+describe('markerGenesParams restriction', () => {
+  it('sends restrict_to with the run so the run result is already restricted', () => {
+    const base = { obsColumn: 'leiden', topN: 5, geneSubset: '', activeCellIndices: null, selectedGroups: new Set(['a']), nCategories: 1, minInGroupFraction: '', maxOutGroupFraction: '', minFoldChange: '' }
+    expect(markerGenesParams({ ...base, restrictTo: { label: 'TFs', genes: ['Sox2'] } }).restrict_to).toEqual({ label: 'TFs', genes: ['Sox2'] })
+    expect('restrict_to' in markerGenesParams({ ...base, restrictTo: null })).toBe(false)
   })
 })

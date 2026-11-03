@@ -10,7 +10,7 @@ import numpy as np
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from xcell.adaptor import DataAdaptor, combine_datasets, describe_combine_columns, FigureInputMissing
 from xcell.task_manager import task_manager
@@ -1777,6 +1777,22 @@ def run_diffexp(request: DiffExpRequest, dataset: str | None = Query(None)):
 # =========================================================================
 
 
+class MarkerRestriction(BaseModel):
+    """Keep only marker genes in an annotation: a labelled gene list (a Gene
+    Panel set) or a boolean .var column. Exactly one source."""
+    label: str
+    genes: list[str] | None = None
+    var_column: str | None = None
+
+    @model_validator(mode='after')
+    def _one_source(self):
+        if (self.genes is None) == (self.var_column is None):
+            raise ValueError('restrict_to names exactly one of genes or var_column')
+        if self.genes is not None and not self.genes:
+            raise ValueError('the restriction names no genes')
+        return self
+
+
 class MarkerGenesRequest(BaseModel):
     """Request model for one-vs-rest marker gene analysis."""
     obs_column: str
@@ -1791,6 +1807,7 @@ class MarkerGenesRequest(BaseModel):
     # when None); the thresholds above and top_n select from them.
     store_top_n: int | None = None
     label: str | None = None
+    restrict_to: MarkerRestriction | None = None
 
 
 class MarkerSelection(BaseModel):
@@ -1802,6 +1819,7 @@ class MarkerSelection(BaseModel):
     max_padj: float | None = None
     rank_by: str = 'score'
     groups: list[str] | None = None
+    restrict_to: MarkerRestriction | None = None
 
 
 class MarkerSourceSpec(MarkerSelection):
@@ -1891,6 +1909,7 @@ def run_marker_genes(request: MarkerGenesRequest, dataset: str | None = Query(No
             active_cell_indices=request.active_cell_indices,
             store_top_n=request.store_top_n,
             label=request.label,
+            restrict_to=request.restrict_to.model_dump() if request.restrict_to else None,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

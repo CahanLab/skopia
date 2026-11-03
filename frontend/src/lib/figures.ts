@@ -2,7 +2,7 @@
  *  shapes each renderer draws, colour ramps, filenames and PNG rasterising.
  *  Kept free of React so the contract is unit-testable. */
 
-import { markerParams, type MarkerSource, type DotplotOptions, DEFAULT_DOTPLOT_OPTIONS } from './markerSelection'
+import { markerParams, type MarkerSource, type DotplotOptions, DEFAULT_DOTPLOT_OPTIONS, restrictionWire } from './markerSelection'
 
 export type FigureKind = 'enrichment_heatmap' | 'enrichment_network' | 'composition_barplot' | 'expression_heatmap' | 'cnv_heatmap' | 'expression_dotplot'
 
@@ -174,6 +174,7 @@ export function heatmapFigureFromConfig(cfg: HeatmapConfigLike, cellSubset: stri
     inputs: {
       gene_sets: (cfg.selectedGeneSets ?? []).map((g) => ({ name: g.name, genes: g.genes })),
       marker_key: src ? src.key : null,
+      marker_restrict: src?.restrictTo ? restrictionWire(src.restrictTo) : null,
       obs_column: cfg.obsColumn, line_name: cfg.lineName, transform,
       ...cellInputs(cellSubset, cfg.cellIndices ?? null),
     },
@@ -193,6 +194,7 @@ export function dotplotFigureFromConfig(cfg: HeatmapConfigLike, cellSubset: stri
     inputs: {
       gene_sets: (cfg.selectedGeneSets ?? []).map((g) => ({ name: g.name, genes: g.genes })),
       marker_key: src ? src.key : null,
+      marker_restrict: src?.restrictTo ? restrictionWire(src.restrictTo) : null,
       obs_column: cfg.obsColumn, transform,
       ...cellInputs(cellSubset, cfg.cellIndices ?? null),
     },
@@ -278,9 +280,30 @@ export function defaultTitle(kind: FigureKind, inputs: Record<string, unknown>, 
   if (kind === 'composition_barplot') return `Composition of ${String(inputs.column_a)} by ${String(inputs.column_b)}`
   if (kind === 'cnv_heatmap') return `CNV heatmap: ${String(inputs.key)}${inputs.obs_column ? ` by ${String(inputs.obs_column)}` : ''}`
   const sets = (inputs.gene_sets as { name: string }[] | undefined) ?? []
-  const parts = [...(inputs.marker_key ? [`markers ${String(inputs.marker_key)}`] : []), ...sets.slice(0, 3).map((s) => s.name)]
+  const restrict = inputs.marker_restrict as { label: string } | null | undefined
+  const markers = inputs.marker_key ? [`markers ${String(inputs.marker_key)}${restrict ? ` in ${restrict.label}` : ''}`] : []
+  const parts = [...markers, ...sets.slice(0, 3).map((s) => s.name)]
   if (kind === 'expression_dotplot') return `Dot plot: ${parts.join(', ')} by ${String(inputs.obs_column)}`
   return `Expression heatmap: ${parts.join(', ')}`
+}
+
+/** A figure's inputs on one line: gene lists as `<name> (<n> genes)`, a
+ *  restriction as `in <label>`, nulls skipped. */
+export function inputsSummary(inputs: Record<string, unknown>): string {
+  const parts: string[] = []
+  for (const [k, v] of Object.entries(inputs)) {
+    if (v === null || v === undefined) continue
+    if (k === 'gene_sets' && Array.isArray(v)) {
+      if (v.length) parts.push(`gene_sets: ${v.map((s) => `${(s as { name: string }).name} (${((s as { genes: string[] }).genes ?? []).length} genes)`).join(', ')}`)
+    } else if (k === 'marker_restrict' && typeof v === 'object') {
+      parts.push(`in ${(v as { label: string }).label}`)
+    } else if (Array.isArray(v)) {
+      parts.push(`${k}: ${v.length} items`)
+    } else {
+      parts.push(`${k}: ${String(v)}`)
+    }
+  }
+  return parts.join(' · ')
 }
 
 /** Five-stop diverging ramps, negative → zero → positive. */

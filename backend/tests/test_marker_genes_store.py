@@ -151,6 +151,22 @@ def test_select_on_a_group_with_no_rows_is_empty():
     assert c['genes'] == [] and c['n_candidates'] == 0
 
 
+def test_select_restricts_to_an_allowed_gene_list_before_thresholds():
+    sel = mg.select_markers(_record(), top_n=1, genes={'g1', 'g2', 'g6', 'nope'})
+    assert _genes(sel, 'a') == ['g1'] and _genes(sel, 'b') == ['g6']
+    assert sel['results'][0]['n_candidates'] == 2 and sel['restricted'] is True
+    # thresholds apply inside the allowed list
+    sel = mg.select_markers(_record(), top_n=5, genes={'g1', 'g2'}, min_pct_in=0.5)
+    assert _genes(sel, 'a') == ['g2'] and sel['results'][0]['n_candidates'] == 1
+
+
+def test_select_restriction_with_unknown_names_is_empty():
+    sel = mg.select_markers(_record(), genes=['zzz'])
+    assert all(r['genes'] == [] and r['n_candidates'] == 0 for r in sel['results'])
+    assert sel['restricted'] is True
+    assert mg.select_markers(_record())['restricted'] is False
+
+
 # ---------------------------------------------------------------------------
 # Adaptor store and routes
 # ---------------------------------------------------------------------------
@@ -255,6 +271,61 @@ def test_select_reads_without_rerunning_the_test(monkeypatch):
                       {"name": "c", "genes": groups[2]["genes"]}]
     # a selection is a read: nothing is logged
     assert [s.action for s in a.analysis_record.steps].count("marker_genes") == 1
+
+
+def test_adaptor_restricts_from_a_gene_list_and_a_boolean_column():
+    a = _adaptor()
+    key = a.run_marker_genes(obs_column='grp', top_n=3, store_top_n=10)['key']
+    full = a.select_marker_genes(key, top_n=2)
+    first = full['results'][0]['genes'][0]['gene']
+    sel = a.select_marker_genes(key, top_n=2, restrict_to={'label': 'one', 'genes': [first, 'zzz']})
+    assert [g['gene'] for g in sel['results'][0]['genes']] == [first] and sel['restricted'] is True
+    assert sel['restrict_to'] == {'label': 'one', 'genes': [first, 'zzz']}
+    a.adata.var['flag'] = [g == first for g in a.adata.var_names]          # bool dtype
+    a.adata.var['flag01'] = a.adata.var['flag'].astype(int)                  # numeric 0/1 counts too
+    for col in ('flag', 'flag01'):
+        sel = a.select_marker_genes(key, top_n=2, restrict_to={'label': col, 'var_column': col})
+        assert [g['gene'] for g in sel['results'][0]['genes']] == [first]
+    a.adata.var['n_cells'] = np.arange(a.adata.n_vars)
+    with pytest.raises(ValueError, match='boolean'):
+        a.select_marker_genes(key, restrict_to={'label': 'x', 'var_column': 'n_cells'})
+    with pytest.raises(KeyError):
+        a.select_marker_genes(key, restrict_to={'label': 'x', 'var_column': 'ghost'})
+    with pytest.raises(ValueError, match='names no genes'):
+        a.select_marker_genes(key, restrict_to={'label': 'x', 'genes': []})
+    with pytest.raises(ValueError):
+        a.select_marker_genes(key, restrict_to={'label': 'x', 'genes': ['g00'], 'var_column': 'flag'})
+    # a stored ranking holds weak markers too, so a restriction keeps the gene
+    # in every group whose stored rows have it; the plot path dedupes later
+    groups = a.marker_gene_set_groups(key, top_n=2, restrict_to={'label': 'one', 'genes': [first]})
+    assert groups[0] == {'name': full['results'][0]['group'], 'genes': [first]}
+    assert all(g['genes'] == [first] for g in groups)
+
+
+def test_run_applies_a_restriction_to_its_own_result(monkeypatch):
+    # A restriction chosen before Run must shape the run's returned lists too,
+    # or the modal shows unrestricted rows while Plot… draws restricted ones.
+    a = _adaptor()
+    first = a.run_marker_genes(obs_column='grp', top_n=1, store_top_n=10, _log=False)['results'][0]['genes'][0]['gene']
+    out = a.run_marker_genes(obs_column='grp', top_n=5, store_top_n=10, restrict_to={'label': 'one', 'genes': [first]})
+    assert [g['gene'] for g in out['results'][0]['genes']] == [first] and out['restricted'] is True
+    assert out['restrict_to'] == {'label': 'one', 'genes': [first]}
+    c = _client(a, monkeypatch)
+    r = c.post('/api/marker-genes', json={'obs_column': 'grp', 'top_n': 5, 'restrict_to': {'label': 'one', 'genes': [first]}})
+    assert r.status_code == 200, r.text
+    assert [g['gene'] for g in r.json()['results'][0]['genes']] == [first]
+    assert c.post('/api/marker-genes', json={'obs_column': 'grp', 'restrict_to': {'label': 'x'}}).status_code == 422
+
+
+def test_select_route_takes_restrict_to(monkeypatch):
+    a = _adaptor()
+    key = a.run_marker_genes(obs_column='grp', top_n=3, store_top_n=10)['key']
+    c = _client(a, monkeypatch)
+    first = c.post(f'/api/marker_genes/runs/{key}/select', json={'top_n': 1}).json()['results'][0]['genes'][0]['gene']
+    r = c.post(f'/api/marker_genes/runs/{key}/select', json={'top_n': 5, 'restrict_to': {'label': 'one', 'genes': [first]}})
+    assert r.status_code == 200 and [g['gene'] for g in r.json()['results'][0]['genes']] == [first]
+    assert c.post(f'/api/marker_genes/runs/{key}/select', json={'restrict_to': {'label': 'x', 'genes': []}}).status_code == 422
+    assert c.post(f'/api/marker_genes/runs/{key}/select', json={'restrict_to': {'label': 'x'}}).status_code == 422
 
 
 def test_select_route_and_run_list_route(monkeypatch):

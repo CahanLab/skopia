@@ -6947,19 +6947,44 @@ class DataAdaptor:
         self._log_action('marker_genes_delete', {'key': key}, {'deleted': key})
         return {'deleted': key}
 
-    def select_marker_genes(self, key: str, **selection: Any) -> dict[str, Any]:
-        """Top N after filters from the stored table — a read, never logged."""
+    def _restriction_genes(self, spec: dict[str, Any] | None) -> set[str] | None:
+        """The allowed names of a restriction ``{label, genes} | {label,
+        var_column}``; ``None`` for no restriction. The session gene mask is
+        not applied: a restriction is an allowed list, and the plot path drops
+        hidden genes afterwards like any other row. A column must be one the
+        gene-mask picker offers (``get_var_boolean_columns``); an absent column
+        is a ``KeyError`` so a figure can report it as a missing input."""
+        if spec is None:
+            return None
+        if not isinstance(spec, dict):
+            raise ValueError('restrict_to must be {label, genes} or {label, var_column}')
+        genes, col = spec.get('genes'), spec.get('var_column')
+        if (genes is None) == (col is None):
+            raise ValueError('restrict_to names exactly one of genes or var_column')
+        if genes is not None:
+            if not isinstance(genes, list) or not genes:
+                raise ValueError('the restriction names no genes')
+            return {str(g) for g in genes}
+        if col not in self.adata.var.columns:
+            raise KeyError(f"Column '{col}' not found in .var")
+        return set(self.column_to_gene_names(str(col)))
+
+    def select_marker_genes(self, key: str, restrict_to: dict[str, Any] | None = None, **selection: Any) -> dict[str, Any]:
+        """Top N after filters from the stored table — a read, never logged.
+        ``restrict_to`` keeps only the stored rows in an annotation."""
         from xcell import marker_genes as mg  # noqa: PLC0415
         record = self.get_marker_run(key, include_table=True)
-        out = mg.select_markers(record, **selection)
+        out = mg.select_markers(record, genes=self._restriction_genes(restrict_to), **selection)
         out.update({'key': key, 'uid': record.get('uid'), 'obs_column': record.get('obs_column'),
-                    'n_cells_tested': (record.get('params') or {}).get('n_cells_tested')})
+                    'n_cells_tested': (record.get('params') or {}).get('n_cells_tested'),
+                    'restrict_to': restrict_to})
         return out
 
-    def marker_gene_set_groups(self, key: str, **selection: Any) -> list[dict[str, Any]]:
+    def marker_gene_set_groups(self, key: str, restrict_to: dict[str, Any] | None = None,
+                               **selection: Any) -> list[dict[str, Any]]:
         """The selection as heatmap / dot plot row groups: one per group that
         kept any gene, named by the group, in the run's group order."""
-        sel = self.select_marker_genes(key, **selection)
+        sel = self.select_marker_genes(key, restrict_to=restrict_to, **selection)
         return [{'name': r['group'], 'genes': [g['gene'] for g in r['genes']]} for r in sel['results'] if r['genes']]
 
     def dotplot_data(self, genes: list[str], gene_set_groups: list[dict[str, Any]] | None, obs_column: str, *,
@@ -7289,6 +7314,17 @@ class DataAdaptor:
             if marker_key and marker_key not in self._marker_store():
                 raise ValueError(f"inputs.marker_key '{marker_key}' is not a stored marker run; "
                                  f"have {sorted(self._marker_store()) or 'none'}")
+            restrict = inputs.get('marker_restrict') or None
+            if restrict is not None:
+                if not marker_key:
+                    raise ValueError('inputs.marker_restrict needs inputs.marker_key')
+                try:
+                    self._restriction_genes(restrict)
+                except KeyError as e:
+                    raise ValueError(f'inputs.marker_restrict: {e.args[0]}') from e
+                restrict = {'label': str(restrict.get('label', ''))} | (
+                    {'genes': [str(g) for g in restrict['genes']]} if restrict.get('genes') is not None
+                    else {'var_column': str(restrict['var_column'])})
             obs_column = inputs.get('obs_column') or None
             if obs_column and obs_column not in self.adata.obs.columns:
                 raise ValueError(f"inputs.obs_column '{obs_column}' is not an .obs column")
@@ -7302,7 +7338,7 @@ class DataAdaptor:
                 if transform not in (None, 'log1p'):
                     raise ValueError("inputs.transform must be null or 'log1p'")
                 return {'gene_sets': [{'name': str(s.get('name', '')), 'genes': [str(g) for g in s['genes']]} for s in sets],
-                        'marker_key': str(marker_key) if marker_key else None,
+                        'marker_key': str(marker_key) if marker_key else None, 'marker_restrict': restrict,
                         'obs_column': obs_column, 'transform': transform, **self._figure_cell_inputs(inputs)}
             line_name = inputs.get('line_name') or None
             if line_name and line_name not in {l.get('name') for l in self.get_lines()}:
@@ -7311,7 +7347,7 @@ class DataAdaptor:
             if transform not in (None, 'log1p'):
                 raise ValueError("inputs.transform must be null or 'log1p'")
             return {'gene_sets': [{'name': str(s.get('name', '')), 'genes': [str(g) for g in s['genes']]} for s in sets],
-                    'marker_key': str(marker_key) if marker_key else None,
+                    'marker_key': str(marker_key) if marker_key else None, 'marker_restrict': restrict,
                     'obs_column': obs_column, 'line_name': line_name, 'transform': transform,
                     **self._figure_cell_inputs(inputs)}
         if kind == 'cnv_heatmap':
@@ -7477,7 +7513,12 @@ class DataAdaptor:
             expected = (record.get('input_ids') or {}).get(key)
             if expected and uid != expected:
                 raise FigureInputMissing(f"Marker run '{key}' was replaced by a later run; the figure cannot be drawn")
-            groups += self.marker_gene_set_groups(key, **self._marker_selection(params))
+            restrict = inp.get('marker_restrict') or None
+            try:
+                groups += self.marker_gene_set_groups(key, restrict_to=restrict, **self._marker_selection(params))
+            except KeyError as e:
+                # the restriction's .var column was deleted after the figure was saved
+                raise FigureInputMissing(f"{e.args[0]}; the figure cannot be drawn") from e
         groups += [{'name': s_['name'], 'genes': list(s_['genes'])} for s_ in inp.get('gene_sets') or []]
         return groups
 
@@ -7486,7 +7527,8 @@ class DataAdaptor:
             what = 'Expression heatmap' if kind == 'expression_heatmap' else 'Dot plot'
             parts = []
             if inputs.get('marker_key'):
-                parts.append(f"markers {inputs['marker_key']}")
+                restrict = inputs.get('marker_restrict') or None
+                parts.append(f"markers {inputs['marker_key']}" + (f" in {restrict['label']}" if restrict else ''))
             parts += [s['name'] for s in inputs['gene_sets'][:3]]
             by = f" by {inputs['obs_column']}" if kind == 'expression_dotplot' else ''
             return f"{what}: {', '.join(parts)}{by}"
@@ -14672,9 +14714,14 @@ class DataAdaptor:
         active_cell_indices: list[int] | None = None,
         store_top_n: int | None = None,
         label: str | None = None,
+        restrict_to: dict[str, Any] | None = None,
         _log: bool = True,
     ) -> dict[str, Any]:
         """Run one-vs-rest marker gene analysis using scanpy.
+
+        ``restrict_to`` is applied to the run's own returned selection (so a
+        restriction chosen before Run shapes the lists the modal shows); it is
+        validated before the test runs and is not part of the stored run.
 
         The whole ranking (``store_top_n`` rows per group, with percent
         detected in and out of the group) is stored under
@@ -14702,6 +14749,8 @@ class DataAdaptor:
         Raises:
             ValueError: If column doesn't exist, isn't categorical, or has < 2 groups
         """
+        # Fail on a bad restriction before the test runs; it costs seconds.
+        self._restriction_genes(restrict_to)
         # Validate obs_column exists
         if obs_column not in self.adata.obs.columns:
             raise ValueError(f"Column '{obs_column}' not found in .obs")
@@ -14811,13 +14860,14 @@ class DataAdaptor:
         key = self._store_marker_run(f'markers_{obs_column}', record)
 
         # The run-time thresholds are the first selection on the stored table.
+        allowed = self._restriction_genes(restrict_to)
         selection = {
             'top_n': top_n,
             'min_pct_in': min_in_group_fraction,
             'max_pct_out': max_out_group_fraction,
             'min_log2fc': float(np.log2(min_fold_change)) if min_fold_change is not None and min_fold_change > 0 else None,
         }
-        selected = mg.select_markers(record, **selection)
+        selected = mg.select_markers(record, genes=allowed, **selection)
 
         if _log:
             self._log_action('marker_genes', {
@@ -14845,6 +14895,8 @@ class DataAdaptor:
             'results': selected['results'],
             'n_stored_per_group': selected['n_stored_per_group'],
             'truncated': selected['truncated'],
+            'restricted': selected['restricted'],
+            'restrict_to': restrict_to,
             'gene_subset_type': subset_type,
             'n_genes_tested': int(work_adata.n_vars),
             'n_cells_tested': int(work_adata.n_obs),
