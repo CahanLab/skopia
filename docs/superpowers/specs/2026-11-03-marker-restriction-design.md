@@ -92,8 +92,7 @@ sets with genes (`<name> (<n>)`, up and down genes together), then the
 boolean `.var` columns (`<name> (<n_true>)`), grouped with `<optgroup>`.
 Its value is the `MarkerSource.restrictTo` shape. The modal already fetches
 the boolean columns; the picker takes them as a prop so the Expression
-settings fetch them the same way (`/api/genes/boolean_columns` or
-whatever the modal calls; the plan names it).
+settings fetch them the same way (`GET /api/var/boolean_columns`).
 
 **Find Marker Genes modal.** A "Show only:" row under the Advanced Filters
 with the picker. Changing it re-selects through the debounced select call
