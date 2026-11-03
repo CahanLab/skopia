@@ -1,15 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import {
   markerRequest, markerParams, markerSummary, normalizeHeatmapConfig, rowsFromConfig, DEFAULT_DOTPLOT_OPTIONS,
-  type MarkerSource,
+  restrictionOptions, matchRestriction,
+  type MarkerSource, type MarkerRestriction,
 } from './markerSelection'
-import { dotplotFigureFromConfig, heatmapFigureFromConfig } from './figures'
+import { dotplotFigureFromConfig, heatmapFigureFromConfig, inputsSummary } from './figures'
 import type { HeatmapConfig } from '../store'
 
 const src: MarkerSource = {
   key: 'markers_leiden', label: 'leiden', topN: 10,
-  minPctIn: 0.25, maxPctOut: null, minLog2fc: 1, maxPadj: null, rankBy: 'score',
+  minPctIn: 0.25, maxPctOut: null, minLog2fc: 1, maxPadj: null, rankBy: 'score', restrictTo: null,
 }
+const tf: MarkerRestriction = { label: 'TFs', genes: ['Sox2', 'Foxa2'] }
 
 const sets = [{ id: 'x', name: 'immune', genes: ['Ptprc', 'Cd3e'] }]
 
@@ -48,7 +50,7 @@ describe('normalizeHeatmapConfig', () => {
   it('keeps what a new config already says', () => {
     const cfg = normalizeHeatmapConfig({ ...legacy, plotType: 'dotplot', markerSource: src, dotplot: { ...DEFAULT_DOTPLOT_OPTIONS, swapAxes: true } })
     expect(cfg.plotType).toBe('dotplot')
-    expect(cfg.markerSource).toBe(src)
+    expect(cfg.markerSource).toEqual(src)
     expect(cfg.dotplot.swapAxes).toBe(true)
   })
 })
@@ -81,7 +83,7 @@ describe('figure builders', () => {
   it('a dot plot figure names its kind, column and options', () => {
     const fig = dotplotFigureFromConfig({ ...legacy, plotType: 'dotplot', markerSource: src, dotplot: { ...DEFAULT_DOTPLOT_OPTIONS, colorBy: 'mean_expressing', vmax: 2 } }, 'half', null)
     expect(fig.kind).toBe('expression_dotplot')
-    expect(fig.inputs).toEqual({ gene_sets: [{ name: 'immune', genes: ['Ptprc', 'Cd3e'] }], marker_key: 'markers_leiden', obs_column: 'leiden', transform: null, cell_subset: 'half', cell_indices: null })
+    expect(fig.inputs).toEqual({ gene_sets: [{ name: 'immune', genes: ['Ptprc', 'Cd3e'] }], marker_key: 'markers_leiden', marker_restrict: null, obs_column: 'leiden', transform: null, cell_subset: 'half', cell_indices: null })
     expect(fig.params).toEqual({
       ...markerParams(src), color_by: 'mean_expressing', standard_scale: 'none', expression_cutoff: 0, gene_ordering: 'as_provided',
       swap_axes: false, colormap: 'viridis', vmax: 2, dot_max: null,
@@ -99,5 +101,43 @@ describe('sequentialColor', () => {
     expect(sequentialColor(NaN, 'reds')).toBe('rgb(255,245,240)')
     // an unknown name falls back to viridis
     expect(sequentialColor(0, 'nope')).toBe('rgb(68,1,84)')
+  })
+})
+
+describe('restriction', () => {
+  it('markerRequest carries the restriction in wire shape', () => {
+    expect(markerRequest({ ...src, restrictTo: tf }).restrict_to).toEqual({ label: 'TFs', genes: ['Sox2', 'Foxa2'] })
+    expect(markerRequest({ ...src, restrictTo: { label: 'flag', varColumn: 'flag' } }).restrict_to).toEqual({ label: 'flag', var_column: 'flag' })
+    expect('restrict_to' in markerRequest(src)).toBe(false)
+  })
+  it('markerSummary names the restriction', () => {
+    expect(markerSummary({ ...src, restrictTo: tf })).toBe('top 10 of markers_leiden · pct in ≥ 0.25 · log2FC ≥ 1 · in TFs')
+  })
+  it('a pre-feature source normalizes to no restriction', () => {
+    const legacySrc = { ...src } as Partial<MarkerSource>
+    delete legacySrc.restrictTo
+    expect(normalizeHeatmapConfig({ ...legacy, markerSource: legacySrc as MarkerSource }).markerSource?.restrictTo).toBeNull()
+  })
+  it('figure builders record marker_restrict and title it', () => {
+    const fig = dotplotFigureFromConfig({ ...legacy, plotType: 'dotplot', markerSource: { ...src, restrictTo: tf }, dotplot: DEFAULT_DOTPLOT_OPTIONS }, null, null)
+    expect(fig.inputs.marker_restrict).toEqual({ label: 'TFs', genes: ['Sox2', 'Foxa2'] })
+    expect(heatmapFigureFromConfig(legacy, null).inputs.marker_restrict).toBeNull()
+  })
+  it('restrictionOptions lists sets with genes then boolean columns; matchRestriction finds a snapshot by label', () => {
+    const opts = restrictionOptions([{ id: 'a', name: 'TFs', genes: ['Sox2'], genesDown: ['Sox2', 'Hes1'] }, { id: 'b', name: 'empty', genes: [] }], [{ name: 'flag', n_true: 3 }])
+    expect(opts.map((o) => o.value)).toEqual(['set:a', 'col:flag'])
+    expect(opts[0].restriction).toEqual({ label: 'TFs', genes: ['Sox2', 'Hes1'] })
+    expect(opts[0].label).toBe('TFs (2)')
+    expect(opts[0].group).toBe('Gene sets')
+    expect(opts[1].restriction).toEqual({ label: 'flag', varColumn: 'flag' })
+    expect(opts[1].label).toBe('flag (3)')
+    expect(matchRestriction(opts, tf)).toBe('set:a')
+    expect(matchRestriction(opts, { label: 'flag', genes: ['x'] })).toBe('saved')   // same label, other source kind
+    expect(matchRestriction(opts, { label: 'gone', genes: ['x'] })).toBe('saved')
+    expect(matchRestriction(opts, null)).toBe('')
+  })
+  it('inputsSummary collapses gene lists', () => {
+    expect(inputsSummary({ gene_sets: [{ name: 'immune', genes: ['a', 'b'] }], marker_key: 'markers_x', marker_restrict: { label: 'TFs', genes: ['a'] }, obs_column: 'leiden', transform: null }))
+      .toBe('gene_sets: immune (2 genes) · marker_key: markers_x · in TFs · obs_column: leiden')
   })
 })

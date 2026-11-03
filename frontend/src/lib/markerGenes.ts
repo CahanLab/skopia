@@ -1,3 +1,4 @@
+import { restrictionWire, type MarkerRestriction, type MarkerRestrictionWire } from './markerSelection'
 /**
  * The one-vs-rest marker-genes request, built from the modal's state.
  *
@@ -85,10 +86,12 @@ export function runnableGroupCount(selected: ReadonlySet<string>, maskedCounts: 
  *  (`POST /api/marker_genes/runs/{key}/select`). The fold-change box is a
  *  ratio, the stored column is log2, so it travels as log2. Blanks and
  *  non-positive fold changes are left out. */
-export function selectionFromModal(topN: number, minInGroupFraction: string, maxOutGroupFraction: string, minFoldChange: string): {
-  top_n: number; min_pct_in?: number; max_pct_out?: number; min_log2fc?: number
-} {
-  const out: { top_n: number; min_pct_in?: number; max_pct_out?: number; min_log2fc?: number } = { top_n: Math.max(1, topN) }
+export function selectionFromModal(
+  topN: number, minInGroupFraction: string, maxOutGroupFraction: string, minFoldChange: string,
+  restrictTo: MarkerRestriction | null = null,
+): { top_n: number; min_pct_in?: number; max_pct_out?: number; min_log2fc?: number; restrict_to?: MarkerRestrictionWire } {
+  const out: ReturnType<typeof selectionFromModal> = { top_n: Math.max(1, topN) }
+  if (restrictTo) out.restrict_to = restrictionWire(restrictTo)
   const minIGF = parseFloat(minInGroupFraction)
   if (Number.isFinite(minIGF)) out.min_pct_in = minIGF
   const maxOGF = parseFloat(maxOutGroupFraction)

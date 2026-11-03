@@ -213,7 +213,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
     const markerSource: MarkerSource | null = usingMarkers && markerRun ? {
       key: markerRun.key, label: markerRun.obs_column, topN: Math.max(1, markerTopN),
       minPctIn: numOrNull(minPctIn), maxPctOut: numOrNull(maxPctOut), minLog2fc: numOrNull(minLog2fc), maxPadj: numOrNull(maxPadj),
-      rankBy,
+      rankBy, restrictTo: null,
     } : null
 
     onApply({

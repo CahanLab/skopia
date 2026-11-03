@@ -467,7 +467,7 @@ export default function MarkerGenesModal() {
       markerSource: {
         key: resultKey, label: markerGenesColumn, topN: sel.top_n,
         minPctIn: sel.min_pct_in ?? null, maxPctOut: sel.max_pct_out ?? null, minLog2fc: sel.min_log2fc ?? null, maxPadj: null,
-        rankBy: 'score',
+        rankBy: 'score', restrictTo: null,
       },
       dotplot: DEFAULT_DOTPLOT_OPTIONS,
       cellOrdering: 'category',
