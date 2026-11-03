@@ -302,6 +302,22 @@ export function divergingColor(v: number, vmax: number, colormap: string): strin
   return `rgb(${mix.join(',')})`
 }
 
+/** Five-stop sequential ramps, low → high, for the dot plot's colour. */
+const SEQ_RAMPS: Record<string, [number, number, number][]> = {
+  viridis: [[68, 1, 84], [59, 82, 139], [33, 145, 140], [94, 201, 98], [253, 231, 37]],
+  reds: [[255, 245, 240], [252, 187, 161], [251, 106, 74], [203, 24, 29], [103, 0, 13]],
+}
+
+export function sequentialColor(t: number, colormap: string): string {
+  const ramp = SEQ_RAMPS[colormap] ?? SEQ_RAMPS.viridis
+  const c = Number.isFinite(t) ? Math.max(0, Math.min(1, t)) : 0
+  const pos = c * (ramp.length - 1)
+  const i = Math.min(ramp.length - 2, Math.floor(pos))
+  const f = pos - i
+  const a = ramp[i], b = ramp[i + 1]
+  return `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * f)).join(',')})`
+}
+
 export function truncate(label: string, n: number): string {
   return label.length > n ? `${label.slice(0, Math.max(1, n - 1))}…` : label
 }

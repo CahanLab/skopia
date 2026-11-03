@@ -88,3 +88,16 @@ describe('figure builders', () => {
     })
   })
 })
+
+describe('sequentialColor', () => {
+  it('maps 0..1 onto the named ramp and clamps outside it', async () => {
+    const { sequentialColor } = await import('./figures')
+    expect(sequentialColor(0, 'viridis')).toBe('rgb(68,1,84)')
+    expect(sequentialColor(1, 'viridis')).toBe('rgb(253,231,37)')
+    expect(sequentialColor(2, 'viridis')).toBe('rgb(253,231,37)')
+    expect(sequentialColor(0, 'reds')).toBe('rgb(255,245,240)')
+    expect(sequentialColor(NaN, 'reds')).toBe('rgb(255,245,240)')
+    // an unknown name falls back to viridis
+    expect(sequentialColor(0, 'nope')).toBe('rgb(68,1,84)')
+  })
+})
