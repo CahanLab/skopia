@@ -1893,8 +1893,9 @@ export default function App() {
             <button
               style={{ ...styles.tab, ...(centerPanelView === 'heatmap' ? styles.tabActive : {}) }}
               onClick={() => setCenterPanelView('heatmap')}
+              title="Expression plots: heatmap or dot plot of genes by cells or groups"
             >
-              Heatmap
+              Expression
             </button>
             <button
               style={{ ...styles.tab, ...(centerPanelView === 'barplot' ? styles.tabActive : {}) }}
