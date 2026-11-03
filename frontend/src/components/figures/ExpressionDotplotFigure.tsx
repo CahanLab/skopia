@@ -49,25 +49,28 @@ export const ExpressionDotplotFigure = forwardRef<SVGSVGElement, ExpressionDotpl
     return m || 1
   }, [data.mean, params.vmax])
 
-  // Cell size follows the width available, within what a dot and a label can use.
-  const cell = Math.max(14, Math.min(28, Math.floor(((width ?? 600) - 160) / Math.max(1, nCols))))
-  const fontSize = Math.max(8, Math.min(12, cell * 0.6))
+  // Cell size follows the width left beside the row labels, within what a
+  // dot and a label can use; the legends sit below the grid so a narrow
+  // panel (the Figures tab's) never pushes them out of view.
   const rowNames = (swap ? data.genes : data.categories).map((s) => truncate(s, 28))
   const colNames = (swap ? data.categories : data.genes).map((s) => truncate(s, 24))
   const groupRuns = runs(data.row_groups)
   const groupNames = Array.from(new Set(groupRuns.map((r) => r.name)))
   const groupColor = (name: string) => GROUP_COLORS[groupNames.indexOf(name) % GROUP_COLORS.length]
-  const rowLabelW = Math.min(240, 10 + Math.max(0, ...rowNames.map((l) => l.length)) * fontSize * 0.62) + (swap && groupRuns.length ? 12 : 0)
-  const colLabelH = Math.min(150, 10 + Math.max(0, ...colNames.map((l) => l.length)) * fontSize * 0.55) + (!swap && groupRuns.length ? 16 : 0)
+  const longestRow = Math.max(0, ...rowNames.map((l) => l.length))
+  const cell = Math.max(14, Math.min(28, Math.floor(((width ?? 600) - Math.min(240, 10 + longestRow * 7.4) - 40) / Math.max(1, nCols))))
+  const fontSize = Math.max(8, Math.min(12, cell * 0.6))
+  const rowLabelW = Math.min(240, 10 + longestRow * fontSize * 0.62) + (swap && groupRuns.length ? 12 : 0)
+  const colLabelH = Math.min(150, 10 + Math.max(0, ...colNames.map((l) => l.length)) * fontSize * 0.55) + (!swap && groupRuns.length ? 8 : 0)
   const titleH = title ? 24 : 0
   const left = rowLabelW + 8
   const top = titleH + colLabelH + 8
   const gridW = nCols * cell
   const gridH = nRows * cell
-  const legendW = 150
-  const svgW = Math.max(width ?? 0, left + gridW + legendW + 48, title ? 24 + title.length * 7 : 0)
-  const legendBlockH = 56 + 3 * 16
-  const svgH = top + Math.max(gridH, legendBlockH) + 24
+  const legendW = 120
+  const groupLegendRows = groupNames.length ? Math.ceil(groupNames.length / 3) : 0
+  const svgW = Math.max(width ?? 0, left + gridW + 24, left + 340, title ? 24 + title.length * 7 : 0)
+  const svgH = top + gridH + 70 + groupLegendRows * 16 + (data.n_genes_hidden ? 14 : 0)
 
   if (nGenes === 0 || nCats === 0) {
     return (
@@ -84,10 +87,11 @@ export const ExpressionDotplotFigure = forwardRef<SVGSVGElement, ExpressionDotpl
   const radius = (pct: number) => rMax * Math.sqrt(Math.max(0, Math.min(1, pct / dotMax)))
   const color = (mean: number) => (colormap === 'rdbu' ? divergingColor(mean, vmax, 'rdbu') : sequentialColor(mean / vmax, colormap))
   const at = (gi: number, ci: number) => (swap ? { col: ci, row: gi } : { col: gi, row: ci })
-  const legendX = left + gridW + 28
-  const legendY = top
+  const legendX = left
+  const legendY = top + gridH + 16
   const sizeStops = [0.25, 0.5, 1.0].map((f) => f * dotMax)
   const colorStops = [0, 0.25, 0.5, 0.75, 1]
+  const colorLegendX = legendX + 3 * (2 * rMax + 34) + 24
 
   return (
     <svg ref={ref} data-figure-svg width={svgW} height={svgH} style={{ background, fontFamily: FONT, display: 'block' }}>
@@ -101,18 +105,16 @@ export const ExpressionDotplotFigure = forwardRef<SVGSVGElement, ExpressionDotpl
         </g>
       ) : (
         <g key={`${r.name}-${r.start}`}>
-          <rect x={left + r.start * cell + 1} y={top - 12} width={r.size * cell - 2} height={4} fill={groupColor(r.name)} />
-          <text x={left + r.start * cell + (r.size * cell) / 2} y={top - 15} fill={groupColor(r.name)} fontSize={Math.max(7, fontSize - 2)} textAnchor="middle">
-            {truncate(r.name, Math.max(3, Math.floor((r.size * cell) / (fontSize * 0.55))))}
+          <rect x={left + r.start * cell + 1} y={top - 6} width={r.size * cell - 2} height={4} fill={groupColor(r.name)}>
             <title>{r.name}</title>
-          </text>
+          </rect>
         </g>
       ))}
       {/* column labels, rotated */}
       {colNames.map((label, j) => (
         <text
           key={j} fill="#ccc" fontSize={fontSize}
-          transform={`translate(${left + j * cell + cell / 2 + fontSize * 0.35}, ${top - (groupRuns.length && !swap ? 20 : 6)}) rotate(-45)`}
+          transform={`translate(${left + j * cell + cell / 2 + fontSize * 0.35}, ${top - (groupRuns.length && !swap ? 10 : 6)}) rotate(-45)`}
           textAnchor="start"
           style={!swap && onGeneClick ? { cursor: 'pointer' } : undefined}
           onClick={!swap && onGeneClick ? () => onGeneClick(data.genes[j]) : undefined}
@@ -156,12 +158,12 @@ export const ExpressionDotplotFigure = forwardRef<SVGSVGElement, ExpressionDotpl
           </circle>
         )
       }))}
-      {/* legends: dot size, then colour */}
-      <text x={legendX} y={legendY + 10} fill="#ccc" fontSize={10}>Fraction of cells</text>
+      {/* legends below the grid: dot size, colour, then the row groups */}
+      <text x={legendX} y={legendY + 4} fill="#ccc" fontSize={10}>Fraction of cells</text>
       {sizeStops.map((f, k) => (
         <g key={k}>
-          <circle cx={legendX + rMax + 2} cy={legendY + 24 + k * (2 * rMax + 6) + rMax} r={radius(f)} fill="#ccc" />
-          <text x={legendX + 2 * rMax + 12} y={legendY + 24 + k * (2 * rMax + 6) + rMax + 3.5} fill="#aaa" fontSize={9}>{`${Math.round(f * 100)}%`}</text>
+          <circle cx={legendX + k * (2 * rMax + 34) + rMax + 2} cy={legendY + 14 + rMax} r={radius(f)} fill="#ccc" />
+          <text x={legendX + k * (2 * rMax + 34) + 2 * rMax + 8} y={legendY + 14 + rMax + 3.5} fill="#aaa" fontSize={9}>{`${Math.round(f * 100)}%`}</text>
         </g>
       ))}
       <defs>
@@ -169,20 +171,26 @@ export const ExpressionDotplotFigure = forwardRef<SVGSVGElement, ExpressionDotpl
           {colorStops.map((s, k) => <stop key={k} offset={`${s * 100}%`} stopColor={color(s * vmax)} />)}
         </linearGradient>
       </defs>
-      {(() => {
-        const y = legendY + 24 + 3 * (2 * rMax + 6) + 14
+      <text x={colorLegendX} y={legendY + 4} fill="#ccc" fontSize={10}>{data.color_label}</text>
+      <rect x={colorLegendX} y={legendY + 10} width={legendW} height={10} fill="url(#dotplot-color-legend)" stroke="#0f3460" strokeWidth={0.5} />
+      <text x={colorLegendX} y={legendY + 31} fill="#aaa" fontSize={9}>0</text>
+      <text x={colorLegendX + legendW} y={legendY + 31} fill="#aaa" fontSize={9} textAnchor="end">{vmax >= 10 ? vmax.toFixed(0) : vmax.toFixed(2)}</text>
+      {groupNames.map((name, k) => {
+        const x = legendX + (k % 3) * 110
+        const y = legendY + 14 + 2 * rMax + 18 + Math.floor(k / 3) * 16
         return (
-          <g>
-            <text x={legendX} y={y} fill="#ccc" fontSize={10}>{data.color_label}</text>
-            <rect x={legendX} y={y + 6} width={legendW} height={10} fill="url(#dotplot-color-legend)" stroke="#0f3460" strokeWidth={0.5} />
-            <text x={legendX} y={y + 28} fill="#aaa" fontSize={9}>0</text>
-            <text x={legendX + legendW} y={y + 28} fill="#aaa" fontSize={9} textAnchor="end">{vmax >= 10 ? vmax.toFixed(0) : vmax.toFixed(2)}</text>
-            {!!data.n_genes_hidden && (
-              <text x={legendX} y={y + 44} fill="#e9a23b" fontSize={9}>{`${data.n_genes_hidden} hidden by gene mask`}</text>
-            )}
+          <g key={name}>
+            <rect x={x} y={y - 8} width={10} height={10} fill={groupColor(name)} />
+            <text x={x + 14} y={y} fill="#aaa" fontSize={9}>
+              <title>{name}</title>
+              {truncate(name, 14)}
+            </text>
           </g>
         )
-      })()}
+      })}
+      {!!data.n_genes_hidden && (
+        <text x={legendX} y={legendY + 14 + 2 * rMax + 18 + groupLegendRows * 16} fill="#e9a23b" fontSize={9}>{`${data.n_genes_hidden} hidden by gene mask`}</text>
+      )}
     </svg>
   )
 })

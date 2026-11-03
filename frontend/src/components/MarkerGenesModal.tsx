@@ -501,6 +501,10 @@ export default function MarkerGenesModal() {
 
   if (!isMarkerGenesModalOpen || !markerGenesColumn) return null
 
+  const filtersActive = [minInGroupFraction, maxOutGroupFraction, minFoldChange].some((v) => Number.isFinite(parseFloat(v)))
+  // The cap only matters when a filter could have wanted rows beyond it, or
+  // Top N asks for more than was kept.
+  const capMatters = resultTruncated && (filtersActive || (storedPerGroup !== null && topN > storedPerGroup))
   const nRunnableGroups = runnableGroupCount(selectedGroups, maskedCounts)
   const canRun = nRunnableGroups >= 2 && !isRunning
   const nActive = activeCellMask ? activeCellMask.reduce((n, b) => n + (b ? 1 : 0), 0) : 0
@@ -658,7 +662,7 @@ export default function MarkerGenesModal() {
                     Stored as <span style={{ color: '#4ecdc4' }}>{resultKey}</span>
                     {storedPerGroup !== null && ` (${storedPerGroup.toLocaleString()} ranked genes per group)`}.
                     {' '}Top N and the filters select from it without re-running.
-                    {resultTruncated && (
+                    {capMatters && (
                       <span style={{ color: '#e9a23b' }} title="A group holds exactly the stored number of rows, so a filter may have lost candidates the store never kept. Re-run with a larger stored ranking if the lists come up short.">
                         {' '}Stored ranking is at its cap.
                       </span>
@@ -677,7 +681,7 @@ export default function MarkerGenesModal() {
                       {groupResult.group}
                     </span>
                     <span style={{ fontSize: '11px', color: '#888' }} title="Shown of those that passed the filters">
-                      {groupResult.genes.length} genes{groupResult.n_candidates > groupResult.genes.length ? ` of ${groupResult.n_candidates}` : ''}
+                      {groupResult.genes.length} gene{groupResult.genes.length === 1 ? '' : 's'}{filtersActive && groupResult.n_candidates > groupResult.genes.length ? ` of ${groupResult.n_candidates} passing` : ''}
                     </span>
                   </div>
                   {expandedGroups.has(groupResult.group) && groupResult.genes.length > 0 && (
