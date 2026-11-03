@@ -6962,6 +6962,49 @@ class DataAdaptor:
         sel = self.select_marker_genes(key, **selection)
         return [{'name': r['group'], 'genes': [g['gene'] for g in r['genes']]} for r in sel['results'] if r['genes']]
 
+    def dotplot_data(self, genes: list[str], gene_set_groups: list[dict[str, Any]] | None, obs_column: str, *,
+                     transform: str | None = None, cell_indices: list[int] | None = None,
+                     **params: Any) -> dict[str, Any]:
+        """Dot plot table for ``genes`` grouped by ``obs_column``, reading the
+        same source the heatmap draws from (the lazily normalised copy under
+        ``log1p``, else ``.X``) and dropping genes the gene mask hides."""
+        from xcell.dotplot import compute_dotplot  # noqa: PLC0415
+        if obs_column not in self.adata.obs.columns:
+            raise ValueError(f"Column '{obs_column}' not found in .obs")
+        col = self.adata.obs[obs_column]
+        if not (pd.api.types.is_categorical_dtype(col.dtype) or pd.api.types.is_string_dtype(col.dtype)):
+            raise ValueError(f"Column '{obs_column}' is not categorical (dtype: {col.dtype})")
+        if transform not in (None, 'log1p'):
+            raise ValueError("transform must be null or 'log1p'")
+        var_index = self.adata.var.index
+        known = [g for g in genes if g in var_index]
+        visible, n_hidden = self._filter_to_visible(list(dict.fromkeys(known)))
+        visible_set = set(visible)
+        kept = [g for g in known if g in visible_set]
+        cells = np.arange(self.n_cells) if cell_indices is None else self._validate_cell_indices(cell_indices)
+        if cells is None:
+            cells = np.arange(self.n_cells)
+        labels = col.astype(str).to_numpy()[cells]
+        cats = list(col.cat.categories.astype(str)) if pd.api.types.is_categorical_dtype(col.dtype) else None
+        if kept:
+            src = self.normalized_adata if transform == 'log1p' else self.adata
+            X = src[cells, [var_index.get_loc(g) for g in kept]].X
+            expr = X.toarray() if hasattr(X, 'toarray') else np.asarray(X)
+        else:
+            expr = np.zeros((len(cells), 0))
+        out = compute_dotplot(np.asarray(expr, dtype=np.float64), labels, kept, gene_set_groups,
+                              category_order=cats, **params)
+        colors = self._get_category_colors(obs_column)
+        if colors is not None and cats is not None:
+            by_cat = dict(zip(cats, colors))
+            out['category_colors'] = [by_cat.get(c) for c in out['categories']]
+        else:
+            out['category_colors'] = None
+        out['obs_column'] = obs_column
+        out['n_genes_hidden'] = n_hidden
+        out['transform'] = transform
+        return out
+
     def heatmap_groups_from_markers(self, markers: dict[str, Any] | None) -> list[dict[str, Any]]:
         """``{key, **selection}`` from a plot request → row groups; [] when absent."""
         if not markers:

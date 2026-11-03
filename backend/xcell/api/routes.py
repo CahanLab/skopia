@@ -2365,6 +2365,38 @@ def get_heatmap_data(request: HeatmapRequest, dataset: str | None = Query(None))
         raise HTTPException(status_code=400, detail=str(e))
 
 
+class DotplotRequest(BaseModel):
+    """Request model for dot plot data: the heatmap's rows, grouped by a column."""
+    genes: list[str] = []
+    gene_set_groups: list[HeatmapGeneSetGroup] | None = None
+    markers: MarkerSourceSpec | None = None
+    obs_column: str
+    transform: str | None = None
+    cell_indices: list[int] | None = None
+    expression_cutoff: float = 0.0
+    color_by: str = "mean"
+    standard_scale: str = "none"
+    gene_ordering: str = "as_provided"
+
+
+@router.post("/dotplot/data")
+def get_dotplot_data(request: DotplotRequest, dataset: str | None = Query(None)):
+    """Per gene per group: fraction of cells expressing and mean expression."""
+    adaptor = get_adaptor(dataset)
+    try:
+        genes, gene_set_groups = _plot_rows(adaptor, request.genes, request.gene_set_groups, request.markers)
+        return adaptor.dotplot_data(
+            genes, gene_set_groups, request.obs_column,
+            transform=request.transform, cell_indices=request.cell_indices,
+            expression_cutoff=request.expression_cutoff, color_by=request.color_by,
+            standard_scale=request.standard_scale, gene_ordering=request.gene_ordering,
+        )
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 def _plot_rows(adaptor, genes: list[str], gene_set_groups: list[HeatmapGeneSetGroup] | None,
                markers: MarkerSourceSpec | None) -> tuple[list[str], list[dict] | None]:
     """Rows for an expression plot: the marker run's groups (resolved from the
