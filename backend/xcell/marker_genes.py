@@ -12,6 +12,7 @@ the test. Pure: no AnnData here.
 from __future__ import annotations
 
 import math
+from collections.abc import Collection
 from typing import Any
 
 import numpy as np
@@ -79,8 +80,14 @@ def _passes(value: float | None, lo: float | None = None, hi: float | None = Non
 def select_markers(record: dict[str, Any], *, top_n: int = 10,
                    min_pct_in: float | None = None, max_pct_out: float | None = None,
                    min_log2fc: float | None = None, max_padj: float | None = None,
-                   rank_by: str = 'score', groups: list[str] | None = None) -> dict[str, Any]:
+                   rank_by: str = 'score', groups: list[str] | None = None,
+                   genes: Collection[str] | None = None) -> dict[str, Any]:
     """Top ``top_n`` rows per group after the filters, from the stored table.
+
+    ``genes`` restricts each group to the stored rows whose gene is in it
+    (an annotation: TFs, collagens, a gene set) before the thresholds, so
+    ``n_candidates`` counts the annotated genes that passed. A name outside
+    the stored ranking cannot appear: the cap is the cap.
 
     Returns ``results`` (per group: the rows and ``n_candidates``, how many
     passed the filters before the cut), ``n_stored_per_group`` and
@@ -92,6 +99,7 @@ def select_markers(record: dict[str, Any], *, top_n: int = 10,
         raise ValueError('top_n must be at least 1')
     if rank_by not in RANK_BY:
         raise ValueError(f"rank_by must be one of {RANK_BY}, got {rank_by!r}")
+    allowed = set(genes) if genes is not None else None
     table = record.get('table') or {}
     all_groups = [str(g) for g in (record.get('groups') or list(table))]
     if groups is not None:
@@ -113,6 +121,8 @@ def select_markers(record: dict[str, Any], *, top_n: int = 10,
         if store_top_n and n >= store_top_n:
             truncated = True
         rows = [{k: cols[k][i] for k in TABLE_COLUMNS} for i in range(n)]
+        if allowed is not None:
+            rows = [r for r in rows if r['genes'] in allowed]
         kept = [r for r in rows
                 if _passes(r['pct_in'], lo=min_pct_in)
                 and _passes(r['pct_out'], hi=max_pct_out)
@@ -123,4 +133,5 @@ def select_markers(record: dict[str, Any], *, top_n: int = 10,
             kept.sort(key=lambda r: (r[rank_by] is None, -(r[rank_by] or 0.0)))
         picked = [{'gene': r['genes'], **{k: r[k] for k in TABLE_COLUMNS if k != 'genes'}} for r in kept[:top_n]]
         results.append({'group': g, 'genes': picked, 'n_candidates': len(kept)})
-    return {'results': results, 'n_stored_per_group': n_stored, 'truncated': truncated}
+    return {'results': results, 'n_stored_per_group': n_stored, 'truncated': truncated,
+            'restricted': allowed is not None}

@@ -151,6 +151,22 @@ def test_select_on_a_group_with_no_rows_is_empty():
     assert c['genes'] == [] and c['n_candidates'] == 0
 
 
+def test_select_restricts_to_an_allowed_gene_list_before_thresholds():
+    sel = mg.select_markers(_record(), top_n=1, genes={'g1', 'g2', 'g6', 'nope'})
+    assert _genes(sel, 'a') == ['g1'] and _genes(sel, 'b') == ['g6']
+    assert sel['results'][0]['n_candidates'] == 2 and sel['restricted'] is True
+    # thresholds apply inside the allowed list
+    sel = mg.select_markers(_record(), top_n=5, genes={'g1', 'g2'}, min_pct_in=0.5)
+    assert _genes(sel, 'a') == ['g2'] and sel['results'][0]['n_candidates'] == 1
+
+
+def test_select_restriction_with_unknown_names_is_empty():
+    sel = mg.select_markers(_record(), genes=['zzz'])
+    assert all(r['genes'] == [] and r['n_candidates'] == 0 for r in sel['results'])
+    assert sel['restricted'] is True
+    assert mg.select_markers(_record())['restricted'] is False
+
+
 # ---------------------------------------------------------------------------
 # Adaptor store and routes
 # ---------------------------------------------------------------------------
