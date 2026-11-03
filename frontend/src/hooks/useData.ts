@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState, useRef } from 'react'
 import type { OraResult, EnrichmentSummary, CachedLibrary, AnyEnrichmentResult, BatchCollection } from '../lib/enrichment'
-import type { FigureRecord, FigureSummary, FigureData } from '../lib/figures'
+import type { FigureRecord, FigureSummary, FigureData, ExpressionDotplotData } from '../lib/figures'
 import type { TextAnnotation } from '../lib/textAnnotations'
 import { mergePcaSubsetLists } from '../lib/pcaSubsets'
 import { useStore, DatasetSlot, Schema, EmbeddingData, ObsColumnData, DrawnLine, ExpressionData, BivariateExpressionData, DiffExpResult, LineAssociationResult, GeneMaskConfig, PCASubsetSummary, HighlightLayer, HighlightThresholdMode } from '../store'
@@ -2164,20 +2164,75 @@ export function useLineAssociation() {
 // Marker genes (one-vs-rest) API types and function
 export interface MarkerGeneEntry {
   gene: string
-  log2fc: number
-  pval: number
-  pval_adj: number
+  score: number | null
+  log2fc: number | null
+  pct_in: number | null
+  pct_out: number | null
+  pval: number | null
+  pval_adj: number | null
 }
 
 export interface MarkerGenesGroupResult {
   group: string
   genes: MarkerGeneEntry[]
+  /** Rows that passed the filters before the top-N cut. */
+  n_candidates: number
 }
 
+/** A run's response and a later `select` share this shape: both are a
+ *  selection on the stored ranking under `key`. */
 export interface MarkerGenesResponse {
+  key: string
+  uid: string
   obs_column: string
   results: MarkerGenesGroupResult[]
   n_cells_tested: number
+  n_stored_per_group: Record<string, number>
+  /** Some group holds exactly store_top_n rows, so a filter may have lost candidates. */
+  truncated: boolean
+}
+
+export interface MarkerRunSummary {
+  key: string
+  uid: string
+  label: string | null
+  obs_column: string
+  n_groups: number
+  n_cells_tested: number | null
+  cell_subset: string | null
+  n_cell_indices: number | null
+  gene_subset: string | null
+  store_top_n: number | null
+  created_at: string | null
+}
+
+export async function fetchMarkerRuns(slot?: DatasetSlot): Promise<MarkerRunSummary[]> {
+  return (await fetchJson<{ runs: MarkerRunSummary[] }>(appendDataset(`${API_BASE}/marker_genes/runs`, slot))).runs
+}
+
+/** Top N after filters from a stored run — a read, never a re-run. */
+export async function selectMarkerGenes(key: string, selection: {
+  top_n: number
+  min_pct_in?: number
+  max_pct_out?: number
+  min_log2fc?: number
+  max_padj?: number
+  rank_by?: 'score' | 'log2fc'
+  groups?: string[]
+}, slot?: DatasetSlot): Promise<MarkerGenesResponse> {
+  return fetchJson<MarkerGenesResponse>(appendDataset(`${API_BASE}/marker_genes/runs/${encodeURIComponent(key)}/select`, slot), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(selection),
+  })
+}
+
+export async function deleteMarkerRun(key: string, slot?: DatasetSlot): Promise<void> {
+  await fetchJson(appendDataset(`${API_BASE}/marker_genes/runs/${encodeURIComponent(key)}`, slot), { method: 'DELETE' })
+}
+
+export async function fetchDotplotData(body: Record<string, unknown>, slot?: DatasetSlot): Promise<ExpressionDotplotData> {
+  return fetchJson<ExpressionDotplotData>(appendDataset(`${API_BASE}/dotplot/data`, slot), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  })
 }
 
 export async function runMarkerGenes(params: {
@@ -2189,6 +2244,8 @@ export async function runMarkerGenes(params: {
   min_fold_change?: number
   gene_subset?: string | null
   active_cell_indices?: number[]
+  store_top_n?: number | null
+  label?: string | null
 }, slot?: DatasetSlot): Promise<MarkerGenesResponse> {
   return fetchJson<MarkerGenesResponse>(appendDataset(`${API_BASE}/marker-genes`, slot), {
     method: 'POST',

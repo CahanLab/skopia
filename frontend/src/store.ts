@@ -1,4 +1,5 @@
 import { DEFAULT_TEXT_STYLE, type TextAnnotation, type TextStyle } from './lib/textAnnotations'
+import type { MarkerSource, DotplotOptions } from './lib/markerSelection'
 import { create } from 'zustand'
 import { transformPoint, transformPoints, pointInPolygon, shapeOverlapsHull, type ShapeAffine } from './utils/shapeTransform'
 import { sortGeneSetInCategory } from './lib/geneSetOps'
@@ -485,7 +486,15 @@ export interface BarplotConfig {
 export interface HeatmapConfig {
   // `name` is the row-group label (it carries the folder when folders are
   // mixed); `id` is what the config modal restores the selection from.
+  // May be empty when `markerSource` names the rows.
   selectedGeneSets: { id?: string; name: string; genes: string[] }[]
+  // Heatmap (genes × ordered cells) or scanpy-style dot plot (genes × groups).
+  // Absent on configs saved before dot plots existed: read as 'heatmap'.
+  plotType?: 'heatmap' | 'dotplot'
+  // A stored marker run as the row source, with the selection on it; the
+  // groups are resolved server-side at request time, never frozen here.
+  markerSource?: MarkerSource | null
+  dotplot?: DotplotOptions
   cellOrdering: 'none' | 'category' | 'line_position' | 'line_distance' | 'category_then_position' | 'similarity' | 'category_then_similarity'
   obsColumn: string | null
   lineName: string | null

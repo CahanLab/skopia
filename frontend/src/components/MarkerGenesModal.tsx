@@ -606,10 +606,10 @@ export default function MarkerGenesModal() {
                         <div key={gene.gene} style={styles.resultGene}>
                           <span style={{ flex: 1 }}>{gene.gene}</span>
                           <span style={{ ...styles.resultGeneStats, width: '70px', textAlign: 'right' }}>
-                            {gene.log2fc.toFixed(2)}
+                            {gene.log2fc === null ? '–' : gene.log2fc.toFixed(2)}
                           </span>
                           <span style={{ ...styles.resultGeneStats, width: '80px', textAlign: 'right' }}>
-                            {gene.pval_adj < 0.001 ? gene.pval_adj.toExponential(1) : gene.pval_adj.toFixed(3)}
+                            {gene.pval_adj === null ? '–' : gene.pval_adj < 0.001 ? gene.pval_adj.toExponential(1) : gene.pval_adj.toFixed(3)}
                           </span>
                         </div>
                       ))}

@@ -59,7 +59,7 @@ describe('tab configs become figure records', () => {
     }
     expect(heatmapFigureFromConfig(cfg, null, 'log1p')).toEqual({
       kind: 'expression_heatmap',
-      inputs: { gene_sets: [{ name: 'collagen', genes: ['Col1a1', 'Col1a2'] }], obs_column: 'leiden', line_name: 'L1', transform: 'log1p', cell_subset: null, cell_indices: [3, 4] },
+      inputs: { gene_sets: [{ name: 'collagen', genes: ['Col1a1', 'Col1a2'] }], marker_key: null, obs_column: 'leiden', line_name: 'L1', transform: 'log1p', cell_subset: null, cell_indices: [3, 4] },
       params: { cell_ordering: 'line_position', gene_ordering: 'peak_position', aggregate_gene_sets: true, n_bins: 20 },
     })
     // the tab never draws with the active subset, so callers pass null; the helper still honours one if given

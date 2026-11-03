@@ -13,8 +13,16 @@ const BACKEND_DEFAULTS: Record<string, Record<string, unknown>> = {
     node_size_by: 'degree', edge_width_by: 'value', label_max_chars: 30, colormap: 'rdbu',
   },
   composition_barplot: { order: 'category', share_of: null, normalize: true, min_cells: 0, show_values: false },
-  expression_heatmap: { cell_ordering: 'category', gene_ordering: 'as_provided', aggregate_gene_sets: false, n_bins: 50 },
+  expression_heatmap: {
+    cell_ordering: 'category', gene_ordering: 'as_provided', aggregate_gene_sets: false, n_bins: 50,
+    marker_top_n: 10, marker_min_pct_in: null, marker_max_pct_out: null, marker_min_log2fc: null, marker_max_padj: null, marker_rank_by: 'score',
+  },
   cnv_heatmap: { row_mode: 'cells', max_rows: 400, group_order: 'cnv_score', vmax: null, colormap: 'rdbu' },
+  expression_dotplot: {
+    marker_top_n: 10, marker_min_pct_in: null, marker_max_pct_out: null, marker_min_log2fc: null, marker_max_padj: null, marker_rank_by: 'score',
+    color_by: 'mean', standard_scale: 'none', expression_cutoff: 0.0, gene_ordering: 'as_provided', swap_axes: false,
+    colormap: 'viridis', vmax: null, dot_max: null,
+  },
 }
 
 describe('FIGURE_SCHEMAS', () => {
@@ -29,6 +37,16 @@ describe('FIGURE_SCHEMAS', () => {
       for (const f of FIGURE_SCHEMAS[kind as keyof typeof FIGURE_SCHEMAS]) {
         // share_of's options are the live categories of column B; its default is null
         if (f.type === 'select' && defaults[f.name] !== null) expect(f.options!.map((o) => o.value)).toContain(defaults[f.name])
+      }
+    }
+  })
+})
+
+describe('FIGURE_SCHEMAS marker fields', () => {
+  it('marker fields are gated on the marker_key input for both expression kinds', () => {
+    for (const kind of ['expression_heatmap', 'expression_dotplot'] as const) {
+      for (const f of FIGURE_SCHEMAS[kind]) {
+        expect(f.whenInput ?? null).toBe(f.name.startsWith('marker_') ? 'marker_key' : null)
       }
     }
   })
