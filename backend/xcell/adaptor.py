@@ -7621,14 +7621,15 @@ class DataAdaptor:
                 raise ValueError(f"unknown params for {record['kind']}: {unknown}")
             delta = {k: v for k, v in params.items() if record['params'].get(k) != v}
             if delta:
+                merged = {**self._figure_defaults(record['kind']), **record['params'], **delta}
                 if record['kind'] == 'expression_heatmap':
-                    self._check_heatmap_params(record['inputs'], {**record['params'], **delta})
+                    self._check_heatmap_params(record['inputs'], merged)
                 if record['kind'] in ('expression_heatmap', 'expression_dotplot'):
-                    self._check_marker_params({**record['params'], **delta})
+                    self._check_marker_params(merged)
                 if record['kind'] == 'expression_dotplot':
-                    self._check_dotplot_params({**record['params'], **delta})
+                    self._check_dotplot_params(merged)
                 if record['kind'] == 'cnv_heatmap':
-                    self._check_cnv_params({**record['params'], **delta})
+                    self._check_cnv_params(merged)
                 record['params'].update(delta)
                 changes['params'] = delta
         if len(changes) > 1:
@@ -7705,7 +7706,9 @@ class DataAdaptor:
         from xcell import enrichment_figures as ef  # noqa: PLC0415
         record = self.get_figure(figure_id)
         kind = record['kind']
-        params = {**record['params'], **(params_override or {})}
+        # Defaults underneath, so a record written before a kind gained a
+        # param (the marker_* keys, 2026-11) still validates and draws.
+        params = {**self._figure_defaults(kind), **record['params'], **(params_override or {})}
         allowed = set(self._FIGURE_PARAM_KEYS[kind])
         unknown = sorted(set(params_override or {}) - allowed)
         if unknown:
@@ -7795,7 +7798,9 @@ class DataAdaptor:
             self._check_marker_params(params)
             self._check_dotplot_params(params)
             row_groups = self._figure_row_groups(record, params)
-            genes = [g for s_ in row_groups for g in s_['genes']]
+            # First group wins for a gene in two groups, as routes._plot_rows does
+            # for the Heatmap tab, so the tab and the saved figure agree.
+            genes = list(dict.fromkeys(g for s_ in row_groups for g in s_['genes']))
             out = self.dotplot_data(
                 genes, row_groups, inp['obs_column'], transform=inp.get('transform'), cell_indices=self._figure_cells(inp),
                 expression_cutoff=float(params.get('expression_cutoff') or 0.0), color_by=str(params.get('color_by', 'mean')),

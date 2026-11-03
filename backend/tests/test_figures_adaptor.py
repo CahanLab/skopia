@@ -445,3 +445,30 @@ def test_every_figure_param_has_a_config_default():
     cfg = user_config.get_user_config()['figures']
     for kind in DataAdaptor.FIGURE_KINDS:
         assert set(cfg[kind]) == set(DataAdaptor._FIGURE_PARAM_KEYS[kind]), kind
+
+
+def test_a_heatmap_figure_saved_before_marker_params_still_draws_and_edits():
+    # A record written by an earlier release has only the heatmap params; the
+    # marker keys must fall back to the kind's defaults, not fail validation.
+    a, _ = _with_markers()
+    sets = [{'name': 'immune', 'genes': ['Ptprc', 'Cd3e']}]
+    f = a.create_figure('expression_heatmap', inputs={'gene_sets': sets, 'obs_column': 'grp'})
+    store = a.adata.uns[a.FIGURES_UNS_KEY]
+    legacy = json.loads(store[f['id']])
+    legacy['params'] = {k: v for k, v in legacy['params'].items() if not k.startswith('marker_')}
+    legacy['inputs'].pop('marker_key', None)
+    store[f['id']] = json.dumps(legacy)
+    d = a.figure_data(f['id'])
+    assert d['row_labels'] == ['Ptprc', 'Cd3e']
+    u = a.update_figure(f['id'], params={'n_bins': 7})
+    assert u['params']['n_bins'] == 7
+
+
+def test_a_dotplot_figure_shows_a_gene_shared_by_two_sets_once():
+    # Same rule as /api/dotplot/data (routes._plot_rows): first group wins.
+    a, _ = _with_markers()
+    sets = [{'name': 'immune', 'genes': ['Ptprc', 'Cd3e']}, {'name': 'b', 'genes': ['Cd3e', 'Cd19']}]
+    f = a.create_figure('expression_dotplot', inputs={'gene_sets': sets, 'obs_column': 'grp'})
+    d = a.figure_data(f['id'])
+    assert d['genes'] == ['Ptprc', 'Cd3e', 'Cd19']
+    assert d['row_groups'] == ['immune', 'immune', 'b']
