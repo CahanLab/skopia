@@ -7314,6 +7314,17 @@ class DataAdaptor:
             if marker_key and marker_key not in self._marker_store():
                 raise ValueError(f"inputs.marker_key '{marker_key}' is not a stored marker run; "
                                  f"have {sorted(self._marker_store()) or 'none'}")
+            restrict = inputs.get('marker_restrict') or None
+            if restrict is not None:
+                if not marker_key:
+                    raise ValueError('inputs.marker_restrict needs inputs.marker_key')
+                try:
+                    self._restriction_genes(restrict)
+                except KeyError as e:
+                    raise ValueError(f'inputs.marker_restrict: {e.args[0]}') from e
+                restrict = {'label': str(restrict.get('label', ''))} | (
+                    {'genes': [str(g) for g in restrict['genes']]} if restrict.get('genes') is not None
+                    else {'var_column': str(restrict['var_column'])})
             obs_column = inputs.get('obs_column') or None
             if obs_column and obs_column not in self.adata.obs.columns:
                 raise ValueError(f"inputs.obs_column '{obs_column}' is not an .obs column")
@@ -7327,7 +7338,7 @@ class DataAdaptor:
                 if transform not in (None, 'log1p'):
                     raise ValueError("inputs.transform must be null or 'log1p'")
                 return {'gene_sets': [{'name': str(s.get('name', '')), 'genes': [str(g) for g in s['genes']]} for s in sets],
-                        'marker_key': str(marker_key) if marker_key else None,
+                        'marker_key': str(marker_key) if marker_key else None, 'marker_restrict': restrict,
                         'obs_column': obs_column, 'transform': transform, **self._figure_cell_inputs(inputs)}
             line_name = inputs.get('line_name') or None
             if line_name and line_name not in {l.get('name') for l in self.get_lines()}:
@@ -7336,7 +7347,7 @@ class DataAdaptor:
             if transform not in (None, 'log1p'):
                 raise ValueError("inputs.transform must be null or 'log1p'")
             return {'gene_sets': [{'name': str(s.get('name', '')), 'genes': [str(g) for g in s['genes']]} for s in sets],
-                    'marker_key': str(marker_key) if marker_key else None,
+                    'marker_key': str(marker_key) if marker_key else None, 'marker_restrict': restrict,
                     'obs_column': obs_column, 'line_name': line_name, 'transform': transform,
                     **self._figure_cell_inputs(inputs)}
         if kind == 'cnv_heatmap':
@@ -7502,7 +7513,12 @@ class DataAdaptor:
             expected = (record.get('input_ids') or {}).get(key)
             if expected and uid != expected:
                 raise FigureInputMissing(f"Marker run '{key}' was replaced by a later run; the figure cannot be drawn")
-            groups += self.marker_gene_set_groups(key, **self._marker_selection(params))
+            restrict = inp.get('marker_restrict') or None
+            try:
+                groups += self.marker_gene_set_groups(key, restrict_to=restrict, **self._marker_selection(params))
+            except KeyError as e:
+                # the restriction's .var column was deleted after the figure was saved
+                raise FigureInputMissing(f"{e.args[0]}; the figure cannot be drawn") from e
         groups += [{'name': s_['name'], 'genes': list(s_['genes'])} for s_ in inp.get('gene_sets') or []]
         return groups
 
@@ -7511,7 +7527,8 @@ class DataAdaptor:
             what = 'Expression heatmap' if kind == 'expression_heatmap' else 'Dot plot'
             parts = []
             if inputs.get('marker_key'):
-                parts.append(f"markers {inputs['marker_key']}")
+                restrict = inputs.get('marker_restrict') or None
+                parts.append(f"markers {inputs['marker_key']}" + (f" in {restrict['label']}" if restrict else ''))
             parts += [s['name'] for s in inputs['gene_sets'][:3]]
             by = f" by {inputs['obs_column']}" if kind == 'expression_dotplot' else ''
             return f"{what}: {', '.join(parts)}{by}"

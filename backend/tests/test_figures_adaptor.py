@@ -472,3 +472,31 @@ def test_a_dotplot_figure_shows_a_gene_shared_by_two_sets_once():
     d = a.figure_data(f['id'])
     assert d['genes'] == ['Ptprc', 'Cd3e', 'Cd19']
     assert d['row_groups'] == ['immune', 'immune', 'b']
+
+
+def test_a_figure_restricted_to_an_annotation():
+    a, key = _with_markers()
+    first = a.select_marker_genes(key, top_n=1)['results'][0]['genes'][0]['gene']
+    f = a.create_figure('expression_dotplot', inputs={'gene_sets': [], 'marker_key': key, 'obs_column': 'grp',
+                                                      'marker_restrict': {'label': 'one', 'genes': [first, 'zzz']}})
+    assert f['inputs']['marker_restrict'] == {'label': 'one', 'genes': [first, 'zzz']}
+    assert 'in one' in f['title']
+    d = a.figure_data(f['id'])
+    assert d['genes'] == [first]
+    assert json.loads(a.adata.uns[a.FIGURES_UNS_KEY][f['id']])['inputs']['marker_restrict']['label'] == 'one'
+    a.adata.var['flag'] = [g == first for g in a.adata.var_names]
+    g = a.create_figure('expression_heatmap', inputs={'gene_sets': [], 'marker_key': key, 'obs_column': 'grp',
+                                                      'marker_restrict': {'label': 'flag', 'var_column': 'flag'}})
+    assert a.figure_data(g['id'])['row_labels'] == [first]
+    del a.adata.var['flag']
+    with pytest.raises(FigureInputMissing, match='flag'):
+        a.figure_data(g['id'])
+    with pytest.raises(ValueError, match='marker_restrict'):
+        a.create_figure('expression_heatmap', inputs={'gene_sets': [{'name': 's', 'genes': [first]}],
+                                                      'marker_restrict': {'label': 'one', 'genes': [first]}})
+    with pytest.raises(ValueError):
+        a.create_figure('expression_heatmap', inputs={'gene_sets': [], 'marker_key': key,
+                                                      'marker_restrict': {'label': 'x', 'genes': []}})
+    with pytest.raises(ValueError):
+        a.create_figure('expression_heatmap', inputs={'gene_sets': [], 'marker_key': key,
+                                                      'marker_restrict': {'label': 'x', 'var_column': 'ghost'}})
