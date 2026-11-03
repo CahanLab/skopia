@@ -1,9 +1,9 @@
 /**
- * HeatmapView — canvas-based expression heatmap for the center panel.
- *
- * Shows a per-gene (or per-gene-set) expression matrix with cells ordered
- * along a user-chosen axis. Gene labels on the left, optional group
- * separators, viridis colormap, hover tooltip, click-to-color-by-gene.
+ * HeatmapView — the Heatmap tab of the center panel: a canvas expression
+ * heatmap (genes × ordered cells) or an SVG scanpy-style dot plot (genes ×
+ * groups), from gene sets and/or the top marker genes of a stored marker
+ * run. Both read the same config; the plot type decides the request and the
+ * renderer.
  *
  * Rollback: delete this file, HeatmapConfigModal.tsx, and remove imports
  * from App.tsx plus the heatmap state from store.ts.
@@ -11,19 +11,21 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useStore, HeatmapConfig } from '../store'
-import { useDataActions, appendDataset, createFigure } from '../hooks/useData'
-import { heatmapFigureFromConfig } from '../lib/figures'
+import { useDataActions, appendDataset, createFigure, fetchDotplotData } from '../hooks/useData'
+import { heatmapFigureFromConfig, dotplotFigureFromConfig } from '../lib/figures'
 import { heatmapCellScope } from '../lib/heatmapCells'
+import { markerSummary, normalizeHeatmapConfig, rowsFromConfig } from '../lib/markerSelection'
 import HeatmapConfigModal from './HeatmapConfigModal'
 import ExpressionHeatmapFigure from './figures/ExpressionHeatmapFigure'
-import type { ExpressionHeatmapData as HeatmapData } from '../lib/figures'
+import ExpressionDotplotFigure from './figures/ExpressionDotplotFigure'
+import type { ExpressionHeatmapData as HeatmapData, ExpressionDotplotData } from '../lib/figures'
 
 // ---------------------------------------------------------------------------
 // HeatmapView (main component)
 // ---------------------------------------------------------------------------
 
 export default function HeatmapView() {
-  const heatmapConfig = useStore((s) => s.heatmapConfig)
+  const rawConfig = useStore((s) => s.heatmapConfig)
   const setHeatmapConfig = useStore((s) => s.setHeatmapConfig)
   const drawnLines = useStore((s) => s.drawnLines)
   const displayPreferences = useStore((s) => s.displayPreferences)
@@ -33,12 +35,14 @@ export default function HeatmapView() {
   const setCenterPanelView = useStore((s) => s.setCenterPanelView)
   const activeCellMask = useStore((s) => s.activeCellMask)
   const activeSubsetName = useStore((s) => s.activeSubsetName)
+  // A config saved before plot types and marker sources is a gene-set heatmap.
+  const heatmapConfig = useMemo(() => (rawConfig ? normalizeHeatmapConfig(rawConfig) : null), [rawConfig])
   const cellScope = useMemo(
     () => heatmapCellScope(heatmapConfig?.cellIndices, activeCellMask, activeSubsetName),
     [heatmapConfig?.cellIndices, activeCellMask, activeSubsetName],
   )
   // The drawn cells alone: saving the mask as a subset renames it without
-  // changing a cell, and must not recompute the heatmap.
+  // changing a cell, and must not recompute the plot.
   const drawnCells = useMemo(
     () => heatmapCellScope(heatmapConfig?.cellIndices, activeCellMask, null).indices,
     [heatmapConfig?.cellIndices, activeCellMask],
@@ -50,10 +54,11 @@ export default function HeatmapView() {
     try {
       // What the tab drew: the config's cells narrowed by the mask, under the display transform.
       const transform = displayPreferences.expressionTransform === 'log1p' ? 'log1p' as const : null
-      const rec = await createFigure(
-        heatmapFigureFromConfig({ ...heatmapConfig, cellIndices: cellScope.indices }, cellScope.subset, transform),
-        activeSlot,
-      )
+      const cfg = { ...heatmapConfig, cellIndices: cellScope.indices }
+      const body = heatmapConfig.plotType === 'dotplot'
+        ? dotplotFigureFromConfig(cfg, cellScope.subset, transform)
+        : heatmapFigureFromConfig(cfg, cellScope.subset, transform)
+      const rec = await createFigure(body, activeSlot)
       refreshFigures(); setActiveFigureId(rec.id); setCenterPanelView('figures')
     } catch (e) {
       setError((e as Error).message)
@@ -63,24 +68,35 @@ export default function HeatmapView() {
 
   const [configOpen, setConfigOpen] = useState(!heatmapConfig)
   const [data, setData] = useState<HeatmapData | null>(null)
+  const [dotData, setDotData] = useState<ExpressionDotplotData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const plotRef = useRef<HTMLDivElement>(null)
+  const [plotWidth, setPlotWidth] = useState(720)
+  useEffect(() => {
+    const el = plotRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setPlotWidth(Math.max(320, el.clientWidth - 16)))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [data, dotData])
 
-  // Fetch heatmap data when the config or the cells it draws change
+  // Fetch when the config or the cells it draws change
   useEffect(() => {
     if (!heatmapConfig) return
-    fetchHeatmapData(heatmapConfig, drawnCells)
+    fetchPlotData(heatmapConfig, drawnCells)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [heatmapConfig, drawnCells])
 
-  const fetchHeatmapData = async (config: HeatmapConfig, cellIndices: number[] | null) => {
+  const fetchPlotData = async (config: ReturnType<typeof normalizeHeatmapConfig>, cellIndices: number[] | null) => {
     const seq = ++requestSeq.current
     if (cellIndices && cellIndices.length === 0) {
       // An older request still in flight is now ignored, so its finally
       // will not clear the spinner — clear it here.
       setLoading(false)
-      setData(null)
+      setData(null); setDotData(null)
       setError(config.cellIndices?.length
-        ? 'The cell mask excludes every cell this heatmap is restricted to. Reset the mask or reconfigure.'
+        ? 'The cell mask excludes every cell this plot is restricted to. Reset the mask or reconfigure.'
         : 'The cell mask has no active cells. Reset the mask.')
       return
     }
@@ -88,7 +104,7 @@ export default function HeatmapView() {
     setError(null)
     try {
       // Sync drawn lines to backend if needed for line-based ordering
-      if (config.lineName && drawnLines.length > 0) {
+      if (config.plotType === 'heatmap' && config.lineName && drawnLines.length > 0) {
         const linesPayload = drawnLines.map((l) => ({
           name: l.name,
           embeddingName: l.embeddingName,
@@ -102,30 +118,32 @@ export default function HeatmapView() {
         })
       }
 
-      // Build gene list and gene_set_groups
-      const allGenes: string[] = []
-      const geneSetGroups: { name: string; genes: string[] }[] = []
-      for (const gs of config.selectedGeneSets) {
-        geneSetGroups.push({ name: gs.name, genes: gs.genes })
-        allGenes.push(...gs.genes)
-      }
-      const seen = new Set<string>()
-      const uniqueGenes: string[] = []
-      for (const g of allGenes) {
-        if (!seen.has(g)) {
-          seen.add(g)
-          uniqueGenes.push(g)
-        }
-      }
-
       const transform = displayPreferences.expressionTransform === 'log1p' ? 'log1p' : null
+      const rows = rowsFromConfig(config)
+
+      if (config.plotType === 'dotplot') {
+        const d = config.dotplot
+        const result = await fetchDotplotData({
+          ...rows,
+          obs_column: config.obsColumn,
+          transform,
+          cell_indices: cellIndices,
+          expression_cutoff: d.expressionCutoff,
+          color_by: d.colorBy,
+          standard_scale: d.standardScale,
+          gene_ordering: d.geneOrdering,
+        }, activeSlot)
+        if (seq !== requestSeq.current) return
+        setData(null)
+        setDotData(result)
+        return
+      }
 
       const response = await fetch(appendDataset('/api/heatmap/data'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          genes: uniqueGenes,
-          gene_set_groups: geneSetGroups,
+          ...rows,
           aggregate_gene_sets: config.aggregateGeneSets,
           cell_ordering: config.cellOrdering,
           obs_column: config.obsColumn,
@@ -144,11 +162,12 @@ export default function HeatmapView() {
 
       const result: HeatmapData = await response.json()
       if (seq !== requestSeq.current) return
+      setDotData(null)
       setData(result)
     } catch (err) {
       if (seq !== requestSeq.current) return
       setError((err as Error).message)
-      setData(null)
+      setData(null); setDotData(null)
     } finally {
       if (seq === requestSeq.current) setLoading(false)
     }
@@ -163,7 +182,7 @@ export default function HeatmapView() {
     return (
       <HeatmapConfigModal
         config={heatmapConfig}
-        onApply={(config) => {
+        onApply={(config: HeatmapConfig) => {
           setHeatmapConfig(config)
           setConfigOpen(false)
         }}
@@ -172,10 +191,12 @@ export default function HeatmapView() {
     )
   }
 
+  const isDotplot = heatmapConfig.plotType === 'dotplot'
+
   if (loading) {
     return (
       <div style={hmStyles.centered}>
-        <div style={{ color: '#aaa', fontSize: '14px' }}>Computing heatmap...</div>
+        <div style={{ color: '#aaa', fontSize: '14px' }}>Computing {isDotplot ? 'dot plot' : 'heatmap'}...</div>
       </div>
     )
   }
@@ -191,20 +212,26 @@ export default function HeatmapView() {
     )
   }
 
-  if (!data || data.matrix.length === 0) {
+  const empty = isDotplot ? (!dotData || dotData.genes.length === 0) : (!data || data.matrix.length === 0)
+  const nHidden = isDotplot ? dotData?.n_genes_hidden : data?.n_genes_hidden
+  if (empty) {
     return (
       <div style={hmStyles.centered}>
         <div style={{ color: '#888', fontSize: '13px', marginBottom: '12px' }}>
-          {data?.n_genes_hidden
-            ? `${data.n_genes_hidden === 1 ? 'The selected gene is' : `All ${data.n_genes_hidden} selected genes are`} hidden by the active gene mask (Genes ⋯ → Gene mask…).`
-            : 'No data to display. Check that selected gene sets contain valid genes.'}
+          {nHidden
+            ? `${nHidden === 1 ? 'The selected gene is' : `All ${nHidden} selected genes are`} hidden by the active gene mask (Genes ⋯ → Gene mask…).`
+            : heatmapConfig.markerSource
+              ? 'No marker gene passed the filters. Loosen them or raise Top N.'
+              : 'No data to display. Check that selected gene sets contain valid genes.'}
         </div>
         <button style={hmStyles.settingsButton} onClick={() => setConfigOpen(true)}>
-          Configure Heatmap
+          Configure {isDotplot ? 'Dot Plot' : 'Heatmap'}
         </button>
       </div>
     )
   }
+
+  const markerNote = heatmapConfig.markerSource ? ` · ${markerSummary(heatmapConfig.markerSource)}` : ''
 
   return (
     <div style={hmStyles.wrapper}>
@@ -213,15 +240,24 @@ export default function HeatmapView() {
         <button style={hmStyles.settingsButton} onClick={() => setConfigOpen(true)}>
           Settings
         </button>
-        <button style={hmStyles.settingsButton} onClick={saveAsFigure} title="Keep this heatmap as a figure record (Figures tab): editable, exportable as PNG, with provenance">
+        <button style={hmStyles.settingsButton} onClick={saveAsFigure} title="Keep this plot as a figure record (Figures tab): editable, exportable, with provenance">
           Save as figure
         </button>
         <span style={hmStyles.info}>
-          {data.row_labels.length} genes &times; {data.n_bins} {data.n_bins < data.n_cells ? 'bins' : 'cells'}
-          {data.n_bins < data.n_cells && ` (${data.n_cells.toLocaleString()} cells)`}
+          {isDotplot && dotData ? (
+            <>
+              {dotData.genes.length} genes &times; {dotData.categories.length} groups of {dotData.obs_column} ({dotData.n_cells.toLocaleString()} cells)
+            </>
+          ) : data ? (
+            <>
+              {data.row_labels.length} genes &times; {data.n_bins} {data.n_bins < data.n_cells ? 'bins' : 'cells'}
+              {data.n_bins < data.n_cells && ` (${data.n_cells.toLocaleString()} cells)`}
+            </>
+          ) : null}
+          {markerNote}
           {heatmapConfig?.cellLabel && ` · ${heatmapConfig.cellLabel}`}
           {activeCellMask && ` · cell mask${activeSubsetName ? ` (${activeSubsetName})` : ''}`}
-          {data.cell_ordering_method === 'centroids' && (
+          {data?.cell_ordering_method === 'centroids' && (
             <span
               style={{ color: '#e9a23b' }}
               title="Too many cells for exact hierarchical clustering: the cells were collapsed to 500 k-means centroids, the centroids were clustered, and each centroid's cells were laid out along the axis to the next one."
@@ -229,20 +265,25 @@ export default function HeatmapView() {
               {' · cells clustered via centroids'}
             </span>
           )}
-          {!!data.n_genes_hidden && (
+          {!!nHidden && (
             <span
               style={{ color: '#e9a23b' }}
               title="These genes are in the chosen sets but hidden by the active gene mask (Genes ⋯ → Gene mask…)."
             >
-              {` · ${data.n_genes_hidden} hidden by gene mask`}
+              {` · ${nHidden} hidden by gene mask`}
             </span>
           )}
         </span>
-        <span style={hmStyles.hint}>Click a gene row to color scatter plot</span>
+        <span style={hmStyles.hint}>Click a gene {isDotplot ? 'label' : 'row'} to color scatter plot</span>
       </div>
 
-      {/* Canvas heatmap */}
-      <ExpressionHeatmapFigure data={data} onGeneClick={handleGeneClick} legends="floating" />
+      {isDotplot && dotData ? (
+        <div ref={plotRef} style={hmStyles.svgContainer}>
+          <ExpressionDotplotFigure data={dotData} params={dotplotFigureFromConfig(heatmapConfig, null).params} width={plotWidth} onGeneClick={handleGeneClick} />
+        </div>
+      ) : data ? (
+        <ExpressionHeatmapFigure data={data} onGeneClick={handleGeneClick} legends="floating" />
+      ) : null}
     </div>
   )
 }
@@ -291,5 +332,10 @@ const hmStyles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     height: '100%',
     padding: '20px',
+  },
+  svgContainer: {
+    flex: 1,
+    overflow: 'auto',
+    padding: '8px',
   },
 }

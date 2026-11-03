@@ -6873,6 +6873,148 @@ class DataAdaptor:
         """Take a key now so members can carry it as a back-reference."""
         return self._store_enrichment(key_hint, {'kind': 'reserved'})
 
+    # ------------------------------------------------------------------
+    # Marker-gene runs: the stored ranking that top-X-with-filters reads
+    # ------------------------------------------------------------------
+    MARKER_UNS_KEY = 'xcell_marker_genes'
+
+    def _marker_store(self) -> dict[str, str]:
+        raw = self.adata.uns.get(self.MARKER_UNS_KEY)
+        return dict(raw) if isinstance(raw, dict) else {}
+
+    def _store_marker_run(self, key_hint: str, record: dict[str, Any]) -> str:
+        """JSON under a never-colliding key, with a uid a figure can hold so a
+        later run under a freed key cannot pass for its input (as enrichment)."""
+        import uuid  # noqa: PLC0415
+        base = self._sanitize_subset_name(key_hint)
+        store = self._marker_store()
+        key, n = base, 1
+        while key in store:
+            n += 1
+            key = f'{base}_{n}'
+        record['key'] = key
+        record.setdefault('uid', uuid.uuid4().hex[:12])
+        store[key] = json.dumps(record)
+        self.adata.uns[self.MARKER_UNS_KEY] = store
+        return key
+
+    def _marker_run_uid(self, key: str) -> str | None:
+        store = self._marker_store()
+        if key not in store:
+            return None
+        try:
+            return json.loads(store[key]).get('uid')
+        except (TypeError, ValueError):
+            return None
+
+    def list_marker_runs(self) -> list[dict[str, Any]]:
+        out = []
+        for order, raw in enumerate(self._marker_store().values()):
+            try:
+                r = json.loads(raw)
+            except (TypeError, ValueError):
+                continue
+            p = r.get('params') or {}
+            out.append({
+                '_order': order,
+                'key': r.get('key'), 'uid': r.get('uid'), 'label': r.get('label'),
+                'obs_column': r.get('obs_column'), 'n_groups': len(r.get('groups') or []),
+                'n_cells_tested': p.get('n_cells_tested'), 'cell_subset': p.get('cell_subset'),
+                'n_cell_indices': p.get('n_cell_indices'), 'gene_subset': p.get('gene_subset'),
+                'store_top_n': p.get('store_top_n'), 'created_at': r.get('created_at'),
+            })
+        # created_at has second resolution; the store's insertion order breaks ties
+        out.sort(key=lambda s: (s.get('created_at') or '', s['_order']), reverse=True)
+        for s_ in out:
+            del s_['_order']
+        return out
+
+    def get_marker_run(self, key: str, include_table: bool = False) -> dict[str, Any]:
+        store = self._marker_store()
+        if key not in store:
+            raise KeyError(f"No marker run named '{key}'")
+        r = json.loads(store[key])
+        if not include_table:
+            r.pop('table', None)
+        return r
+
+    def delete_marker_run(self, key: str) -> dict[str, Any]:
+        store = self._marker_store()
+        if key not in store:
+            raise KeyError(f"No marker run named '{key}'")
+        del store[key]
+        self.adata.uns[self.MARKER_UNS_KEY] = store
+        self._log_action('marker_genes_delete', {'key': key}, {'deleted': key})
+        return {'deleted': key}
+
+    def select_marker_genes(self, key: str, **selection: Any) -> dict[str, Any]:
+        """Top N after filters from the stored table — a read, never logged."""
+        from xcell import marker_genes as mg  # noqa: PLC0415
+        record = self.get_marker_run(key, include_table=True)
+        out = mg.select_markers(record, **selection)
+        out.update({'key': key, 'uid': record.get('uid'), 'obs_column': record.get('obs_column'),
+                    'n_cells_tested': (record.get('params') or {}).get('n_cells_tested')})
+        return out
+
+    def marker_gene_set_groups(self, key: str, **selection: Any) -> list[dict[str, Any]]:
+        """The selection as heatmap / dot plot row groups: one per group that
+        kept any gene, named by the group, in the run's group order."""
+        sel = self.select_marker_genes(key, **selection)
+        return [{'name': r['group'], 'genes': [g['gene'] for g in r['genes']]} for r in sel['results'] if r['genes']]
+
+    def dotplot_data(self, genes: list[str], gene_set_groups: list[dict[str, Any]] | None, obs_column: str, *,
+                     transform: str | None = None, cell_indices: list[int] | None = None,
+                     **params: Any) -> dict[str, Any]:
+        """Dot plot table for ``genes`` grouped by ``obs_column``, reading the
+        same source the heatmap draws from (the lazily normalised copy under
+        ``log1p``, else ``.X``) and dropping genes the gene mask hides."""
+        from xcell.dotplot import compute_dotplot  # noqa: PLC0415
+        if obs_column not in self.adata.obs.columns:
+            raise ValueError(f"Column '{obs_column}' not found in .obs")
+        col = self.adata.obs[obs_column]
+        if not (pd.api.types.is_categorical_dtype(col.dtype) or pd.api.types.is_string_dtype(col.dtype)):
+            raise ValueError(f"Column '{obs_column}' is not categorical (dtype: {col.dtype})")
+        if transform not in (None, 'log1p'):
+            raise ValueError("transform must be null or 'log1p'")
+        var_index = self.adata.var.index
+        known = [g for g in genes if g in var_index]
+        visible, n_hidden = self._filter_to_visible(list(dict.fromkeys(known)))
+        visible_set = set(visible)
+        kept = [g for g in known if g in visible_set]
+        cells = np.arange(self.n_cells) if cell_indices is None else self._validate_cell_indices(cell_indices)
+        if cells is None:
+            cells = np.arange(self.n_cells)
+        labels = col.astype(str).to_numpy()[cells]
+        cats = list(col.cat.categories.astype(str)) if pd.api.types.is_categorical_dtype(col.dtype) else None
+        if kept:
+            src = self.normalized_adata if transform == 'log1p' else self.adata
+            X = src[cells, [var_index.get_loc(g) for g in kept]].X
+            expr = X.toarray() if hasattr(X, 'toarray') else np.asarray(X)
+        else:
+            expr = np.zeros((len(cells), 0))
+        out = compute_dotplot(np.asarray(expr, dtype=np.float64), labels, kept, gene_set_groups,
+                              category_order=cats, **params)
+        colors = self._get_category_colors(obs_column)
+        if colors is not None and cats is not None:
+            by_cat = dict(zip(cats, colors))
+            out['category_colors'] = [by_cat.get(c) for c in out['categories']]
+        else:
+            out['category_colors'] = None
+        out['obs_column'] = obs_column
+        out['n_genes_hidden'] = n_hidden
+        out['transform'] = transform
+        return out
+
+    def heatmap_groups_from_markers(self, markers: dict[str, Any] | None) -> list[dict[str, Any]]:
+        """``{key, **selection}`` from a plot request → row groups; [] when absent."""
+        if not markers:
+            return []
+        spec = dict(markers)
+        key = spec.pop('key', None)
+        if not key:
+            raise ValueError('markers.key must name a stored marker run')
+        return self.marker_gene_set_groups(str(key), **{k: v for k, v in spec.items() if v is not None})
+
     def _put_enrichment(self, key: str, result: dict[str, Any]) -> None:
         """Replace a reserved placeholder with the real record, keeping its uid."""
         store = self._enrichment_store()
@@ -7078,15 +7220,21 @@ class DataAdaptor:
     FIGURES_UNS_KEY = 'xcell_figures'
     FIGURES_SEQ_KEY = 'xcell_figures_seq'
     FIGURE_KINDS = ('enrichment_heatmap', 'enrichment_network', 'composition_barplot', 'expression_heatmap',
-                    'cnv_heatmap')
+                    'cnv_heatmap', 'expression_dotplot')
+    # A stored marker run as the row source: top N and the filters are params,
+    # so they are tuned live and recorded, and never re-run the test.
+    _MARKER_PARAM_KEYS = ('marker_top_n', 'marker_min_pct_in', 'marker_max_pct_out', 'marker_min_log2fc',
+                          'marker_max_padj', 'marker_rank_by')
     _FIGURE_PARAM_KEYS = {
         'enrichment_heatmap': ('value', 'padj_max', 'top_n', 'direction', 'collapse_jaccard', 'row_order',
                                'col_order', 'colormap', 'vmax', 'show_values', 'label_max_chars', 'cell_size'),
         'enrichment_network': ('value', 'padj_max', 'top_n', 'direction', 'set_edge_jaccard', 'layout', 'seed',
                                'node_size_by', 'edge_width_by', 'label_max_chars', 'colormap'),
         'composition_barplot': ('order', 'share_of', 'normalize', 'min_cells', 'show_values'),
-        'expression_heatmap': ('cell_ordering', 'gene_ordering', 'aggregate_gene_sets', 'n_bins'),
+        'expression_heatmap': ('cell_ordering', 'gene_ordering', 'aggregate_gene_sets', 'n_bins') + _MARKER_PARAM_KEYS,
         'cnv_heatmap': ('row_mode', 'max_rows', 'group_order', 'vmax', 'colormap'),
+        'expression_dotplot': _MARKER_PARAM_KEYS + ('color_by', 'standard_scale', 'expression_cutoff', 'gene_ordering',
+                                                    'swap_axes', 'colormap', 'vmax', 'dot_max'),
     }
 
     def _figure_store(self) -> dict[str, str]:
@@ -7129,13 +7277,33 @@ class DataAdaptor:
                     raise ValueError(f"inputs.{f} must name an .obs column (got {col!r})")
             return {'column_a': inputs['column_a'], 'column_b': inputs['column_b'],
                     **self._figure_cell_inputs(inputs)}
-        if kind == 'expression_heatmap':
+        if kind in ('expression_heatmap', 'expression_dotplot'):
             sets = inputs.get('gene_sets')
-            if not isinstance(sets, list) or not sets or not all(isinstance(s, dict) and s.get('genes') for s in sets):
-                raise ValueError('inputs.gene_sets must be a non-empty list of {name, genes}')
+            if sets is None:
+                sets = []
+            marker_key = inputs.get('marker_key') or None
+            if not isinstance(sets, list) or not all(isinstance(s, dict) and s.get('genes') for s in sets):
+                raise ValueError('inputs.gene_sets must be a list of {name, genes}')
+            if not sets and not marker_key:
+                raise ValueError('inputs.gene_sets must be non-empty, or inputs.marker_key must name a stored marker run')
+            if marker_key and marker_key not in self._marker_store():
+                raise ValueError(f"inputs.marker_key '{marker_key}' is not a stored marker run; "
+                                 f"have {sorted(self._marker_store()) or 'none'}")
             obs_column = inputs.get('obs_column') or None
             if obs_column and obs_column not in self.adata.obs.columns:
                 raise ValueError(f"inputs.obs_column '{obs_column}' is not an .obs column")
+            if kind == 'expression_dotplot':
+                if not obs_column:
+                    raise ValueError('inputs.obs_column must name the .obs column that groups the dots')
+                dtype = self.adata.obs[obs_column].dtype
+                if not (pd.api.types.is_categorical_dtype(dtype) or pd.api.types.is_string_dtype(dtype)):
+                    raise ValueError(f"inputs.obs_column '{obs_column}' is not categorical")
+                transform = inputs.get('transform') or None
+                if transform not in (None, 'log1p'):
+                    raise ValueError("inputs.transform must be null or 'log1p'")
+                return {'gene_sets': [{'name': str(s.get('name', '')), 'genes': [str(g) for g in s['genes']]} for s in sets],
+                        'marker_key': str(marker_key) if marker_key else None,
+                        'obs_column': obs_column, 'transform': transform, **self._figure_cell_inputs(inputs)}
             line_name = inputs.get('line_name') or None
             if line_name and line_name not in {l.get('name') for l in self.get_lines()}:
                 raise ValueError(f"inputs.line_name '{line_name}' is not a drawn line")
@@ -7143,6 +7311,7 @@ class DataAdaptor:
             if transform not in (None, 'log1p'):
                 raise ValueError("inputs.transform must be null or 'log1p'")
             return {'gene_sets': [{'name': str(s.get('name', '')), 'genes': [str(g) for g in s['genes']]} for s in sets],
+                    'marker_key': str(marker_key) if marker_key else None,
                     'obs_column': obs_column, 'line_name': line_name, 'transform': transform,
                     **self._figure_cell_inputs(inputs)}
         if kind == 'cnv_heatmap':
@@ -7224,6 +7393,8 @@ class DataAdaptor:
                     parent = None
                 if parent:
                     keys.add(parent)
+        if inputs.get('marker_key'):
+            keys.add(inputs['marker_key'])
         columns = {inputs.get('column_a'), inputs.get('column_b'), inputs.get('obs_column')} - {None}
         out: list[int] = []
         for step in self.analysis_record.steps:
@@ -7253,7 +7424,72 @@ class DataAdaptor:
         if vmax is not None and not float(vmax) > 0:
             raise ValueError('vmax must be positive, or null for automatic')
 
+    @staticmethod
+    def _check_marker_params(params: dict[str, Any]) -> None:
+        from xcell import marker_genes as mg  # noqa: PLC0415
+        if int(params.get('marker_top_n') or 0) < 1:
+            raise ValueError('marker_top_n must be at least 1')
+        if params.get('marker_rank_by') not in mg.RANK_BY:
+            raise ValueError(f"marker_rank_by must be one of {mg.RANK_BY}")
+        for k in ('marker_min_pct_in', 'marker_max_pct_out'):
+            v = params.get(k)
+            if v is not None and not 0.0 <= float(v) <= 1.0:
+                raise ValueError(f'{k} must be between 0 and 1, or null')
+        v = params.get('marker_max_padj')
+        if v is not None and not 0.0 <= float(v) <= 1.0:
+            raise ValueError('marker_max_padj must be between 0 and 1, or null')
+
+    @staticmethod
+    def _check_dotplot_params(params: dict[str, Any]) -> None:
+        from xcell import dotplot as dp  # noqa: PLC0415
+        if params.get('color_by') not in dp.COLOR_BY:
+            raise ValueError(f"color_by must be one of {dp.COLOR_BY}")
+        if params.get('standard_scale') not in dp.STANDARD_SCALE:
+            raise ValueError(f"standard_scale must be one of {dp.STANDARD_SCALE}")
+        if params.get('gene_ordering') not in dp.GENE_ORDERINGS:
+            raise ValueError(f"gene_ordering must be one of {dp.GENE_ORDERINGS}")
+        for k in ('vmax', 'dot_max'):
+            v = params.get(k)
+            if v is not None and not float(v) > 0:
+                raise ValueError(f'{k} must be positive, or null for automatic')
+        if params.get('dot_max') is not None and float(params['dot_max']) > 1:
+            raise ValueError('dot_max is a fraction of cells: at most 1')
+
+    def _marker_selection(self, params: dict[str, Any]) -> dict[str, Any]:
+        return {
+            'top_n': int(params.get('marker_top_n') or 10),
+            'min_pct_in': params.get('marker_min_pct_in'), 'max_pct_out': params.get('marker_max_pct_out'),
+            'min_log2fc': params.get('marker_min_log2fc'), 'max_padj': params.get('marker_max_padj'),
+            'rank_by': str(params.get('marker_rank_by') or 'score'),
+        }
+
+    def _figure_row_groups(self, record: dict[str, Any], params: dict[str, Any]) -> list[dict[str, Any]]:
+        """The marker run's groups (resolved now, from the stored ranking)
+        ahead of the literal sets. A run that is gone, or re-made under the
+        freed key, is a missing input — the uid tells the two apart."""
+        inp = record['inputs']
+        groups: list[dict[str, Any]] = []
+        key = inp.get('marker_key')
+        if key:
+            uid = self._marker_run_uid(key)
+            if uid is None:
+                raise FigureInputMissing(f"Marker run '{key}' no longer exists; the figure cannot be drawn")
+            expected = (record.get('input_ids') or {}).get(key)
+            if expected and uid != expected:
+                raise FigureInputMissing(f"Marker run '{key}' was replaced by a later run; the figure cannot be drawn")
+            groups += self.marker_gene_set_groups(key, **self._marker_selection(params))
+        groups += [{'name': s_['name'], 'genes': list(s_['genes'])} for s_ in inp.get('gene_sets') or []]
+        return groups
+
     def _default_figure_title(self, kind: str, inputs: dict[str, Any]) -> str:
+        if kind in ('expression_heatmap', 'expression_dotplot'):
+            what = 'Expression heatmap' if kind == 'expression_heatmap' else 'Dot plot'
+            parts = []
+            if inputs.get('marker_key'):
+                parts.append(f"markers {inputs['marker_key']}")
+            parts += [s['name'] for s in inputs['gene_sets'][:3]]
+            by = f" by {inputs['obs_column']}" if kind == 'expression_dotplot' else ''
+            return f"{what}: {', '.join(parts)}{by}"
         if kind == 'cnv_heatmap':
             by = f" by {inputs['obs_column']}" if inputs.get('obs_column') else ''
             return f"CNV heatmap: {inputs['key']}{by}"
@@ -7268,9 +7504,7 @@ class DataAdaptor:
                     labels.append(k)
             what = 'heatmap' if kind == 'enrichment_heatmap' else 'network'
             return f"Enrichment {what}: {'; '.join(labels)}"
-        if kind == 'composition_barplot':
-            return f"Composition of {inputs['column_a']} by {inputs['column_b']}"
-        return f"Expression heatmap: {', '.join(s['name'] for s in inputs['gene_sets'][:3])}"
+        return f"Composition of {inputs['column_a']} by {inputs['column_b']}"
 
     def create_figure(self, kind: str, *, title: str | None = None, caption: str = '',
                       inputs: dict[str, Any], params: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -7295,6 +7529,10 @@ class DataAdaptor:
             if 'cell_ordering' not in (params or {}):
                 merged['cell_ordering'] = self._compatible_ordering(clean_inputs, str(merged.get('cell_ordering', 'none')))
             self._check_heatmap_params(clean_inputs, merged)
+        if kind in ('expression_heatmap', 'expression_dotplot'):
+            self._check_marker_params(merged)
+        if kind == 'expression_dotplot':
+            self._check_dotplot_params(merged)
         if kind == 'cnv_heatmap':
             self._check_cnv_params(merged)
         now = datetime.now(timezone.utc).isoformat(timespec='seconds')
@@ -7305,6 +7543,8 @@ class DataAdaptor:
                 input_ids[k] = json.loads(store[k]).get('uid')
             except (KeyError, TypeError, ValueError):
                 input_ids[k] = None
+        if clean_inputs.get('marker_key'):
+            input_ids[clean_inputs['marker_key']] = self._marker_run_uid(clean_inputs['marker_key'])
         record = {
             'id': self._next_figure_id(), 'kind': kind,
             'title': title or self._default_figure_title(kind, clean_inputs), 'caption': caption or '',
@@ -7381,10 +7621,15 @@ class DataAdaptor:
                 raise ValueError(f"unknown params for {record['kind']}: {unknown}")
             delta = {k: v for k, v in params.items() if record['params'].get(k) != v}
             if delta:
+                merged = {**self._figure_defaults(record['kind']), **record['params'], **delta}
                 if record['kind'] == 'expression_heatmap':
-                    self._check_heatmap_params(record['inputs'], {**record['params'], **delta})
+                    self._check_heatmap_params(record['inputs'], merged)
+                if record['kind'] in ('expression_heatmap', 'expression_dotplot'):
+                    self._check_marker_params(merged)
+                if record['kind'] == 'expression_dotplot':
+                    self._check_dotplot_params(merged)
                 if record['kind'] == 'cnv_heatmap':
-                    self._check_cnv_params({**record['params'], **delta})
+                    self._check_cnv_params(merged)
                 record['params'].update(delta)
                 changes['params'] = delta
         if len(changes) > 1:
@@ -7461,7 +7706,9 @@ class DataAdaptor:
         from xcell import enrichment_figures as ef  # noqa: PLC0415
         record = self.get_figure(figure_id)
         kind = record['kind']
-        params = {**record['params'], **(params_override or {})}
+        # Defaults underneath, so a record written before a kind gained a
+        # param (the marker_* keys, 2026-11) still validates and draws.
+        params = {**self._figure_defaults(kind), **record['params'], **(params_override or {})}
         allowed = set(self._FIGURE_PARAM_KEYS[kind])
         unknown = sorted(set(params_override or {}) - allowed)
         if unknown:
@@ -7501,15 +7748,17 @@ class DataAdaptor:
             if inp.get('obs_column') and inp['obs_column'] not in self.adata.obs.columns:
                 raise FigureInputMissing(f"Column '{inp['obs_column']}' no longer exists; the figure cannot be drawn")
             self._check_heatmap_params(inp, params)
+            self._check_marker_params(params)
+            row_groups = self._figure_row_groups(record, params)
             genes: list[str] = []
             seen: set[str] = set()
-            for s_ in inp['gene_sets']:
+            for s_ in row_groups:
                 for g in s_['genes']:
                     if g not in seen:
                         seen.add(g)
                         genes.append(g)
             out = compute_heatmap_data(
-                self, genes, gene_set_groups=[{'name': s_['name'], 'genes': list(s_['genes'])} for s_ in inp['gene_sets']],
+                self, genes, gene_set_groups=row_groups,
                 aggregate_gene_sets=bool(params.get('aggregate_gene_sets')), cell_ordering=str(params.get('cell_ordering', 'category')),
                 obs_column=inp.get('obs_column'), line_name=inp.get('line_name'),
                 gene_ordering=str(params.get('gene_ordering', 'as_provided')), n_bins=int(params.get('n_bins', 0)),
@@ -7539,6 +7788,24 @@ class DataAdaptor:
                 chromosomes=self._cnv_store()[key]['chromosomes'])
             out['colormap'] = params.get('colormap', 'rdbu')
             out['cnv_key'] = key
+            out['figure_id'] = figure_id
+            out['kind'] = kind
+            return out
+        if kind == 'expression_dotplot':
+            inp = record['inputs']
+            if inp['obs_column'] not in self.adata.obs.columns:
+                raise FigureInputMissing(f"Column '{inp['obs_column']}' no longer exists; the figure cannot be drawn")
+            self._check_marker_params(params)
+            self._check_dotplot_params(params)
+            row_groups = self._figure_row_groups(record, params)
+            # First group wins for a gene in two groups, as routes._plot_rows does
+            # for the Heatmap tab, so the tab and the saved figure agree.
+            genes = list(dict.fromkeys(g for s_ in row_groups for g in s_['genes']))
+            out = self.dotplot_data(
+                genes, row_groups, inp['obs_column'], transform=inp.get('transform'), cell_indices=self._figure_cells(inp),
+                expression_cutoff=float(params.get('expression_cutoff') or 0.0), color_by=str(params.get('color_by', 'mean')),
+                standard_scale=str(params.get('standard_scale', 'none')), gene_ordering=str(params.get('gene_ordering', 'as_provided')))
+            out['params'] = params
             out['figure_id'] = figure_id
             out['kind'] = kind
             return out
@@ -14403,9 +14670,17 @@ class DataAdaptor:
         min_fold_change: float | None = None,
         gene_subset: str | list[str] | dict[str, Any] | None = None,
         active_cell_indices: list[int] | None = None,
+        store_top_n: int | None = None,
+        label: str | None = None,
         _log: bool = True,
     ) -> dict[str, Any]:
         """Run one-vs-rest marker gene analysis using scanpy.
+
+        The whole ranking (``store_top_n`` rows per group, with percent
+        detected in and out of the group) is stored under
+        ``uns['xcell_marker_genes'][key]``; the three threshold arguments and
+        ``top_n`` are then a *selection* on that table, the same one
+        ``select_marker_genes`` makes, so changing them never re-runs the test.
 
         Identifies marker genes for each group in a categorical obs column
         using Wilcoxon rank-sum test (one-vs-rest).
@@ -14491,65 +14766,58 @@ class DataAdaptor:
         # adata.raw — which may carry an older/larger gene index than .X, leading
         # to marker names that don't exist in the current var_names and fail to
         # color/visualize. The two-group diffexp path already uses use_raw=False;
-        # this matches that behavior.
+        # this matches that behavior. pts=True gives the percent detected in
+        # and out of each group, which the post hoc filters read.
         sc.tl.rank_genes_groups(
             work_adata,
             groupby=obs_column,
             groups=tested_groups if singletons else 'all',
             method='wilcoxon',
             use_raw=False,
+            pts=True,
             key_added='marker_genes',
         )
 
-        # Apply filters if specified
-        has_filters = any(x is not None for x in [min_in_group_fraction, max_out_group_fraction, min_fold_change])
-        if has_filters:
-            filter_kwargs: dict[str, Any] = {'key': 'marker_genes', 'key_added': 'marker_genes_filtered'}
-            if min_in_group_fraction is not None:
-                filter_kwargs['min_in_group_fraction'] = min_in_group_fraction
-            if max_out_group_fraction is not None:
-                filter_kwargs['max_out_group_fraction'] = max_out_group_fraction
-            if min_fold_change is not None:
-                filter_kwargs['min_fold_change'] = min_fold_change
-            sc.tl.filter_rank_genes_groups(work_adata, **filter_kwargs)
+        from datetime import datetime, timezone  # noqa: PLC0415
+        from xcell import config as user_config  # noqa: PLC0415
+        from xcell import marker_genes as mg  # noqa: PLC0415
 
-        # Extract results per group
-        result_groups = []
-        for group in work_adata.obs[obs_column].cat.categories:
-            group_str = str(group)
-            if group_str in singletons:
-                result_groups.append({'group': group_str, 'genes': []})
-                continue
-            try:
-                if has_filters:
-                    df = sc.get.rank_genes_groups_df(work_adata, group=group_str, key='marker_genes_filtered')
-                    # filter_rank_genes_groups sets filtered genes to NaN
-                    df = df.dropna(subset=['names'])
-                else:
-                    df = sc.get.rank_genes_groups_df(work_adata, group=group_str, key='marker_genes')
+        if store_top_n is None:
+            cfg = user_config.get_user_config().get('marker_genes')
+            store_top_n = int((cfg or {}).get('store_top_n') or 500) if isinstance(cfg, dict) else 500
+        store_top_n = max(1, int(store_top_n))
+        rg = work_adata.uns['marker_genes']
+        all_groups = [str(g) for g in work_adata.obs[obs_column].cat.categories]
+        table = mg.build_table(
+            rg['names'], rg['scores'], rg['logfoldchanges'], rg['pvals'], rg['pvals_adj'],
+            rg.get('pts'), rg.get('pts_rest'), tested_groups, store_top_n)
+        for g in singletons:
+            table[g] = {k: [] for k in mg.TABLE_COLUMNS}
+        record = {
+            'label': label or None,
+            'created_at': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+            'obs_column': obs_column,
+            'groups': all_groups,
+            'singletons': singletons,
+            'params': {
+                'groups': groups, 'gene_subset': gene_subset, 'store_top_n': store_top_n,
+                'n_cells_tested': int(work_adata.n_obs),
+                'cell_subset': None, 'n_cell_indices': None if cell_idx is None else int(len(cell_idx)),
+            },
+            'n_genes_tested': int(work_adata.n_vars),
+            'gene_subset_type': subset_type,
+            'table': table,
+        }
+        key = self._store_marker_run(f'markers_{obs_column}', record)
 
-                # Take top N
-                df = df.head(top_n)
-
-                genes = []
-                for _, row in df.iterrows():
-                    genes.append({
-                        'gene': str(row['names']),
-                        'log2fc': float(row['logfoldchanges']),
-                        'pval': float(row['pvals']),
-                        'pval_adj': float(row['pvals_adj']),
-                    })
-
-                result_groups.append({
-                    'group': group_str,
-                    'genes': genes,
-                })
-            except Exception:
-                # If a group fails (e.g., too few cells), include empty result
-                result_groups.append({
-                    'group': group_str,
-                    'genes': [],
-                })
+        # The run-time thresholds are the first selection on the stored table.
+        selection = {
+            'top_n': top_n,
+            'min_pct_in': min_in_group_fraction,
+            'max_pct_out': max_out_group_fraction,
+            'min_log2fc': float(np.log2(min_fold_change)) if min_fold_change is not None and min_fold_change > 0 else None,
+        }
+        selected = mg.select_markers(record, **selection)
 
         if _log:
             self._log_action('marker_genes', {
@@ -14560,17 +14828,26 @@ class DataAdaptor:
                 'max_out_group_fraction': max_out_group_fraction,
                 'min_fold_change': min_fold_change,
                 'gene_subset': gene_subset,
+                'store_top_n': store_top_n,
+                'label': label,
             }, {
-                'n_groups': len(result_groups),
-                'total_genes': sum(len(g['genes']) for g in result_groups),
+                'key': key,
+                'uid': record['uid'],
+                'n_groups': len(selected['results']),
+                'total_genes': sum(len(g['genes']) for g in selected['results']),
+                'truncated': selected['truncated'],
             }, subset=cell_idx)
 
         return {
+            'key': key,
+            'uid': record['uid'],
             'obs_column': obs_column,
-            'results': result_groups,
+            'results': selected['results'],
+            'n_stored_per_group': selected['n_stored_per_group'],
+            'truncated': selected['truncated'],
             'gene_subset_type': subset_type,
-            'n_genes_tested': work_adata.n_vars,
-            'n_cells_tested': work_adata.n_obs,
+            'n_genes_tested': int(work_adata.n_vars),
+            'n_cells_tested': int(work_adata.n_obs),
         }
 
     # ------------------------------------------------------------------

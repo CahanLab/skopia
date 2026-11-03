@@ -80,3 +80,36 @@ export function runnableGroupCount(selected: ReadonlySet<string>, maskedCounts: 
   for (const g of selected) if ((maskedCounts.get(g) ?? 0) >= 2) n++
   return n
 }
+
+/** The modal's Top N and thresholds as a selection on the stored ranking
+ *  (`POST /api/marker_genes/runs/{key}/select`). The fold-change box is a
+ *  ratio, the stored column is log2, so it travels as log2. Blanks and
+ *  non-positive fold changes are left out. */
+export function selectionFromModal(topN: number, minInGroupFraction: string, maxOutGroupFraction: string, minFoldChange: string): {
+  top_n: number; min_pct_in?: number; max_pct_out?: number; min_log2fc?: number
+} {
+  const out: { top_n: number; min_pct_in?: number; max_pct_out?: number; min_log2fc?: number } = { top_n: Math.max(1, topN) }
+  const minIGF = parseFloat(minInGroupFraction)
+  if (Number.isFinite(minIGF)) out.min_pct_in = minIGF
+  const maxOGF = parseFloat(maxOutGroupFraction)
+  if (Number.isFinite(maxOGF)) out.max_pct_out = maxOGF
+  const minFC = parseFloat(minFoldChange)
+  if (Number.isFinite(minFC) && minFC > 0) out.min_log2fc = Math.log2(minFC)
+  return out
+}
+
+// Masks are replaced, not mutated, so identity is the mask's identity.
+const maskIds = new WeakMap<readonly boolean[], number>()
+let nextMaskId = 1
+
+/** What decides whether the test must run again: the column, the groups,
+ *  the gene subset and the cell mask. Top N and the thresholds are not part
+ *  of it — they select from the stored ranking. */
+export function runSignature(i: Pick<MarkerGenesInputs, 'obsColumn' | 'selectedGroups' | 'geneSubset'> & Record<string, unknown>, mask: readonly boolean[] | null): string {
+  let maskId = 0
+  if (mask) {
+    maskId = maskIds.get(mask) ?? 0
+    if (!maskId) { maskId = nextMaskId++; maskIds.set(mask, maskId) }
+  }
+  return JSON.stringify([i.obsColumn, Array.from(i.selectedGroups).sort(), i.geneSubset, maskId])
+}

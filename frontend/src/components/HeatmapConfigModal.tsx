@@ -1,21 +1,23 @@
 /**
- * HeatmapConfigModal — inline configuration panel for the heatmap view.
+ * HeatmapConfigModal — inline configuration panel for the Heatmap tab.
  *
  * Rendered inside the center panel when the user first switches to the
  * Heatmap tab or clicks the Settings button. Lets the user choose:
- *   - Gene sets to display
- *   - Cell ordering (category, line position, etc.)
- *   - Gene ordering (as provided, by peak position, by similarity)
- *   - Cell ordering by similarity (clustered), alone or within category
- *   - Aggregate gene sets toggle
- *   - Number of cell bins
+ *   - Plot: an expression heatmap (genes × ordered cells) or a scanpy-style
+ *     dot plot (genes × groups)
+ *   - Rows: gene sets, and/or the top marker genes of a stored marker run
+ *     (top N and the filters select from the stored ranking; nothing re-runs)
+ *   - Cell ordering, gene ordering, aggregation and bins (heatmap)
+ *   - Group-by column and dot options (dot plot)
  *
  * Rollback: delete this file and remove imports from HeatmapView.tsx.
  */
 
 import { useState, useEffect, useRef } from 'react'
 import { orderSelectedSets, groupLabel, folderSelectionState, restoreSelectedIds } from '../lib/heatmapGroups'
+import { DEFAULT_DOTPLOT_OPTIONS, type DotplotOptions, type MarkerSource } from '../lib/markerSelection'
 import { useStore, HeatmapConfig, GeneSet, GeneSetCategoryType, cfgDefault } from '../store'
+import { fetchMarkerRuns, type MarkerRunSummary } from '../hooks/useData'
 
 const CATEGORY_ORDER: GeneSetCategoryType[] = ['manual', 'gene_clusters', 'similar_genes', 'diff_exp', 'spatial', 'marker_genes', 'line_association', 'enrichment']
 const CATEGORY_NAMES: Record<GeneSetCategoryType, string> = {
@@ -67,6 +69,18 @@ function FolderRow({ name, state, onToggle }: { name: string; state: 'none' | 's
   )
 }
 
+/** What the run picker shows for a stored marker run. */
+export function markerRunLabel(r: MarkerRunSummary): string {
+  const scope = r.cell_subset ? ` · ${r.cell_subset}` : r.n_cell_indices ? ` · ${r.n_cell_indices.toLocaleString()} masked cells` : ''
+  const when = r.created_at ? ` · ${r.created_at.slice(0, 16).replace('T', ' ')}` : ''
+  return `${r.key} — ${r.obs_column}, ${r.n_groups} groups${r.label ? ` (${r.label})` : ''}${scope}${when}`
+}
+
+const numOrNull = (s: string): number | null => {
+  const n = parseFloat(s)
+  return Number.isFinite(n) ? n : null
+}
+
 interface Props {
   config: HeatmapConfig | null
   onApply: (config: HeatmapConfig) => void
@@ -78,12 +92,18 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
   const schema = useStore((s) => s.schema)
   const drawnLines = useStore((s) => s.drawnLines)
   const activeCellMask = useStore((s) => s.activeCellMask)
+  const activeSlot = useStore((s) => s.activeSlot)
+  const isMarkerGenesModalOpen = useStore((s) => s.isMarkerGenesModalOpen)
+  const setMarkerGenesColumn = useStore((s) => s.setMarkerGenesColumn)
+  const setMarkerGenesModalOpen = useStore((s) => s.setMarkerGenesModalOpen)
   const nActive = activeCellMask ? activeCellMask.reduce((n, b) => n + (b ? 1 : 0), 0) : 0
 
   const allGeneSets = getAllGeneSets(geneSetCategories)
   const nonEmptySets = allGeneSets.filter((gs) => gs.genes.length > 0)
 
   // Initialize from existing config or defaults
+  const [plotType, setPlotType] = useState<'heatmap' | 'dotplot'>(config?.plotType ?? 'heatmap')
+  const [rowSource, setRowSource] = useState<'gene_sets' | 'markers'>(config?.markerSource ? 'markers' : 'gene_sets')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     () => restoreSelectedIds(config?.selectedGeneSets ?? [], nonEmptySets)
   )
@@ -94,21 +114,61 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
   const [aggregateGeneSets, setAggregateGeneSets] = useState(config?.aggregateGeneSets ?? cfgDefault(['heatmap', 'aggregate_gene_sets'], false))
   const [nBins, setNBins] = useState(config?.nBins ?? cfgDefault(['heatmap', 'n_bins'], 300))
   const [keepCellSubset, setKeepCellSubset] = useState(true)
+  const [dotplot, setDotplot] = useState<DotplotOptions>({ ...DEFAULT_DOTPLOT_OPTIONS, ...(config?.dotplot ?? {}) })
 
-  // Get categorical obs columns for ordering
+  // Marker source: a stored run and the selection on it (numbers kept as
+  // strings so a half-typed threshold does not snap).
+  const [markerRuns, setMarkerRuns] = useState<MarkerRunSummary[] | null>(null)
+  const [markerKey, setMarkerKey] = useState<string>(config?.markerSource?.key ?? '')
+  const [markerTopN, setMarkerTopN] = useState<number>(config?.markerSource?.topN ?? 10)
+  const [minPctIn, setMinPctIn] = useState(config?.markerSource?.minPctIn != null ? String(config.markerSource.minPctIn) : '')
+  const [maxPctOut, setMaxPctOut] = useState(config?.markerSource?.maxPctOut != null ? String(config.markerSource.maxPctOut) : '')
+  const [minLog2fc, setMinLog2fc] = useState(config?.markerSource?.minLog2fc != null ? String(config.markerSource.minLog2fc) : '')
+  const [maxPadj, setMaxPadj] = useState(config?.markerSource?.maxPadj != null ? String(config.markerSource.maxPadj) : '')
+  const [rankBy, setRankBy] = useState<'score' | 'log2fc'>(config?.markerSource?.rankBy ?? 'score')
+
+  // Refetched whenever the marker modal closes: a run made from the link
+  // below must show up without leaving the panel.
+  useEffect(() => {
+    if (isMarkerGenesModalOpen) return
+    let cancelled = false
+    fetchMarkerRuns(activeSlot)
+      .then((runs) => {
+        if (cancelled) return
+        setMarkerRuns(runs)
+        setMarkerKey((k) => (k && runs.some((r) => r.key === k) ? k : runs[0]?.key ?? ''))
+      })
+      .catch(() => { if (!cancelled) setMarkerRuns([]) })
+    return () => { cancelled = true }
+  }, [activeSlot, isMarkerGenesModalOpen])
+
+  const markerRun = markerRuns?.find((r) => r.key === markerKey) ?? null
+
+  // Get categorical obs columns for ordering / grouping
   const categoricalColumns = schema
     ? schema.obs_columns.filter((c) => schema.obs_dtypes[c] === 'category')
     : []
 
   // Set defaults if needed
   useEffect(() => {
-    if ((cellOrdering === 'category' || cellOrdering === 'category_then_similarity') && !obsColumn && categoricalColumns.length > 0) {
-      setObsColumn(categoricalColumns[0])
+    if ((cellOrdering === 'category' || cellOrdering === 'category_then_similarity' || plotType === 'dotplot') && !obsColumn && categoricalColumns.length > 0) {
+      setObsColumn(markerRun?.obs_column && categoricalColumns.includes(markerRun.obs_column) ? markerRun.obs_column : categoricalColumns[0])
     }
     if ((cellOrdering === 'line_position' || cellOrdering === 'line_distance' || cellOrdering === 'category_then_position') && !lineName && drawnLines.length > 0) {
       setLineName(drawnLines[0].name)
     }
-  }, [cellOrdering, obsColumn, lineName, categoricalColumns, drawnLines])
+  }, [cellOrdering, obsColumn, lineName, categoricalColumns, drawnLines, plotType, markerRun])
+
+  const pickMarkerRun = (key: string) => {
+    setMarkerKey(key)
+    const run = markerRuns?.find((r) => r.key === key)
+    // Markers read best against their own groups: order the cells by the
+    // run's column unless the user already chose an ordering.
+    if (run && categoricalColumns.includes(run.obs_column)) {
+      setObsColumn(run.obs_column)
+      if (cellOrdering === 'none') setCellOrdering('category')
+    }
+  }
 
   const toggleGeneSet = (id: string) => {
     setSelectedIds((prev) => {
@@ -139,17 +199,31 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
     setSelectedIds(new Set())
   }
 
+  const needsCategory = cellOrdering === 'category' || cellOrdering === 'category_then_position' || cellOrdering === 'category_then_similarity'
+  const needsLine = cellOrdering === 'line_position' || cellOrdering === 'line_distance' || cellOrdering === 'category_then_position'
+  const usingMarkers = rowSource === 'markers' && Boolean(markerKey)
+  const hasRows = usingMarkers || selectedIds.size > 0
+  const canApply = hasRows && (plotType === 'heatmap' || Boolean(obsColumn))
+
   const handleApply = () => {
+    if (!canApply) return
     // Folder order, then each folder's own set order — a pathway reads
     // ligands → receptors → … whatever order the boxes were ticked in.
     const selected = orderSelectedSets(nonEmptySets, selectedIds)
-    if (selected.length === 0) return
+    const markerSource: MarkerSource | null = usingMarkers && markerRun ? {
+      key: markerRun.key, label: markerRun.obs_column, topN: Math.max(1, markerTopN),
+      minPctIn: numOrNull(minPctIn), maxPctOut: numOrNull(maxPctOut), minLog2fc: numOrNull(minLog2fc), maxPadj: numOrNull(maxPadj),
+      rankBy,
+    } : null
 
     onApply({
       selectedGeneSets: selected.map((gs) => ({ id: gs.id, name: groupLabel(gs, selected), genes: gs.genes })),
+      plotType,
+      markerSource,
+      dotplot,
       cellOrdering,
-      obsColumn: needsCategory ? obsColumn : null,
-      lineName: needsLine ? lineName : null,
+      obsColumn: plotType === 'dotplot' || needsCategory ? obsColumn : null,
+      lineName: plotType === 'heatmap' && needsLine ? lineName : null,
       geneOrdering,
       aggregateGeneSets,
       nBins,
@@ -158,19 +232,45 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
     })
   }
 
-  const needsCategory = cellOrdering === 'category' || cellOrdering === 'category_then_position' || cellOrdering === 'category_then_similarity'
-  const needsLine = cellOrdering === 'line_position' || cellOrdering === 'line_distance' || cellOrdering === 'category_then_position'
+  const openMarkerModal = () => {
+    const col = obsColumn && categoricalColumns.includes(obsColumn) ? obsColumn : categoricalColumns[0]
+    if (!col) return
+    setMarkerGenesColumn(col)
+    setMarkerGenesModalOpen(true)
+  }
+
+  const thresholdInput = (label: string, value: string, set: (v: string) => void, placeholder: string, title: string, step = 0.05) => (
+    <label style={styles.thresholdRow} title={title}>
+      <span style={{ flex: 1 }}>{label}</span>
+      <input type="number" step={step} value={value} placeholder={placeholder} onChange={(e) => set(e.target.value)} style={{ ...styles.numberInput, width: '72px' }} />
+    </label>
+  )
 
   return (
     <div style={styles.container}>
       <div style={styles.panel}>
-        <h3 style={styles.title}>Configure Heatmap</h3>
+        <h3 style={styles.title}>Configure {plotType === 'dotplot' ? 'Dot Plot' : 'Heatmap'}</h3>
 
-        {/* Gene set selection */}
+        {/* Plot type */}
+        <div style={styles.section}>
+          <div style={styles.sectionTitle}>Plot</div>
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <label style={styles.radioRow} title="Genes as rows, cells (or bins of cells) as columns, ordered along an axis">
+              <input type="radio" name="plotType" checked={plotType === 'heatmap'} onChange={() => setPlotType('heatmap')} />
+              <span>Heatmap</span>
+            </label>
+            <label style={styles.radioRow} title="One dot per gene and group: size is the fraction of the group's cells expressing it, colour the mean expression (scanpy's dotplot)">
+              <input type="radio" name="plotType" checked={plotType === 'dotplot'} onChange={() => setPlotType('dotplot')} disabled={categoricalColumns.length === 0} />
+              <span>Dot plot</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Rows */}
         <div style={styles.section}>
           {activeCellMask && (
             <div style={{ fontSize: '11px', color: '#e9a23b', marginBottom: '8px', padding: '6px 8px', border: '1px solid #0f3460', borderRadius: '4px' }}>
-              Cell mask active ({nActive.toLocaleString()} cells): the heatmap draws only cells inside it.
+              Cell mask active ({nActive.toLocaleString()} cells): the plot draws only cells inside it.
             </div>
           )}
           {config?.cellIndices && config.cellIndices.length > 0 && (
@@ -181,8 +281,58 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
               </label>
             </div>
           )}
+          <div style={styles.sectionTitle}>Rows</div>
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '8px' }}>
+            <label style={styles.radioRow}>
+              <input type="radio" name="rowSource" checked={rowSource === 'gene_sets'} onChange={() => setRowSource('gene_sets')} />
+              <span>Gene sets</span>
+            </label>
+            <label style={styles.radioRow} title="The top marker genes of each group from a stored marker run; top N and the filters select from the stored ranking without re-running the test">
+              <input type="radio" name="rowSource" checked={rowSource === 'markers'} onChange={() => setRowSource('markers')} />
+              <span>Top marker genes</span>
+            </label>
+          </div>
+
+          {rowSource === 'markers' && (
+            <div style={styles.markerBox} data-marker-source>
+              {markerRuns === null ? (
+                <div style={styles.hint}>Loading marker runs…</div>
+              ) : markerRuns.length === 0 ? (
+                <div style={styles.hint}>
+                  No marker run stored yet.{' '}
+                  <span style={styles.link} onClick={openMarkerModal}>Find marker genes…</span>
+                </div>
+              ) : (
+                <>
+                  <select style={{ ...styles.inlineSelect, marginLeft: 0, width: '100%', marginBottom: '8px' }} value={markerKey} onChange={(e) => pickMarkerRun(e.target.value)}>
+                    {markerRuns.map((r) => <option key={r.key} value={r.key}>{markerRunLabel(r)}</option>)}
+                  </select>
+                  <label style={styles.thresholdRow}>
+                    <span style={{ flex: 1 }}>Top N per group</span>
+                    <input type="number" min={1} max={500} value={markerTopN} onChange={(e) => setMarkerTopN(Math.max(1, parseInt(e.target.value) || 1))} style={{ ...styles.numberInput, width: '72px' }} />
+                  </label>
+                  {thresholdInput('Min % in group', minPctIn, setMinPctIn, 'e.g. 0.25', 'Fraction of the group\'s cells expressing the gene (0..1); blank = no filter')}
+                  {thresholdInput('Max % in others', maxPctOut, setMaxPctOut, 'e.g. 0.5', 'Fraction of the other cells expressing the gene (0..1); blank = no filter')}
+                  {thresholdInput('Min log2 fold change', minLog2fc, setMinLog2fc, 'e.g. 1', 'Blank = no filter', 0.25)}
+                  {thresholdInput('Max adjusted p', maxPadj, setMaxPadj, 'e.g. 0.05', 'Blank = no filter', 0.01)}
+                  <label style={styles.thresholdRow}>
+                    <span style={{ flex: 1 }}>Rank by</span>
+                    <select style={{ ...styles.inlineSelect, marginLeft: 0 }} value={rankBy} onChange={(e) => setRankBy(e.target.value as 'score' | 'log2fc')}>
+                      <option value="score">Wilcoxon score</option>
+                      <option value="log2fc">log2 fold change</option>
+                    </select>
+                  </label>
+                  <div style={{ ...styles.hint, marginTop: '6px' }}>
+                    Stored ranking: {markerRun?.store_top_n ?? '?'} genes per group.{' '}
+                    <span style={styles.link} onClick={openMarkerModal}>Find marker genes…</span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           <div style={styles.sectionHeader}>
-            <span style={styles.sectionTitle}>Gene Sets</span>
+            <span style={styles.subTitle}>{rowSource === 'markers' ? 'Also include gene sets' : 'Gene sets'}</span>
             <div style={{ display: 'flex', gap: '6px' }}>
               <button style={styles.smallButton} onClick={selectAllGeneSets}>All</button>
               <button style={styles.smallButton} onClick={selectNoneGeneSets}>None</button>
@@ -236,105 +386,161 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
           )}
         </div>
 
-        {/* Cell ordering */}
-        <div style={styles.section}>
-          <div style={styles.sectionTitle}>Cell Ordering</div>
-          <div style={styles.radioGroup}>
-            <label style={styles.radioRow}>
-              <input type="radio" name="cellOrder" checked={cellOrdering === 'none'} onChange={() => setCellOrdering('none')} />
-              <span>None (original order)</span>
-            </label>
-            <label style={styles.radioRow}>
-              <input type="radio" name="cellOrder" checked={cellOrdering === 'category'} onChange={() => setCellOrdering('category')} disabled={categoricalColumns.length === 0} />
-              <span>Group by category</span>
-            </label>
-            {cellOrdering === 'category' && (
-              <select style={styles.inlineSelect} value={obsColumn || ''} onChange={(e) => setObsColumn(e.target.value || null)}>
+        {plotType === 'dotplot' ? (
+          <>
+            {/* Group by */}
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Group by</div>
+              <select style={{ ...styles.inlineSelect, marginLeft: 0 }} value={obsColumn || ''} onChange={(e) => setObsColumn(e.target.value || null)}>
                 {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-            )}
-            <label style={styles.radioRow}>
-              <input type="radio" name="cellOrder" checked={cellOrdering === 'line_position'} onChange={() => setCellOrdering('line_position')} disabled={drawnLines.length === 0} />
-              <span>By line position</span>
-            </label>
-            <label style={styles.radioRow}>
-              <input type="radio" name="cellOrder" checked={cellOrdering === 'line_distance'} onChange={() => setCellOrdering('line_distance')} disabled={drawnLines.length === 0} />
-              <span>By distance from line</span>
-            </label>
-            <label style={styles.radioRow}>
-              <input type="radio" name="cellOrder" checked={cellOrdering === 'category_then_position'} onChange={() => setCellOrdering('category_then_position')} disabled={categoricalColumns.length === 0 || drawnLines.length === 0} />
-              <span>Category, then position</span>
-            </label>
-            {cellOrdering === 'category_then_position' && (
-              <div style={{ marginLeft: '24px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <select style={styles.inlineSelect} value={obsColumn || ''} onChange={(e) => setObsColumn(e.target.value || null)}>
-                  {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
+            </div>
+
+            {/* Dot options */}
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Dots</div>
+              <label style={styles.thresholdRow}>
+                <span style={{ flex: 1 }}>Colour</span>
+                <select style={{ ...styles.inlineSelect, marginLeft: 0 }} value={dotplot.colorBy} onChange={(e) => setDotplot({ ...dotplot, colorBy: e.target.value as DotplotOptions['colorBy'] })}>
+                  <option value="mean">mean expression (all cells in group)</option>
+                  <option value="mean_expressing">mean in expressing cells</option>
                 </select>
+              </label>
+              <label style={styles.thresholdRow}>
+                <span style={{ flex: 1 }}>Scale</span>
+                <select style={{ ...styles.inlineSelect, marginLeft: 0 }} value={dotplot.standardScale} onChange={(e) => setDotplot({ ...dotplot, standardScale: e.target.value as DotplotOptions['standardScale'] })}>
+                  <option value="none">none</option>
+                  <option value="gene">per gene, 0..1 across groups</option>
+                </select>
+              </label>
+              <label style={styles.thresholdRow} title="A cell counts as expressing when its value exceeds this">
+                <span style={{ flex: 1 }}>Expressing above</span>
+                <input type="number" min={0} step={0.1} value={dotplot.expressionCutoff} onChange={(e) => setDotplot({ ...dotplot, expressionCutoff: Math.max(0, parseFloat(e.target.value) || 0) })} style={{ ...styles.numberInput, width: '72px' }} />
+              </label>
+              <label style={styles.thresholdRow}>
+                <span style={{ flex: 1 }}>Gene order</span>
+                <select style={{ ...styles.inlineSelect, marginLeft: 0 }} value={dotplot.geneOrdering} onChange={(e) => setDotplot({ ...dotplot, geneOrdering: e.target.value as DotplotOptions['geneOrdering'] })}>
+                  <option value="as_provided">as provided</option>
+                  <option value="peak_group">by peak group</option>
+                </select>
+              </label>
+              <label style={styles.thresholdRow}>
+                <span style={{ flex: 1 }}>Colours</span>
+                <select style={{ ...styles.inlineSelect, marginLeft: 0 }} value={dotplot.colormap} onChange={(e) => setDotplot({ ...dotplot, colormap: e.target.value as DotplotOptions['colormap'] })}>
+                  <option value="viridis">viridis</option>
+                  <option value="reds">white – red</option>
+                  <option value="rdbu">blue – white – red</option>
+                </select>
+              </label>
+              <label style={styles.checkboxRow} title="Off: groups as rows and genes as columns, scanpy's layout">
+                <input type="checkbox" checked={dotplot.swapAxes} onChange={(e) => setDotplot({ ...dotplot, swapAxes: e.target.checked })} />
+                <span>Genes as rows</span>
+              </label>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Cell ordering */}
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Cell Ordering</div>
+              <div style={styles.radioGroup}>
+                <label style={styles.radioRow}>
+                  <input type="radio" name="cellOrder" checked={cellOrdering === 'none'} onChange={() => setCellOrdering('none')} />
+                  <span>None (original order)</span>
+                </label>
+                <label style={styles.radioRow}>
+                  <input type="radio" name="cellOrder" checked={cellOrdering === 'category'} onChange={() => setCellOrdering('category')} disabled={categoricalColumns.length === 0} />
+                  <span>Group by category</span>
+                </label>
+                {cellOrdering === 'category' && (
+                  <select style={styles.inlineSelect} value={obsColumn || ''} onChange={(e) => setObsColumn(e.target.value || null)}>
+                    {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                )}
+                <label style={styles.radioRow}>
+                  <input type="radio" name="cellOrder" checked={cellOrdering === 'line_position'} onChange={() => setCellOrdering('line_position')} disabled={drawnLines.length === 0} />
+                  <span>By line position</span>
+                </label>
+                <label style={styles.radioRow}>
+                  <input type="radio" name="cellOrder" checked={cellOrdering === 'line_distance'} onChange={() => setCellOrdering('line_distance')} disabled={drawnLines.length === 0} />
+                  <span>By distance from line</span>
+                </label>
+                <label style={styles.radioRow}>
+                  <input type="radio" name="cellOrder" checked={cellOrdering === 'category_then_position'} onChange={() => setCellOrdering('category_then_position')} disabled={categoricalColumns.length === 0 || drawnLines.length === 0} />
+                  <span>Category, then position</span>
+                </label>
+                {cellOrdering === 'category_then_position' && (
+                  <div style={{ marginLeft: '24px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <select style={styles.inlineSelect} value={obsColumn || ''} onChange={(e) => setObsColumn(e.target.value || null)}>
+                      {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                )}
+                <label style={styles.radioRow} title="Hierarchical clustering (average linkage) of the cells on the selected genes, each gene scaled to its own range; cells with the same expression pattern sit together. Above 5,000 cells the clustering runs on 500 k-means centroids.">
+                  <input type="radio" name="cellOrder" checked={cellOrdering === 'similarity'} onChange={() => setCellOrdering('similarity')} />
+                  <span>By similarity (clustered)</span>
+                </label>
+                <label style={styles.radioRow} title="Group by category, then cluster the cells by similarity inside each group.">
+                  <input type="radio" name="cellOrder" checked={cellOrdering === 'category_then_similarity'} onChange={() => setCellOrdering('category_then_similarity')} disabled={categoricalColumns.length === 0} />
+                  <span>Category, then similarity</span>
+                </label>
+                {cellOrdering === 'category_then_similarity' && (
+                  <select style={{ ...styles.inlineSelect, marginLeft: '24px' }} value={obsColumn || ''} onChange={(e) => setObsColumn(e.target.value || null)}>
+                    {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                )}
+                {needsLine && (
+                  <select style={{ ...styles.inlineSelect, marginLeft: '24px' }} value={lineName || ''} onChange={(e) => setLineName(e.target.value || null)}>
+                    {drawnLines.map((l) => <option key={l.id} value={l.name}>{l.name}</option>)}
+                  </select>
+                )}
               </div>
-            )}
-            <label style={styles.radioRow} title="Hierarchical clustering (average linkage) of the cells on the selected genes, each gene scaled to its own range; cells with the same expression pattern sit together. Above 5,000 cells the clustering runs on 500 k-means centroids.">
-              <input type="radio" name="cellOrder" checked={cellOrdering === 'similarity'} onChange={() => setCellOrdering('similarity')} />
-              <span>By similarity (clustered)</span>
-            </label>
-            <label style={styles.radioRow} title="Group by category, then cluster the cells by similarity inside each group.">
-              <input type="radio" name="cellOrder" checked={cellOrdering === 'category_then_similarity'} onChange={() => setCellOrdering('category_then_similarity')} disabled={categoricalColumns.length === 0} />
-              <span>Category, then similarity</span>
-            </label>
-            {cellOrdering === 'category_then_similarity' && (
-              <select style={{ ...styles.inlineSelect, marginLeft: '24px' }} value={obsColumn || ''} onChange={(e) => setObsColumn(e.target.value || null)}>
-                {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            )}
-            {needsLine && (
-              <select style={{ ...styles.inlineSelect, marginLeft: '24px' }} value={lineName || ''} onChange={(e) => setLineName(e.target.value || null)}>
-                {drawnLines.map((l) => <option key={l.id} value={l.name}>{l.name}</option>)}
-              </select>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* Gene ordering */}
-        <div style={styles.section}>
-          <div style={styles.sectionTitle}>Gene Ordering</div>
-          <div style={styles.radioGroup}>
-            <label style={styles.radioRow}>
-              <input type="radio" name="geneOrder" checked={geneOrdering === 'as_provided'} onChange={() => setGeneOrdering('as_provided')} />
-              <span>By gene set</span>
-            </label>
-            <label style={styles.radioRow}>
-              <input type="radio" name="geneOrder" checked={geneOrdering === 'peak_position'} onChange={() => setGeneOrdering('peak_position')} />
-              <span>By peak position</span>
-            </label>
-            <label style={styles.radioRow} title="Hierarchical clustering (average linkage) of each gene's normalised profile; genes with the same shape sit together. Within each gene set when sets are shown.">
-              <input type="radio" name="geneOrder" checked={geneOrdering === 'similarity'} onChange={() => setGeneOrdering('similarity')} />
-              <span>By similarity (clustered)</span>
-            </label>
-          </div>
-        </div>
+            {/* Gene ordering */}
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Gene Ordering</div>
+              <div style={styles.radioGroup}>
+                <label style={styles.radioRow}>
+                  <input type="radio" name="geneOrder" checked={geneOrdering === 'as_provided'} onChange={() => setGeneOrdering('as_provided')} />
+                  <span>By gene set / marker group</span>
+                </label>
+                <label style={styles.radioRow}>
+                  <input type="radio" name="geneOrder" checked={geneOrdering === 'peak_position'} onChange={() => setGeneOrdering('peak_position')} />
+                  <span>By peak position</span>
+                </label>
+                <label style={styles.radioRow} title="Hierarchical clustering (average linkage) of each gene's normalised profile; genes with the same shape sit together. Within each gene set when sets are shown.">
+                  <input type="radio" name="geneOrder" checked={geneOrdering === 'similarity'} onChange={() => setGeneOrdering('similarity')} />
+                  <span>By similarity (clustered)</span>
+                </label>
+              </div>
+            </div>
 
-        {/* Aggregate toggle */}
-        <div style={styles.section}>
-          <label style={styles.checkboxRow}>
-            <input type="checkbox" checked={aggregateGeneSets} onChange={(e) => setAggregateGeneSets(e.target.checked)} />
-            <span>Show gene set aggregates (mean expression per set)</span>
-          </label>
-        </div>
+            {/* Aggregate toggle */}
+            <div style={styles.section}>
+              <label style={styles.checkboxRow}>
+                <input type="checkbox" checked={aggregateGeneSets} onChange={(e) => setAggregateGeneSets(e.target.checked)} />
+                <span>Show gene set aggregates (mean expression per set)</span>
+              </label>
+            </div>
 
-        {/* Bin count */}
-        <div style={styles.section}>
-          <div style={styles.sectionTitle}>Cell Bins</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              type="number"
-              min={0}
-              max={2000}
-              value={nBins}
-              onChange={(e) => setNBins(Math.max(0, parseInt(e.target.value) || 0))}
-              style={styles.numberInput}
-            />
-            <span style={styles.hint}>0 = no binning (show all cells)</span>
-          </div>
-        </div>
+            {/* Bin count */}
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Cell Bins</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="number"
+                  min={0}
+                  max={2000}
+                  value={nBins}
+                  onChange={(e) => setNBins(Math.max(0, parseInt(e.target.value) || 0))}
+                  style={styles.numberInput}
+                />
+                <span style={styles.hint}>0 = no binning (show all cells)</span>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Actions */}
         <div style={styles.actions}>
@@ -344,13 +550,13 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
           <button
             style={{
               ...styles.applyButton,
-              opacity: selectedIds.size === 0 ? 0.4 : 1,
-              cursor: selectedIds.size === 0 ? 'not-allowed' : 'pointer',
+              opacity: canApply ? 1 : 0.4,
+              cursor: canApply ? 'pointer' : 'not-allowed',
             }}
             onClick={handleApply}
-            disabled={selectedIds.size === 0}
+            disabled={!canApply}
           >
-            Generate Heatmap
+            Generate {plotType === 'dotplot' ? 'Dot Plot' : 'Heatmap'}
           </button>
         </div>
       </div>
@@ -372,8 +578,8 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '8px',
     padding: '24px',
     width: '100%',
-    maxWidth: '500px',
-    maxHeight: '80vh',
+    maxWidth: '520px',
+    maxHeight: '85vh',
     overflowY: 'auto',
   },
   title: {
@@ -399,6 +605,11 @@ const styles: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase',
     marginBottom: '8px',
   },
+  subTitle: {
+    fontSize: '11px',
+    fontWeight: 600,
+    color: '#888',
+  },
   categoryLabel: {
     fontSize: '10px',
     fontWeight: 600,
@@ -408,11 +619,31 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: '4px',
   },
   geneSetList: {
-    maxHeight: '200px',
+    maxHeight: '180px',
     overflowY: 'auto',
     backgroundColor: '#0f3460',
     borderRadius: '4px',
     padding: '8px',
+  },
+  markerBox: {
+    backgroundColor: '#0f1625',
+    border: '1px solid #0f3460',
+    borderRadius: '4px',
+    padding: '10px',
+    marginBottom: '10px',
+  },
+  thresholdRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '3px 0',
+    fontSize: '12px',
+    color: '#ccc',
+  },
+  link: {
+    color: '#4ecdc4',
+    cursor: 'pointer',
+    textDecoration: 'underline',
   },
   checkboxRow: {
     display: 'flex',

@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { markerGenesParams, maskedCategoryCounts, runnableGroupCount } from '../lib/markerGenes'
+import { markerGenesParams, maskedCategoryCounts, runnableGroupCount, selectionFromModal, runSignature } from '../lib/markerGenes'
 import { indicesFromMask } from '../lib/cellSubsets'
+import { DEFAULT_DOTPLOT_OPTIONS } from '../lib/markerSelection'
 import { useStore, cfgDefault, ObsColumnData } from '../store'
-import { useObsSummaries, runMarkerGenes, MarkerGenesGroupResult, appendDataset } from '../hooks/useData'
+import { useObsSummaries, runMarkerGenes, selectMarkerGenes, MarkerGenesGroupResult, appendDataset } from '../hooks/useData'
 
 const styles = {
   backdrop: {
@@ -237,6 +238,8 @@ export default function MarkerGenesModal() {
     setEnrichmentSource,
     activeCellMask,
     activeSubsetName,
+    setHeatmapConfig,
+    setCenterPanelView,
   } = useStore()
 
   const { summaries } = useObsSummaries()
@@ -295,6 +298,15 @@ export default function MarkerGenesModal() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const [addedToSets, setAddedToSets] = useState(false)
+  // The stored run the shown results were selected from, and what the run
+  // answered for: Top N and the thresholds re-select from the stored
+  // ranking; only a change of column, groups, gene subset or mask re-runs.
+  const [resultKey, setResultKey] = useState<string | null>(null)
+  const [resultSignature, setResultSignature] = useState<string | null>(null)
+  const [resultTruncated, setResultTruncated] = useState(false)
+  const [storedPerGroup, setStoredPerGroup] = useState<number | null>(null)
+  const lastSelection = useRef<string | null>(null)
+  const [isSelecting, setIsSelecting] = useState(false)
 
   // Results answer for the cells they were run on. This modal never unmounts,
   // so a mask changed while it was closed would otherwise leave markers for
@@ -309,6 +321,33 @@ export default function MarkerGenesModal() {
   // Get the summary for the selected column
   const columnSummary = summaries.find((s) => s.name === markerGenesColumn)
   const categories = columnSummary?.categories || []
+
+  const signature = markerGenesColumn ? runSignature({ obsColumn: markerGenesColumn, selectedGroups, geneSubset }, activeCellMask) : null
+  const runIsCurrent = Boolean(resultKey && results && signature === resultSignature)
+
+  // Top N or a threshold changed after a run: re-select from the stored
+  // ranking (debounced), never re-run the test.
+  useEffect(() => {
+    if (!runIsCurrent || !resultKey) return
+    const selection = selectionFromModal(topN, minInGroupFraction, maxOutGroupFraction, minFoldChange)
+    const wanted = JSON.stringify(selection)
+    if (wanted === lastSelection.current) return
+    const handle = window.setTimeout(async () => {
+      setIsSelecting(true)
+      try {
+        const response = await selectMarkerGenes(resultKey, selection, activeSlot)
+        lastSelection.current = wanted
+        setResults(response.results)
+        setResultTruncated(response.truncated)
+        setAddedToSets(false)
+      } catch (err) {
+        setErrorMsg((err as Error).message)
+      } finally {
+        setIsSelecting(false)
+      }
+    }, 300)
+    return () => window.clearTimeout(handle)
+  }, [runIsCurrent, resultKey, topN, minInGroupFraction, maxOutGroupFraction, minFoldChange, activeSlot])
 
   // Snapshot the pre-checked categories when modal opens (to avoid re-triggering on every toggle)
   const preCheckedRef = useRef<Set<string> | null>(null)
@@ -383,6 +422,12 @@ export default function MarkerGenesModal() {
       setResultScope(activeCellMask ? (activeSubsetName ?? `${response.n_cells_tested.toLocaleString()} cells`) : null)
       setResultCells(response.n_cells_tested)
       setResultMask(activeCellMask)
+      setResultKey(response.key)
+      setResultSignature(runSignature({ obsColumn: markerGenesColumn, selectedGroups, geneSubset }, activeCellMask))
+      setResultTruncated(response.truncated)
+      const stored = Object.values(response.n_stored_per_group)
+      setStoredPerGroup(stored.length ? Math.max(...stored) : null)
+      lastSelection.current = JSON.stringify(selectionFromModal(topN, minInGroupFraction, maxOutGroupFraction, minFoldChange))
       // Auto-expand first group
       if (response.results.length > 0) {
         setExpandedGroups(new Set([response.results[0].group]))
@@ -411,6 +456,33 @@ export default function MarkerGenesModal() {
     setAddedToSets(true)
   }, [results, resultScope, markerGenesColumn, addFolderToCategory])
 
+  // Hand the current selection to the Heatmap tab as its row source: top N
+  // and the thresholds travel as the selection, resolved server-side.
+  const handlePlot = useCallback(() => {
+    if (!resultKey || !markerGenesColumn) return
+    const sel = selectionFromModal(topN, minInGroupFraction, maxOutGroupFraction, minFoldChange)
+    setHeatmapConfig({
+      selectedGeneSets: [],
+      plotType: 'heatmap',
+      markerSource: {
+        key: resultKey, label: markerGenesColumn, topN: sel.top_n,
+        minPctIn: sel.min_pct_in ?? null, maxPctOut: sel.max_pct_out ?? null, minLog2fc: sel.min_log2fc ?? null, maxPadj: null,
+        rankBy: 'score',
+      },
+      dotplot: DEFAULT_DOTPLOT_OPTIONS,
+      cellOrdering: 'category',
+      obsColumn: markerGenesColumn,
+      lineName: null,
+      geneOrdering: 'as_provided',
+      aggregateGeneSets: false,
+      nBins: cfgDefault(['heatmap', 'n_bins'], 300),
+      cellIndices: null,
+      cellLabel: null,
+    })
+    setCenterPanelView('heatmap')
+    setMarkerGenesModalOpen(false)
+  }, [resultKey, markerGenesColumn, topN, minInGroupFraction, maxOutGroupFraction, minFoldChange, setHeatmapConfig, setCenterPanelView, setMarkerGenesModalOpen])
+
   const toggleResultGroup = useCallback((group: string) => {
     setExpandedGroups((prev) => {
       const next = new Set(prev)
@@ -429,6 +501,10 @@ export default function MarkerGenesModal() {
 
   if (!isMarkerGenesModalOpen || !markerGenesColumn) return null
 
+  const filtersActive = [minInGroupFraction, maxOutGroupFraction, minFoldChange].some((v) => Number.isFinite(parseFloat(v)))
+  // The cap only matters when a filter could have wanted rows beyond it, or
+  // Top N asks for more than was kept.
+  const capMatters = resultTruncated && (filtersActive || (storedPerGroup !== null && topN > storedPerGroup))
   const nRunnableGroups = runnableGroupCount(selectedGroups, maskedCounts)
   const canRun = nRunnableGroups >= 2 && !isRunning
   const nActive = activeCellMask ? activeCellMask.reduce((n, b) => n + (b ? 1 : 0), 0) : 0
@@ -580,6 +656,19 @@ export default function MarkerGenesModal() {
                 {results.length} group{results.length !== 1 ? 's' : ''},{' '}
                 {results.reduce((sum, r) => sum + r.genes.length, 0)} total marker genes
                 {' '}from {resultCells.toLocaleString()} cells{resultScope ? ` (cell mask: ${resultScope})` : ''}
+                {isSelecting && <span style={{ color: '#4ecdc4' }}> · re-selecting…</span>}
+                {resultKey && (
+                  <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                    Stored as <span style={{ color: '#4ecdc4' }}>{resultKey}</span>
+                    {storedPerGroup !== null && ` (${storedPerGroup.toLocaleString()} ranked genes per group)`}.
+                    {' '}Top N and the filters select from it without re-running.
+                    {capMatters && (
+                      <span style={{ color: '#e9a23b' }} title="A group holds exactly the stored number of rows, so a filter may have lost candidates the store never kept. Re-run with a larger stored ranking if the lists come up short.">
+                        {' '}Stored ranking is at its cap.
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               {results.map((groupResult) => (
                 <div key={groupResult.group} style={styles.resultGroup}>
@@ -591,8 +680,8 @@ export default function MarkerGenesModal() {
                       {expandedGroups.has(groupResult.group) ? '\u25BC' : '\u25B6'}{' '}
                       {groupResult.group}
                     </span>
-                    <span style={{ fontSize: '11px', color: '#888' }}>
-                      {groupResult.genes.length} genes
+                    <span style={{ fontSize: '11px', color: '#888' }} title="Shown of those that passed the filters">
+                      {groupResult.genes.length} gene{groupResult.genes.length === 1 ? '' : 's'}{filtersActive && groupResult.n_candidates > groupResult.genes.length ? ` of ${groupResult.n_candidates} passing` : ''}
                     </span>
                   </div>
                   {expandedGroups.has(groupResult.group) && groupResult.genes.length > 0 && (
@@ -600,16 +689,24 @@ export default function MarkerGenesModal() {
                       <div style={{ ...styles.resultGene, fontWeight: 600, color: '#888', fontSize: '11px', borderBottom: '1px solid #1a1a2e', paddingBottom: '4px', marginBottom: '4px' }}>
                         <span style={{ flex: 1 }}>Gene</span>
                         <span style={{ width: '70px', textAlign: 'right' }}>log2FC</span>
+                        <span style={{ width: '60px', textAlign: 'right' }} title="Fraction of the group's cells expressing the gene">% in</span>
+                        <span style={{ width: '60px', textAlign: 'right' }} title="Fraction of the other cells expressing the gene">% out</span>
                         <span style={{ width: '80px', textAlign: 'right' }}>p-adj</span>
                       </div>
                       {groupResult.genes.map((gene) => (
                         <div key={gene.gene} style={styles.resultGene}>
                           <span style={{ flex: 1 }}>{gene.gene}</span>
                           <span style={{ ...styles.resultGeneStats, width: '70px', textAlign: 'right' }}>
-                            {gene.log2fc.toFixed(2)}
+                            {gene.log2fc === null ? '–' : gene.log2fc.toFixed(2)}
+                          </span>
+                          <span style={{ ...styles.resultGeneStats, width: '60px', textAlign: 'right' }}>
+                            {gene.pct_in === null ? '–' : `${(gene.pct_in * 100).toFixed(0)}%`}
+                          </span>
+                          <span style={{ ...styles.resultGeneStats, width: '60px', textAlign: 'right' }}>
+                            {gene.pct_out === null ? '–' : `${(gene.pct_out * 100).toFixed(0)}%`}
                           </span>
                           <span style={{ ...styles.resultGeneStats, width: '80px', textAlign: 'right' }}>
-                            {gene.pval_adj < 0.001 ? gene.pval_adj.toExponential(1) : gene.pval_adj.toFixed(3)}
+                            {gene.pval_adj === null ? '–' : gene.pval_adj < 0.001 ? gene.pval_adj.toExponential(1) : gene.pval_adj.toFixed(3)}
                           </span>
                         </div>
                       ))}
@@ -654,6 +751,15 @@ export default function MarkerGenesModal() {
                 Added to Marker Genes
               </span>
             )}
+            {runIsCurrent && (
+              <button
+                style={{ ...styles.button, ...styles.secondaryButton }}
+                title="Open the Heatmap tab with these markers as the rows (top N and the filters as set here); switch to a dot plot there"
+                onClick={handlePlot}
+              >
+                Plot…
+              </button>
+            )}
             {markerGenesColumn && selectedGroups.size >= 2 && (
               <button
                 style={{ ...styles.button, ...styles.secondaryButton }}
@@ -675,7 +781,7 @@ export default function MarkerGenesModal() {
               onClick={handleRun}
               disabled={!canRun}
             >
-              {isRunning ? 'Running...' : 'Run'}
+              {isRunning ? 'Running...' : runIsCurrent ? 'Re-run test' : 'Run'}
             </button>
           </div>
         </div>

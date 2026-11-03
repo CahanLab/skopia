@@ -17,7 +17,19 @@ export interface ParamField {
   /** Options that only the live data knows (the crosstab's column-B categories). */
   optionsFrom?: 'b_categories'
   help?: string
+  /** Shown only when the figure's inputs carry this key (the marker fields need a marker run). */
+  whenInput?: 'marker_key'
 }
+
+/** Top N and the filters on a stored marker run — the same for both expression kinds. */
+const MARKER_FIELDS: ParamField[] = [
+  { name: 'marker_top_n', label: 'Top markers per group', type: 'int', min: 1, max: 500, whenInput: 'marker_key', help: 'Selected from the stored ranking after the filters below; nothing is re-run.' },
+  { name: 'marker_min_pct_in', label: 'Min % in group', type: 'nullable-number', min: 0, max: 1, step: 0.05, whenInput: 'marker_key', help: 'Fraction of the group\'s cells expressing the gene (0..1); blank = no filter.' },
+  { name: 'marker_max_pct_out', label: 'Max % in others', type: 'nullable-number', min: 0, max: 1, step: 0.05, whenInput: 'marker_key' },
+  { name: 'marker_min_log2fc', label: 'Min log2 fold change', type: 'nullable-number', step: 0.25, whenInput: 'marker_key' },
+  { name: 'marker_max_padj', label: 'Max adjusted p', type: 'nullable-number', min: 0, max: 1, step: 0.01, whenInput: 'marker_key' },
+  { name: 'marker_rank_by', label: 'Rank by', type: 'select', options: [{ value: 'score', label: 'Wilcoxon score' }, { value: 'log2fc', label: 'log2 fold change' }], whenInput: 'marker_key' },
+]
 
 const VALUE_OPTIONS: ParamOption[] = [
   { value: 'nes', label: 'NES' },
@@ -73,6 +85,18 @@ export const FIGURE_SCHEMAS: Record<FigureKind, ParamField[]> = {
     { name: 'gene_ordering', label: 'Gene order', type: 'select', options: [{ value: 'as_provided', label: 'as provided' }, { value: 'peak_position', label: 'by peak position' }, { value: 'similarity', label: 'by similarity (clustered)' }] },
     { name: 'aggregate_gene_sets', label: 'Aggregate gene sets', type: 'bool' },
     { name: 'n_bins', label: 'Bins', type: 'int', min: 0, max: 1000 },
+    ...MARKER_FIELDS,
+  ],
+  expression_dotplot: [
+    ...MARKER_FIELDS,
+    { name: 'color_by', label: 'Dot colour', type: 'select', options: [{ value: 'mean', label: 'mean expression (all cells in group)' }, { value: 'mean_expressing', label: 'mean in expressing cells' }] },
+    { name: 'standard_scale', label: 'Scale', type: 'select', options: [{ value: 'none', label: 'none' }, { value: 'gene', label: 'per gene, 0..1 across groups' }] },
+    { name: 'expression_cutoff', label: 'Expressing above', type: 'number', min: 0, step: 0.1, help: 'A cell counts as expressing when its value exceeds this.' },
+    { name: 'gene_ordering', label: 'Gene order', type: 'select', options: [{ value: 'as_provided', label: 'as provided' }, { value: 'peak_group', label: 'by peak group' }] },
+    { name: 'swap_axes', label: 'Genes as rows', type: 'bool', help: 'Off: groups as rows and genes as columns, scanpy\'s layout.' },
+    { name: 'colormap', label: 'Colours', type: 'select', options: [{ value: 'viridis', label: 'viridis' }, { value: 'reds', label: 'white – red' }, { value: 'rdbu', label: 'blue – white – red' }] },
+    { name: 'vmax', label: 'Colour limit', type: 'nullable-number', min: 0, step: 0.5, help: 'Blank = the data maximum.' },
+    { name: 'dot_max', label: 'Largest dot at fraction', type: 'nullable-number', min: 0.05, max: 1, step: 0.05, help: 'Blank = 1.0 (a dot fills its cell when every cell in the group expresses).' },
   ],
   cnv_heatmap: [
     { name: 'row_mode', label: 'Rows', type: 'select', options: [{ value: 'cells', label: 'cells, binned within each group' }, { value: 'groups', label: 'one mean row per group' }] },

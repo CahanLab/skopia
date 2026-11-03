@@ -2,7 +2,9 @@
  *  shapes each renderer draws, colour ramps, filenames and PNG rasterising.
  *  Kept free of React so the contract is unit-testable. */
 
-export type FigureKind = 'enrichment_heatmap' | 'enrichment_network' | 'composition_barplot' | 'expression_heatmap' | 'cnv_heatmap'
+import { markerParams, type MarkerSource, type DotplotOptions, DEFAULT_DOTPLOT_OPTIONS } from './markerSelection'
+
+export type FigureKind = 'enrichment_heatmap' | 'enrichment_network' | 'composition_barplot' | 'expression_heatmap' | 'cnv_heatmap' | 'expression_dotplot'
 
 export const FIGURE_KIND_LABELS: Record<FigureKind, string> = {
   enrichment_heatmap: 'Enrichment heatmap',
@@ -10,6 +12,7 @@ export const FIGURE_KIND_LABELS: Record<FigureKind, string> = {
   composition_barplot: 'Composition barplot',
   expression_heatmap: 'Expression heatmap',
   cnv_heatmap: 'CNV heatmap',
+  expression_dotplot: 'Dot plot',
 }
 
 export interface FigureProvenance {
@@ -98,11 +101,29 @@ export interface CnvHeatmapData {
   cnv_key: string
 }
 
+/** `/api/dotplot/data` (expression_dotplot): genes × categories. */
+export interface ExpressionDotplotData {
+  genes: string[]
+  row_groups: (string | null)[]
+  categories: string[]
+  category_colors: (string | null)[] | null
+  n_cells: number
+  n_cells_per_category: number[]
+  /** Fraction of the category's cells above the expression cutoff. */
+  pct: number[][]
+  mean: number[][]
+  color_label: string
+  obs_column: string
+  n_genes_hidden?: number
+  transform?: string | null
+  params?: Record<string, unknown>
+}
+
 /** Every data payload names the figure and kind it was computed for, so the
  *  view never has to guess what it is drawing. */
 export interface FigureDataTag { figure_id?: string; kind?: FigureKind }
 
-export type FigureData = (EnrichmentHeatmapData | EnrichmentNetworkData | CrosstabData | ExpressionHeatmapData | CnvHeatmapData) & FigureDataTag
+export type FigureData = (EnrichmentHeatmapData | EnrichmentNetworkData | CrosstabData | ExpressionHeatmapData | CnvHeatmapData | ExpressionDotplotData) & FigureDataTag
 
 export interface BarplotConfigLike {
   columnA: string
@@ -123,6 +144,9 @@ export interface HeatmapConfigLike {
   aggregateGeneSets: boolean
   nBins: number
   cellIndices?: number[] | null
+  markerSource?: MarkerSource | null
+  dotplot?: Partial<DotplotOptions>
+  plotType?: 'heatmap' | 'dotplot'
 }
 
 /** The cells a tab is showing, as figure inputs: a named subset when one is
@@ -144,14 +168,39 @@ export function barplotFigureFromConfig(cfg: BarplotConfigLike, cellSubset: stri
  *  restriction narrowed by the cell mask (see `heatmapCellScope`); `transform`
  *  is the display transform the tab drew with, part of what the figure is. */
 export function heatmapFigureFromConfig(cfg: HeatmapConfigLike, cellSubset: string | null, transform: 'log1p' | null = null) {
+  const src = cfg.markerSource ?? null
   return {
     kind: 'expression_heatmap' as const,
     inputs: {
-      gene_sets: cfg.selectedGeneSets.map((g) => ({ name: g.name, genes: g.genes })),
+      gene_sets: (cfg.selectedGeneSets ?? []).map((g) => ({ name: g.name, genes: g.genes })),
+      marker_key: src ? src.key : null,
       obs_column: cfg.obsColumn, line_name: cfg.lineName, transform,
       ...cellInputs(cellSubset, cfg.cellIndices ?? null),
     },
-    params: { cell_ordering: cfg.cellOrdering, gene_ordering: cfg.geneOrdering, aggregate_gene_sets: cfg.aggregateGeneSets, n_bins: cfg.nBins },
+    params: {
+      cell_ordering: cfg.cellOrdering, gene_ordering: cfg.geneOrdering, aggregate_gene_sets: cfg.aggregateGeneSets, n_bins: cfg.nBins,
+      ...(src ? markerParams(src) : {}),
+    } as Record<string, unknown>,
+  }
+}
+
+/** A dot plot of the tab's rows grouped by its column; `obsColumn` is required by the backend. */
+export function dotplotFigureFromConfig(cfg: HeatmapConfigLike, cellSubset: string | null, transform: 'log1p' | null = null) {
+  const src = cfg.markerSource ?? null
+  const d = { ...DEFAULT_DOTPLOT_OPTIONS, ...(cfg.dotplot ?? {}) }
+  return {
+    kind: 'expression_dotplot' as const,
+    inputs: {
+      gene_sets: (cfg.selectedGeneSets ?? []).map((g) => ({ name: g.name, genes: g.genes })),
+      marker_key: src ? src.key : null,
+      obs_column: cfg.obsColumn, transform,
+      ...cellInputs(cellSubset, cfg.cellIndices ?? null),
+    },
+    params: {
+      ...(src ? markerParams(src) : {}),
+      color_by: d.colorBy, standard_scale: d.standardScale, expression_cutoff: d.expressionCutoff, gene_ordering: d.geneOrdering,
+      swap_axes: d.swapAxes, colormap: d.colormap, vmax: d.vmax, dot_max: d.dotMax,
+    } as Record<string, unknown>,
   }
 }
 
@@ -229,7 +278,9 @@ export function defaultTitle(kind: FigureKind, inputs: Record<string, unknown>, 
   if (kind === 'composition_barplot') return `Composition of ${String(inputs.column_a)} by ${String(inputs.column_b)}`
   if (kind === 'cnv_heatmap') return `CNV heatmap: ${String(inputs.key)}${inputs.obs_column ? ` by ${String(inputs.obs_column)}` : ''}`
   const sets = (inputs.gene_sets as { name: string }[] | undefined) ?? []
-  return `Expression heatmap: ${sets.slice(0, 3).map((s) => s.name).join(', ')}`
+  const parts = [...(inputs.marker_key ? [`markers ${String(inputs.marker_key)}`] : []), ...sets.slice(0, 3).map((s) => s.name)]
+  if (kind === 'expression_dotplot') return `Dot plot: ${parts.join(', ')} by ${String(inputs.obs_column)}`
+  return `Expression heatmap: ${parts.join(', ')}`
 }
 
 /** Five-stop diverging ramps, negative → zero → positive. */
@@ -249,6 +300,22 @@ export function divergingColor(v: number, vmax: number, colormap: string): strin
   const a = ramp[i], b = ramp[i + 1]
   const mix = a.map((c, k) => Math.round(c + (b[k] - c) * f))
   return `rgb(${mix.join(',')})`
+}
+
+/** Five-stop sequential ramps, low → high, for the dot plot's colour. */
+const SEQ_RAMPS: Record<string, [number, number, number][]> = {
+  viridis: [[68, 1, 84], [59, 82, 139], [33, 145, 140], [94, 201, 98], [253, 231, 37]],
+  reds: [[255, 245, 240], [252, 187, 161], [251, 106, 74], [203, 24, 29], [103, 0, 13]],
+}
+
+export function sequentialColor(t: number, colormap: string): string {
+  const ramp = SEQ_RAMPS[colormap] ?? SEQ_RAMPS.viridis
+  const c = Number.isFinite(t) ? Math.max(0, Math.min(1, t)) : 0
+  const pos = c * (ramp.length - 1)
+  const i = Math.min(ramp.length - 2, Math.floor(pos))
+  const f = pos - i
+  const a = ramp[i], b = ramp[i + 1]
+  return `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * f)).join(',')})`
 }
 
 export function truncate(label: string, n: number): string {

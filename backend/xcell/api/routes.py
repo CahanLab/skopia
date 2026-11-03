@@ -1787,6 +1787,26 @@ class MarkerGenesRequest(BaseModel):
     min_fold_change: float | None = None
     gene_subset: str | None = None
     active_cell_indices: list[int] | None = None
+    # Rows kept per group in the stored run (config marker_genes.store_top_n
+    # when None); the thresholds above and top_n select from them.
+    store_top_n: int | None = None
+    label: str | None = None
+
+
+class MarkerSelection(BaseModel):
+    """Top N after filters, read from a stored marker run (never a re-run)."""
+    top_n: int = 10
+    min_pct_in: float | None = None
+    max_pct_out: float | None = None
+    min_log2fc: float | None = None
+    max_padj: float | None = None
+    rank_by: str = 'score'
+    groups: list[str] | None = None
+
+
+class MarkerSourceSpec(MarkerSelection):
+    """A plot's row source: a stored marker run plus the selection on it."""
+    key: str
 
 
 class ClusterGeneSetRequest(BaseModel):
@@ -1840,7 +1860,7 @@ class MarkerGenesResponse(BaseModel):
     n_cells_tested: int
 
 
-@router.post("/marker-genes", response_model=MarkerGenesResponse)
+@router.post("/marker-genes")
 def run_marker_genes(request: MarkerGenesRequest, dataset: str | None = Query(None)):
     """Run one-vs-rest marker gene analysis for groups in a categorical column.
 
@@ -1869,7 +1889,41 @@ def run_marker_genes(request: MarkerGenesRequest, dataset: str | None = Query(No
             min_fold_change=request.min_fold_change,
             gene_subset=request.gene_subset,
             active_cell_indices=request.active_cell_indices,
+            store_top_n=request.store_top_n,
+            label=request.label,
         )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/marker_genes/runs")
+def list_marker_runs(dataset: str | None = Query(None)):
+    return {"runs": get_adaptor(dataset).list_marker_runs()}
+
+
+@router.get("/marker_genes/runs/{key}")
+def get_marker_run(key: str, table: bool = Query(False), dataset: str | None = Query(None)):
+    try:
+        return get_adaptor(dataset).get_marker_run(key, include_table=table)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.delete("/marker_genes/runs/{key}")
+def delete_marker_run(key: str, dataset: str | None = Query(None)):
+    try:
+        return get_adaptor(dataset).delete_marker_run(key)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/marker_genes/runs/{key}/select")
+def select_marker_genes(key: str, request: MarkerSelection, dataset: str | None = Query(None)):
+    """Top N per group after the filters, from the stored ranking."""
+    try:
+        return get_adaptor(dataset).select_marker_genes(key, **request.model_dump())
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -2265,8 +2319,11 @@ class HeatmapGeneSetGroup(BaseModel):
 
 class HeatmapRequest(BaseModel):
     """Request model for heatmap data computation."""
-    genes: list[str]
+    genes: list[str] = []
     gene_set_groups: list[HeatmapGeneSetGroup] | None = None
+    # A stored marker run plus the selection on it: its groups become row
+    # groups ahead of gene_set_groups, so genes may be empty.
+    markers: MarkerSourceSpec | None = None
     aggregate_gene_sets: bool = False
     cell_ordering: str = "none"
     obs_column: str | None = None
@@ -2288,14 +2345,10 @@ def get_heatmap_data(request: HeatmapRequest, dataset: str | None = Query(None))
 
     adaptor = get_adaptor(dataset)
     try:
-        gene_set_groups = None
-        if request.gene_set_groups:
-            gene_set_groups = [
-                {"name": g.name, "genes": g.genes} for g in request.gene_set_groups
-            ]
+        genes, gene_set_groups = _plot_rows(adaptor, request.genes, request.gene_set_groups, request.markers)
         return compute_heatmap_data(
             adaptor,
-            genes=request.genes,
+            genes=genes,
             gene_set_groups=gene_set_groups,
             aggregate_gene_sets=request.aggregate_gene_sets,
             cell_ordering=request.cell_ordering,
@@ -2306,8 +2359,54 @@ def get_heatmap_data(request: HeatmapRequest, dataset: str | None = Query(None))
             transform=request.transform,
             cell_indices=request.cell_indices,
         )
-    except (ValueError, KeyError) as e:
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+class DotplotRequest(BaseModel):
+    """Request model for dot plot data: the heatmap's rows, grouped by a column."""
+    genes: list[str] = []
+    gene_set_groups: list[HeatmapGeneSetGroup] | None = None
+    markers: MarkerSourceSpec | None = None
+    obs_column: str
+    transform: str | None = None
+    cell_indices: list[int] | None = None
+    expression_cutoff: float = 0.0
+    color_by: str = "mean"
+    standard_scale: str = "none"
+    gene_ordering: str = "as_provided"
+
+
+@router.post("/dotplot/data")
+def get_dotplot_data(request: DotplotRequest, dataset: str | None = Query(None)):
+    """Per gene per group: fraction of cells expressing and mean expression."""
+    adaptor = get_adaptor(dataset)
+    try:
+        genes, gene_set_groups = _plot_rows(adaptor, request.genes, request.gene_set_groups, request.markers)
+        return adaptor.dotplot_data(
+            genes, gene_set_groups, request.obs_column,
+            transform=request.transform, cell_indices=request.cell_indices,
+            expression_cutoff=request.expression_cutoff, color_by=request.color_by,
+            standard_scale=request.standard_scale, gene_ordering=request.gene_ordering,
+        )
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+def _plot_rows(adaptor, genes: list[str], gene_set_groups: list[HeatmapGeneSetGroup] | None,
+               markers: MarkerSourceSpec | None) -> tuple[list[str], list[dict] | None]:
+    """Rows for an expression plot: the marker run's groups (resolved from the
+    stored ranking) ahead of the literal sets, genes deduplicated in that order."""
+    groups = adaptor.heatmap_groups_from_markers(markers.model_dump() if markers else None)
+    groups += [{"name": g.name, "genes": list(g.genes)} for g in (gene_set_groups or [])]
+    ordered = [g for grp in groups for g in grp["genes"]] + list(genes)
+    seen: set[str] = set()
+    unique = [g for g in ordered if not (g in seen or seen.add(g))]
+    return unique, (groups or None)
 
 
 # =========================================================================

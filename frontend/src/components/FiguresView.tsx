@@ -6,7 +6,7 @@ import {
 import {
   FIGURE_KIND_LABELS, figureFilename, svgToPngBlob, canvasToPngBlob, blobToBase64, downloadBlob, paramsToBarplotConfig,
   type FigureRecord, type FigureSummary, type FigureData, type EnrichmentHeatmapData, type EnrichmentNetworkData,
-  type CrosstabData, type ExpressionHeatmapData, type CnvHeatmapData,
+  type CrosstabData, type ExpressionHeatmapData, type CnvHeatmapData, type ExpressionDotplotData,
 } from '../lib/figures'
 import { FIGURE_SCHEMAS, coerceParams, type ParamField } from '../lib/figureSchemas'
 import { standaloneSvg, downloadText } from '../lib/svgExport'
@@ -15,6 +15,7 @@ import EnrichmentNetworkFigure from './figures/EnrichmentNetworkFigure'
 import CompositionBarplotFigure from './figures/CompositionBarplotFigure'
 import ExpressionHeatmapFigure, { heatmapLegendFor } from './figures/ExpressionHeatmapFigure'
 import CnvHeatmapFigure, { cnvHeatmapLegendFor } from './figures/CnvHeatmapFigure'
+import ExpressionDotplotFigure from './figures/ExpressionDotplotFigure'
 import NewFigureModal from './figures/NewFigureModal'
 
 /** The Figures tab: a gallery of saved figure records (uns['xcell_figures']),
@@ -294,7 +295,8 @@ export default function FiguresView() {
     }
   }, [record, activeSlot, refreshFigures, setActiveFigureId])
 
-  const fields = record ? FIGURE_SCHEMAS[record.kind] : []
+  // Marker fields only mean something when the figure's rows come from a marker run.
+  const fields = record ? FIGURE_SCHEMAS[record.kind].filter((f) => !f.whenInput || Boolean(record.inputs[f.whenInput])) : []
   const provenanceSteps = record ? steps.filter((s) => record.provenance.steps.includes(s.index)) : []
   const createdStep = record?.provenance.created_step != null ? steps.find((s) => s.index === record.provenance.created_step) : undefined
 
@@ -313,6 +315,8 @@ export default function FiguresView() {
         <div style={{ fontSize: '13px', color: '#eee', fontWeight: 600, marginBottom: '6px' }}>{title}</div>
         <CnvHeatmapFigure ref={canvasRef} data={data as CnvHeatmapData} legends="inline" />
       </div>
+    ) : record.kind === 'expression_dotplot' ? (
+      <ExpressionDotplotFigure ref={svgRef} data={data as ExpressionDotplotData} params={coerced} title={title} width={plotWidth} background={BG} />
     ) : (
       <div>
         <div style={{ fontSize: '13px', color: '#eee', fontWeight: 600, marginBottom: '6px' }}>{title}</div>
