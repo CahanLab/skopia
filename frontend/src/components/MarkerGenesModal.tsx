@@ -267,6 +267,8 @@ export default function MarkerGenesModal() {
         setBooleanColumns(cols)
         const hvg = cols.find((c) => c.name === 'highly_variable')
         setGeneSubset(hvg ? 'highly_variable' : '')
+        // A restriction from another dataset or an earlier open does not carry over.
+        setRestrictTo(null)
       })
       .catch(() => setBooleanColumns([]))
   }, [isMarkerGenesModalOpen, activeSlot])
@@ -417,6 +419,7 @@ export default function MarkerGenesModal() {
         maxOutGroupFraction,
         minFoldChange,
         activeCellIndices: activeCellMask ? indicesFromMask(activeCellMask) : null,
+        restrictTo,
       })
 
       const response = await runMarkerGenes(params, activeSlot)
@@ -662,6 +665,7 @@ export default function MarkerGenesModal() {
                 {results.length} group{results.length !== 1 ? 's' : ''},{' '}
                 {results.reduce((sum, r) => sum + r.genes.length, 0)} total marker genes
                 {' '}from {resultCells.toLocaleString()} cells{resultScope ? ` (cell mask: ${resultScope})` : ''}
+                {restrictTo && <span style={{ color: '#4ecdc4' }}> · in {restrictTo.label}</span>}
                 {isSelecting && <span style={{ color: '#4ecdc4' }}> · re-selecting…</span>}
                 {resultKey && (
                   <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>

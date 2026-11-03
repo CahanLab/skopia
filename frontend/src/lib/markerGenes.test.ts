@@ -110,3 +110,11 @@ describe('selectionFromModal restriction', () => {
     expect('restrict_to' in selectionFromModal(5, '', '', '')).toBe(false)
   })
 })
+
+describe('markerGenesParams restriction', () => {
+  it('sends restrict_to with the run so the run result is already restricted', () => {
+    const base = { obsColumn: 'leiden', topN: 5, geneSubset: '', activeCellIndices: null, selectedGroups: new Set(['a']), nCategories: 1, minInGroupFraction: '', maxOutGroupFraction: '', minFoldChange: '' }
+    expect(markerGenesParams({ ...base, restrictTo: { label: 'TFs', genes: ['Sox2'] } }).restrict_to).toEqual({ label: 'TFs', genes: ['Sox2'] })
+    expect('restrict_to' in markerGenesParams({ ...base, restrictTo: null })).toBe(false)
+  })
+})

@@ -1777,22 +1777,6 @@ def run_diffexp(request: DiffExpRequest, dataset: str | None = Query(None)):
 # =========================================================================
 
 
-class MarkerGenesRequest(BaseModel):
-    """Request model for one-vs-rest marker gene analysis."""
-    obs_column: str
-    groups: list[str] | None = None
-    top_n: int = 25
-    min_in_group_fraction: float | None = None
-    max_out_group_fraction: float | None = None
-    min_fold_change: float | None = None
-    gene_subset: str | None = None
-    active_cell_indices: list[int] | None = None
-    # Rows kept per group in the stored run (config marker_genes.store_top_n
-    # when None); the thresholds above and top_n select from them.
-    store_top_n: int | None = None
-    label: str | None = None
-
-
 class MarkerRestriction(BaseModel):
     """Keep only marker genes in an annotation: a labelled gene list (a Gene
     Panel set) or a boolean .var column. Exactly one source."""
@@ -1807,6 +1791,23 @@ class MarkerRestriction(BaseModel):
         if self.genes is not None and not self.genes:
             raise ValueError('the restriction names no genes')
         return self
+
+
+class MarkerGenesRequest(BaseModel):
+    """Request model for one-vs-rest marker gene analysis."""
+    obs_column: str
+    groups: list[str] | None = None
+    top_n: int = 25
+    min_in_group_fraction: float | None = None
+    max_out_group_fraction: float | None = None
+    min_fold_change: float | None = None
+    gene_subset: str | None = None
+    active_cell_indices: list[int] | None = None
+    # Rows kept per group in the stored run (config marker_genes.store_top_n
+    # when None); the thresholds above and top_n select from them.
+    store_top_n: int | None = None
+    label: str | None = None
+    restrict_to: MarkerRestriction | None = None
 
 
 class MarkerSelection(BaseModel):
@@ -1908,6 +1909,7 @@ def run_marker_genes(request: MarkerGenesRequest, dataset: str | None = Query(No
             active_cell_indices=request.active_cell_indices,
             store_top_n=request.store_top_n,
             label=request.label,
+            restrict_to=request.restrict_to.model_dump() if request.restrict_to else None,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

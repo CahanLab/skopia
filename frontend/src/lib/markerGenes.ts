@@ -20,6 +20,8 @@ export interface MarkerGenesInputs {
   minFoldChange: string
   /** The cell mask's cells; null/absent when no mask is active. */
   activeCellIndices?: number[] | null
+  /** Show only: applied to the run's own result so the lists match a later select. */
+  restrictTo?: MarkerRestriction | null
 }
 
 export interface MarkerGenesParams {
@@ -31,6 +33,7 @@ export interface MarkerGenesParams {
   min_fold_change?: number
   gene_subset?: string
   active_cell_indices?: number[]
+  restrict_to?: MarkerRestrictionWire
 }
 
 export function markerGenesParams(i: MarkerGenesInputs): MarkerGenesParams {
@@ -46,6 +49,7 @@ export function markerGenesParams(i: MarkerGenesInputs): MarkerGenesParams {
   if (!Number.isNaN(maxOGF)) params.max_out_group_fraction = maxOGF
   const minFC = parseFloat(i.minFoldChange)
   if (!Number.isNaN(minFC)) params.min_fold_change = minFC
+  if (i.restrictTo) params.restrict_to = restrictionWire(i.restrictTo)
   return params
 }
 

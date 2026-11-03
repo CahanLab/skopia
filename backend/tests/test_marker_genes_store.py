@@ -302,6 +302,21 @@ def test_adaptor_restricts_from_a_gene_list_and_a_boolean_column():
     assert all(g['genes'] == [first] for g in groups)
 
 
+def test_run_applies_a_restriction_to_its_own_result(monkeypatch):
+    # A restriction chosen before Run must shape the run's returned lists too,
+    # or the modal shows unrestricted rows while Plot… draws restricted ones.
+    a = _adaptor()
+    first = a.run_marker_genes(obs_column='grp', top_n=1, store_top_n=10, _log=False)['results'][0]['genes'][0]['gene']
+    out = a.run_marker_genes(obs_column='grp', top_n=5, store_top_n=10, restrict_to={'label': 'one', 'genes': [first]})
+    assert [g['gene'] for g in out['results'][0]['genes']] == [first] and out['restricted'] is True
+    assert out['restrict_to'] == {'label': 'one', 'genes': [first]}
+    c = _client(a, monkeypatch)
+    r = c.post('/api/marker-genes', json={'obs_column': 'grp', 'top_n': 5, 'restrict_to': {'label': 'one', 'genes': [first]}})
+    assert r.status_code == 200, r.text
+    assert [g['gene'] for g in r.json()['results'][0]['genes']] == [first]
+    assert c.post('/api/marker-genes', json={'obs_column': 'grp', 'restrict_to': {'label': 'x'}}).status_code == 422
+
+
 def test_select_route_takes_restrict_to(monkeypatch):
     a = _adaptor()
     key = a.run_marker_genes(obs_column='grp', top_n=3, store_top_n=10)['key']

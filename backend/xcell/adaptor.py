@@ -14714,9 +14714,14 @@ class DataAdaptor:
         active_cell_indices: list[int] | None = None,
         store_top_n: int | None = None,
         label: str | None = None,
+        restrict_to: dict[str, Any] | None = None,
         _log: bool = True,
     ) -> dict[str, Any]:
         """Run one-vs-rest marker gene analysis using scanpy.
+
+        ``restrict_to`` is applied to the run's own returned selection (so a
+        restriction chosen before Run shapes the lists the modal shows); it is
+        validated before the test runs and is not part of the stored run.
 
         The whole ranking (``store_top_n`` rows per group, with percent
         detected in and out of the group) is stored under
@@ -14744,6 +14749,8 @@ class DataAdaptor:
         Raises:
             ValueError: If column doesn't exist, isn't categorical, or has < 2 groups
         """
+        # Fail on a bad restriction before the test runs; it costs seconds.
+        self._restriction_genes(restrict_to)
         # Validate obs_column exists
         if obs_column not in self.adata.obs.columns:
             raise ValueError(f"Column '{obs_column}' not found in .obs")
@@ -14853,13 +14860,14 @@ class DataAdaptor:
         key = self._store_marker_run(f'markers_{obs_column}', record)
 
         # The run-time thresholds are the first selection on the stored table.
+        allowed = self._restriction_genes(restrict_to)
         selection = {
             'top_n': top_n,
             'min_pct_in': min_in_group_fraction,
             'max_pct_out': max_out_group_fraction,
             'min_log2fc': float(np.log2(min_fold_change)) if min_fold_change is not None and min_fold_change > 0 else None,
         }
-        selected = mg.select_markers(record, **selection)
+        selected = mg.select_markers(record, genes=allowed, **selection)
 
         if _log:
             self._log_action('marker_genes', {
@@ -14887,6 +14895,8 @@ class DataAdaptor:
             'results': selected['results'],
             'n_stored_per_group': selected['n_stored_per_group'],
             'truncated': selected['truncated'],
+            'restricted': selected['restricted'],
+            'restrict_to': restrict_to,
             'gene_subset_type': subset_type,
             'n_genes_tested': int(work_adata.n_vars),
             'n_cells_tested': int(work_adata.n_obs),
