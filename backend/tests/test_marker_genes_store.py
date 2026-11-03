@@ -149,3 +149,159 @@ def test_select_on_a_group_with_no_rows_is_empty():
     sel = mg.select_markers(rec, top_n=3)
     c = next(r for r in sel['results'] if r['group'] == 'c')
     assert c['genes'] == [] and c['n_candidates'] == 0
+
+
+# ---------------------------------------------------------------------------
+# Adaptor store and routes
+# ---------------------------------------------------------------------------
+
+N_CELLS, N_GENES = 120, 8
+GENES = [f"g{i:02d}" for i in range(N_GENES)]
+
+
+def _adata():
+    rng = np.random.default_rng(0)
+    X = rng.poisson(1.0, size=(N_CELLS, N_GENES)).astype(np.float32)
+    grp = np.array(["a", "b", "c"] * (N_CELLS // 3))
+    X[grp == "a", 0] += 8.0      # g00 marks a
+    X[grp == "b", 1] += 8.0      # g01 marks b
+    X[:, 7] = 0.0                # an all-zero gene: scanpy's log2fc is not finite
+    ad = anndata.AnnData(X=csr_matrix(X))
+    ad.var_names = GENES
+    ad.obs["grp"] = pd.Categorical(grp)
+    return ad
+
+
+def _adaptor():
+    return DataAdaptor("x.h5ad", adata=_adata())
+
+
+def _client(a, monkeypatch):
+    monkeypatch.setattr(routes, "get_adaptor", lambda dataset=None: a)
+    return TestClient(app)
+
+
+def _group(result, group):
+    return next(r for r in result["results"] if r["group"] == group)
+
+
+def test_run_stores_a_record_with_pct_columns():
+    a = _adaptor()
+    r = a.run_marker_genes(obs_column="grp", top_n=3)
+    assert r["key"] == "markers_grp" and r["uid"]
+    store = a.adata.uns["xcell_marker_genes"]
+    assert isinstance(store["markers_grp"], str)
+    rec = json.loads(store["markers_grp"])
+    assert rec["uid"] == r["uid"] and rec["obs_column"] == "grp" and rec["groups"] == ["a", "b", "c"]
+    ta = rec["table"]["a"]
+    assert ta["genes"][0] == "g00"
+    assert ta["pct_in"][0] > 0.95 and ta["pct_out"][0] < ta["pct_in"][0]
+    assert ta["score"] == sorted(ta["score"], reverse=True)
+    assert len(ta["genes"]) == N_GENES            # store_top_n default (500) exceeds the gene count
+    json.dumps(rec)
+    # the response is a selection of the stored table
+    g00 = _group(r, "a")["genes"][0]
+    assert g00["gene"] == "g00" and {"score", "pct_in", "pct_out", "log2fc", "pval", "pval_adj"} <= set(g00)
+    assert _group(r, "a")["n_candidates"] == N_GENES
+    assert r["truncated"] is False
+    assert r["n_cells_tested"] == N_CELLS
+
+
+def test_run_truncates_to_store_top_n():
+    a = _adaptor()
+    r = a.run_marker_genes(obs_column="grp", top_n=2, store_top_n=3)
+    rec = json.loads(a.adata.uns["xcell_marker_genes"][r["key"]])
+    assert all(len(rec["table"][g]["genes"]) == 3 for g in ("a", "b", "c"))
+    assert rec["params"]["store_top_n"] == 3
+    assert r["truncated"] is True
+    assert len(_group(r, "a")["genes"]) == 2
+
+
+def test_keys_do_not_collide_and_a_label_is_kept():
+    a = _adaptor()
+    assert a.run_marker_genes(obs_column="grp", top_n=1)["key"] == "markers_grp"
+    r2 = a.run_marker_genes(obs_column="grp", top_n=1, label="second pass")
+    assert r2["key"] == "markers_grp_2"
+    assert json.loads(a.adata.uns["xcell_marker_genes"]["markers_grp_2"])["label"] == "second pass"
+    runs = a.list_marker_runs()
+    assert [x["key"] for x in runs] == ["markers_grp_2", "markers_grp"]
+    assert runs[0]["label"] == "second pass" and runs[0]["n_groups"] == 3 and runs[0]["n_cells_tested"] == N_CELLS
+
+
+def test_old_filter_fields_select_post_hoc():
+    a = _adaptor()
+    r = a.run_marker_genes(obs_column="grp", top_n=10, min_fold_change=4.0, min_in_group_fraction=0.9)
+    assert [g["gene"] for g in _group(r, "a")["genes"]] == ["g00"]
+    assert [g["gene"] for g in _group(r, "b")["genes"]] == ["g01"]
+    # the store still holds the whole ranking: the filters were applied after it
+    rec = json.loads(a.adata.uns["xcell_marker_genes"][r["key"]])
+    assert len(rec["table"]["a"]["genes"]) == N_GENES
+    # and the logged step records the post hoc thresholds under their new names
+    step = a.analysis_record.steps[-1]
+    assert step.action == "marker_genes" and step.result["key"] == r["key"]
+    assert step.params["min_fold_change"] == 4.0
+
+
+def test_select_reads_without_rerunning_the_test(monkeypatch):
+    import scanpy as sc
+    a = _adaptor()
+    key = a.run_marker_genes(obs_column="grp", top_n=1)["key"]
+    monkeypatch.setattr(sc.tl, "rank_genes_groups", lambda *a_, **k: (_ for _ in ()).throw(AssertionError("re-ran")))
+    sel = a.select_marker_genes(key, top_n=2, min_pct_in=0.5)
+    assert sel["key"] == key and sel["obs_column"] == "grp"
+    assert len(_group(sel, "a")["genes"]) == 2
+    groups = a.marker_gene_set_groups(key, top_n=1)
+    assert groups == [{"name": "a", "genes": ["g00"]}, {"name": "b", "genes": ["g01"]},
+                      {"name": "c", "genes": groups[2]["genes"]}]
+    # a selection is a read: nothing is logged
+    assert [s.action for s in a.analysis_record.steps].count("marker_genes") == 1
+
+
+def test_select_route_and_run_list_route(monkeypatch):
+    a = _adaptor()
+    client = _client(a, monkeypatch)
+    res = client.post("/api/marker-genes", json={"obs_column": "grp", "top_n": 2})
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["key"] == "markers_grp" and body["uid"] and "truncated" in body
+    assert _group(body, "a")["genes"][0]["pct_in"] > 0.9
+    runs = client.get("/api/marker_genes/runs").json()["runs"]
+    assert runs[0]["key"] == "markers_grp"
+    rec = client.get("/api/marker_genes/runs/markers_grp").json()
+    assert "table" not in rec and rec["uid"] == body["uid"]
+    assert "table" in client.get("/api/marker_genes/runs/markers_grp", params={"table": "true"}).json()
+    sel = client.post("/api/marker_genes/runs/markers_grp/select",
+                      json={"top_n": 1, "min_pct_in": 0.9, "rank_by": "log2fc"})
+    assert sel.status_code == 200, sel.text
+    assert [g["gene"] for g in _group(sel.json(), "a")["genes"]] == ["g00"]
+    assert client.post("/api/marker_genes/runs/nope/select", json={"top_n": 1}).status_code == 404
+    assert client.post("/api/marker_genes/runs/markers_grp/select", json={"top_n": 1, "rank_by": "x"}).status_code == 400
+
+
+def test_delete_logs_and_removes(monkeypatch):
+    a = _adaptor()
+    client = _client(a, monkeypatch)
+    key = a.run_marker_genes(obs_column="grp", top_n=1)["key"]
+    assert client.delete(f"/api/marker_genes/runs/{key}").status_code == 200
+    assert key not in a.adata.uns["xcell_marker_genes"]
+    assert a.analysis_record.steps[-1].action == "marker_genes_delete"
+    assert client.delete(f"/api/marker_genes/runs/{key}").status_code == 404
+    with pytest.raises(KeyError):
+        a.select_marker_genes(key, top_n=1)
+
+
+def test_record_survives_h5ad_round_trip(tmp_path):
+    a = _adaptor()
+    key = a.run_marker_genes(obs_column="grp", top_n=1)["key"]
+    path = tmp_path / "out.h5ad"
+    a.adata.write_h5ad(path)
+    b = DataAdaptor("x.h5ad", adata=anndata.read_h5ad(path))
+    assert [g["gene"] for g in _group(b.select_marker_genes(key, top_n=1), "b")["genes"]] == ["g01"]
+
+
+def test_the_notebook_summary_names_the_stored_run():
+    from xcell.codegen import translate
+    a = _adaptor()
+    a.run_marker_genes(obs_column="grp", top_n=3)
+    t = translate(a.analysis_record.steps[-1])
+    assert "markers_grp" in t.summary and "enrichment" not in t.summary

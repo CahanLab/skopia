@@ -6873,6 +6873,105 @@ class DataAdaptor:
         """Take a key now so members can carry it as a back-reference."""
         return self._store_enrichment(key_hint, {'kind': 'reserved'})
 
+    # ------------------------------------------------------------------
+    # Marker-gene runs: the stored ranking that top-X-with-filters reads
+    # ------------------------------------------------------------------
+    MARKER_UNS_KEY = 'xcell_marker_genes'
+
+    def _marker_store(self) -> dict[str, str]:
+        raw = self.adata.uns.get(self.MARKER_UNS_KEY)
+        return dict(raw) if isinstance(raw, dict) else {}
+
+    def _store_marker_run(self, key_hint: str, record: dict[str, Any]) -> str:
+        """JSON under a never-colliding key, with a uid a figure can hold so a
+        later run under a freed key cannot pass for its input (as enrichment)."""
+        import uuid  # noqa: PLC0415
+        base = self._sanitize_subset_name(key_hint)
+        store = self._marker_store()
+        key, n = base, 1
+        while key in store:
+            n += 1
+            key = f'{base}_{n}'
+        record['key'] = key
+        record.setdefault('uid', uuid.uuid4().hex[:12])
+        store[key] = json.dumps(record)
+        self.adata.uns[self.MARKER_UNS_KEY] = store
+        return key
+
+    def _marker_run_uid(self, key: str) -> str | None:
+        store = self._marker_store()
+        if key not in store:
+            return None
+        try:
+            return json.loads(store[key]).get('uid')
+        except (TypeError, ValueError):
+            return None
+
+    def list_marker_runs(self) -> list[dict[str, Any]]:
+        out = []
+        for order, raw in enumerate(self._marker_store().values()):
+            try:
+                r = json.loads(raw)
+            except (TypeError, ValueError):
+                continue
+            p = r.get('params') or {}
+            out.append({
+                '_order': order,
+                'key': r.get('key'), 'uid': r.get('uid'), 'label': r.get('label'),
+                'obs_column': r.get('obs_column'), 'n_groups': len(r.get('groups') or []),
+                'n_cells_tested': p.get('n_cells_tested'), 'cell_subset': p.get('cell_subset'),
+                'n_cell_indices': p.get('n_cell_indices'), 'gene_subset': p.get('gene_subset'),
+                'store_top_n': p.get('store_top_n'), 'created_at': r.get('created_at'),
+            })
+        # created_at has second resolution; the store's insertion order breaks ties
+        out.sort(key=lambda s: (s.get('created_at') or '', s['_order']), reverse=True)
+        for s_ in out:
+            del s_['_order']
+        return out
+
+    def get_marker_run(self, key: str, include_table: bool = False) -> dict[str, Any]:
+        store = self._marker_store()
+        if key not in store:
+            raise KeyError(f"No marker run named '{key}'")
+        r = json.loads(store[key])
+        if not include_table:
+            r.pop('table', None)
+        return r
+
+    def delete_marker_run(self, key: str) -> dict[str, Any]:
+        store = self._marker_store()
+        if key not in store:
+            raise KeyError(f"No marker run named '{key}'")
+        del store[key]
+        self.adata.uns[self.MARKER_UNS_KEY] = store
+        self._log_action('marker_genes_delete', {'key': key}, {'deleted': key})
+        return {'deleted': key}
+
+    def select_marker_genes(self, key: str, **selection: Any) -> dict[str, Any]:
+        """Top N after filters from the stored table — a read, never logged."""
+        from xcell import marker_genes as mg  # noqa: PLC0415
+        record = self.get_marker_run(key, include_table=True)
+        out = mg.select_markers(record, **selection)
+        out.update({'key': key, 'uid': record.get('uid'), 'obs_column': record.get('obs_column'),
+                    'n_cells_tested': (record.get('params') or {}).get('n_cells_tested')})
+        return out
+
+    def marker_gene_set_groups(self, key: str, **selection: Any) -> list[dict[str, Any]]:
+        """The selection as heatmap / dot plot row groups: one per group that
+        kept any gene, named by the group, in the run's group order."""
+        sel = self.select_marker_genes(key, **selection)
+        return [{'name': r['group'], 'genes': [g['gene'] for g in r['genes']]} for r in sel['results'] if r['genes']]
+
+    def heatmap_groups_from_markers(self, markers: dict[str, Any] | None) -> list[dict[str, Any]]:
+        """``{key, **selection}`` from a plot request → row groups; [] when absent."""
+        if not markers:
+            return []
+        spec = dict(markers)
+        key = spec.pop('key', None)
+        if not key:
+            raise ValueError('markers.key must name a stored marker run')
+        return self.marker_gene_set_groups(str(key), **{k: v for k, v in spec.items() if v is not None})
+
     def _put_enrichment(self, key: str, result: dict[str, Any]) -> None:
         """Replace a reserved placeholder with the real record, keeping its uid."""
         store = self._enrichment_store()
@@ -14403,9 +14502,17 @@ class DataAdaptor:
         min_fold_change: float | None = None,
         gene_subset: str | list[str] | dict[str, Any] | None = None,
         active_cell_indices: list[int] | None = None,
+        store_top_n: int | None = None,
+        label: str | None = None,
         _log: bool = True,
     ) -> dict[str, Any]:
         """Run one-vs-rest marker gene analysis using scanpy.
+
+        The whole ranking (``store_top_n`` rows per group, with percent
+        detected in and out of the group) is stored under
+        ``uns['xcell_marker_genes'][key]``; the three threshold arguments and
+        ``top_n`` are then a *selection* on that table, the same one
+        ``select_marker_genes`` makes, so changing them never re-runs the test.
 
         Identifies marker genes for each group in a categorical obs column
         using Wilcoxon rank-sum test (one-vs-rest).
@@ -14491,65 +14598,58 @@ class DataAdaptor:
         # adata.raw — which may carry an older/larger gene index than .X, leading
         # to marker names that don't exist in the current var_names and fail to
         # color/visualize. The two-group diffexp path already uses use_raw=False;
-        # this matches that behavior.
+        # this matches that behavior. pts=True gives the percent detected in
+        # and out of each group, which the post hoc filters read.
         sc.tl.rank_genes_groups(
             work_adata,
             groupby=obs_column,
             groups=tested_groups if singletons else 'all',
             method='wilcoxon',
             use_raw=False,
+            pts=True,
             key_added='marker_genes',
         )
 
-        # Apply filters if specified
-        has_filters = any(x is not None for x in [min_in_group_fraction, max_out_group_fraction, min_fold_change])
-        if has_filters:
-            filter_kwargs: dict[str, Any] = {'key': 'marker_genes', 'key_added': 'marker_genes_filtered'}
-            if min_in_group_fraction is not None:
-                filter_kwargs['min_in_group_fraction'] = min_in_group_fraction
-            if max_out_group_fraction is not None:
-                filter_kwargs['max_out_group_fraction'] = max_out_group_fraction
-            if min_fold_change is not None:
-                filter_kwargs['min_fold_change'] = min_fold_change
-            sc.tl.filter_rank_genes_groups(work_adata, **filter_kwargs)
+        from datetime import datetime, timezone  # noqa: PLC0415
+        from xcell import config as user_config  # noqa: PLC0415
+        from xcell import marker_genes as mg  # noqa: PLC0415
 
-        # Extract results per group
-        result_groups = []
-        for group in work_adata.obs[obs_column].cat.categories:
-            group_str = str(group)
-            if group_str in singletons:
-                result_groups.append({'group': group_str, 'genes': []})
-                continue
-            try:
-                if has_filters:
-                    df = sc.get.rank_genes_groups_df(work_adata, group=group_str, key='marker_genes_filtered')
-                    # filter_rank_genes_groups sets filtered genes to NaN
-                    df = df.dropna(subset=['names'])
-                else:
-                    df = sc.get.rank_genes_groups_df(work_adata, group=group_str, key='marker_genes')
+        if store_top_n is None:
+            cfg = user_config.get_user_config().get('marker_genes')
+            store_top_n = int((cfg or {}).get('store_top_n') or 500) if isinstance(cfg, dict) else 500
+        store_top_n = max(1, int(store_top_n))
+        rg = work_adata.uns['marker_genes']
+        all_groups = [str(g) for g in work_adata.obs[obs_column].cat.categories]
+        table = mg.build_table(
+            rg['names'], rg['scores'], rg['logfoldchanges'], rg['pvals'], rg['pvals_adj'],
+            rg.get('pts'), rg.get('pts_rest'), tested_groups, store_top_n)
+        for g in singletons:
+            table[g] = {k: [] for k in mg.TABLE_COLUMNS}
+        record = {
+            'label': label or None,
+            'created_at': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+            'obs_column': obs_column,
+            'groups': all_groups,
+            'singletons': singletons,
+            'params': {
+                'groups': groups, 'gene_subset': gene_subset, 'store_top_n': store_top_n,
+                'n_cells_tested': int(work_adata.n_obs),
+                'cell_subset': None, 'n_cell_indices': None if cell_idx is None else int(len(cell_idx)),
+            },
+            'n_genes_tested': int(work_adata.n_vars),
+            'gene_subset_type': subset_type,
+            'table': table,
+        }
+        key = self._store_marker_run(f'markers_{obs_column}', record)
 
-                # Take top N
-                df = df.head(top_n)
-
-                genes = []
-                for _, row in df.iterrows():
-                    genes.append({
-                        'gene': str(row['names']),
-                        'log2fc': float(row['logfoldchanges']),
-                        'pval': float(row['pvals']),
-                        'pval_adj': float(row['pvals_adj']),
-                    })
-
-                result_groups.append({
-                    'group': group_str,
-                    'genes': genes,
-                })
-            except Exception:
-                # If a group fails (e.g., too few cells), include empty result
-                result_groups.append({
-                    'group': group_str,
-                    'genes': [],
-                })
+        # The run-time thresholds are the first selection on the stored table.
+        selection = {
+            'top_n': top_n,
+            'min_pct_in': min_in_group_fraction,
+            'max_pct_out': max_out_group_fraction,
+            'min_log2fc': float(np.log2(min_fold_change)) if min_fold_change is not None and min_fold_change > 0 else None,
+        }
+        selected = mg.select_markers(record, **selection)
 
         if _log:
             self._log_action('marker_genes', {
@@ -14560,17 +14660,26 @@ class DataAdaptor:
                 'max_out_group_fraction': max_out_group_fraction,
                 'min_fold_change': min_fold_change,
                 'gene_subset': gene_subset,
+                'store_top_n': store_top_n,
+                'label': label,
             }, {
-                'n_groups': len(result_groups),
-                'total_genes': sum(len(g['genes']) for g in result_groups),
+                'key': key,
+                'uid': record['uid'],
+                'n_groups': len(selected['results']),
+                'total_genes': sum(len(g['genes']) for g in selected['results']),
+                'truncated': selected['truncated'],
             }, subset=cell_idx)
 
         return {
+            'key': key,
+            'uid': record['uid'],
             'obs_column': obs_column,
-            'results': result_groups,
+            'results': selected['results'],
+            'n_stored_per_group': selected['n_stored_per_group'],
+            'truncated': selected['truncated'],
             'gene_subset_type': subset_type,
-            'n_genes_tested': work_adata.n_vars,
-            'n_cells_tested': work_adata.n_obs,
+            'n_genes_tested': int(work_adata.n_vars),
+            'n_cells_tested': int(work_adata.n_obs),
         }
 
     # ------------------------------------------------------------------

@@ -177,6 +177,7 @@ scanpy:
 # ---------------------------------------------------------------------------
 marker_genes:
   top_n: 100
+  store_top_n: 500                  # rows kept per group in the stored run; top N and the filters read from these
   min_in_group_fraction: ''         # e.g. 0.25 (blank = unset)
   max_out_group_fraction: ''        # e.g. 0.75
   min_fold_change: ''               # e.g. 2.0

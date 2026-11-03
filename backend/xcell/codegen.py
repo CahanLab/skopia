@@ -696,10 +696,16 @@ REGISTRY: dict[str, ActionSpec] = {
         label='Marker genes', fidelity=XCELL, imports=XCELL_API,
         code=_direct_on_selection('run_marker_genes'), replays_selection=True,
         summary=lambda p, r: (
-            f"Ranked marker genes for `{p.get('obs_column')}` "
-            f"(top {_n(p.get('top_n'))} per group) → "
-            f"{_n(r.get('total_genes'))} genes across {_n(r.get('n_groups'))} groups."
+            f"Ranked marker genes for `{p.get('obs_column')}` one-vs-rest (Wilcoxon); "
+            f"the ranking is stored as `.uns['xcell_marker_genes']['{r.get('key')}']` and "
+            f"the top {_n(p.get('top_n'))} per group after the filters "
+            f"({_n(r.get('total_genes'))} genes across {_n(r.get('n_groups'))} groups) were selected from it."
         ),
+    ),
+    'marker_genes_delete': ActionSpec(
+        label='Delete a marker run', fidelity=XCELL, imports=XCELL_API,
+        code=_direct('delete_marker_run', ('key',)),
+        summary=lambda p, r: f"Deleted marker run '{p.get('key')}'.",
     ),
     'stemfinder': ActionSpec(
         label='Differentiation (stemFinder)', fidelity=XCELL, imports=XCELL_API,

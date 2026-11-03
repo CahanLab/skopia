@@ -1787,6 +1787,26 @@ class MarkerGenesRequest(BaseModel):
     min_fold_change: float | None = None
     gene_subset: str | None = None
     active_cell_indices: list[int] | None = None
+    # Rows kept per group in the stored run (config marker_genes.store_top_n
+    # when None); the thresholds above and top_n select from them.
+    store_top_n: int | None = None
+    label: str | None = None
+
+
+class MarkerSelection(BaseModel):
+    """Top N after filters, read from a stored marker run (never a re-run)."""
+    top_n: int = 10
+    min_pct_in: float | None = None
+    max_pct_out: float | None = None
+    min_log2fc: float | None = None
+    max_padj: float | None = None
+    rank_by: str = 'score'
+    groups: list[str] | None = None
+
+
+class MarkerSourceSpec(MarkerSelection):
+    """A plot's row source: a stored marker run plus the selection on it."""
+    key: str
 
 
 class ClusterGeneSetRequest(BaseModel):
@@ -1840,7 +1860,7 @@ class MarkerGenesResponse(BaseModel):
     n_cells_tested: int
 
 
-@router.post("/marker-genes", response_model=MarkerGenesResponse)
+@router.post("/marker-genes")
 def run_marker_genes(request: MarkerGenesRequest, dataset: str | None = Query(None)):
     """Run one-vs-rest marker gene analysis for groups in a categorical column.
 
@@ -1869,7 +1889,41 @@ def run_marker_genes(request: MarkerGenesRequest, dataset: str | None = Query(No
             min_fold_change=request.min_fold_change,
             gene_subset=request.gene_subset,
             active_cell_indices=request.active_cell_indices,
+            store_top_n=request.store_top_n,
+            label=request.label,
         )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/marker_genes/runs")
+def list_marker_runs(dataset: str | None = Query(None)):
+    return {"runs": get_adaptor(dataset).list_marker_runs()}
+
+
+@router.get("/marker_genes/runs/{key}")
+def get_marker_run(key: str, table: bool = Query(False), dataset: str | None = Query(None)):
+    try:
+        return get_adaptor(dataset).get_marker_run(key, include_table=table)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.delete("/marker_genes/runs/{key}")
+def delete_marker_run(key: str, dataset: str | None = Query(None)):
+    try:
+        return get_adaptor(dataset).delete_marker_run(key)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/marker_genes/runs/{key}/select")
+def select_marker_genes(key: str, request: MarkerSelection, dataset: str | None = Query(None)):
+    """Top N per group after the filters, from the stored ranking."""
+    try:
+        return get_adaptor(dataset).select_marker_genes(key, **request.model_dump())
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
