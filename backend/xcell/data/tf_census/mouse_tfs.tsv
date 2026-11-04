@@ -1,0 +1,1479 @@
+mouse_symbol	mgi_id	human_orthologs	dbd	human_codebook_status	source
+1700034E13Rik		ZNF475	C2H2 ZF	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+2010315B03Rik	MGI:1919321	ZNF670	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+2310033P09Rik		C1orf35	BBR	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+2610008E11Rik			C2H2 ZF		cisbp_3.10_only_mouse_specific
+2610021A01Rik			C2H2 ZF		cisbp_3.10_only_mouse_specific
+4930522L14Rik			C2H2 ZF		cisbp_3.10_only_mouse_specific
+5730507C01Rik	MGI:1917882	ZNF670	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+A430033K04Rik			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Adnp	MGI:1338758	ADNP	Homeodomain	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Adnp2	MGI:2448562	ADNP2	Homeodomain	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Aebp2	MGI:1338038	AEBP2	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Afdn		AFDN	Leafy	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+Ahctf1	MGI:1915033	AHCTF1	AT hook	Known motif	cisbp_3.10;human_census_ortholog
+Ahr	MGI:105043	AHR	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Ahrr	MGI:1333776	AHRR	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+AI987944	MGI:2142079	ZNF670	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Aire	MGI:1338803	AIRE	SAND	Known motif	cisbp_3.10;human_census_ortholog
+Akap8	MGI:1928488	AKAP8	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Akap8l	MGI:1860606	AKAP8L	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Alx1	MGI:104621	ALX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Alx3	MGI:1277097	ALX3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Alx4	MGI:108359	ALX4	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Ar	MGI:88064	AR	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Arid3a	MGI:1328360	ARID3A	ARID/BRIGHT	Known motif	cisbp_3.10;human_census_ortholog
+Arid3b	MGI:1930768	ARID3B	ARID/BRIGHT	Inferred motif	cisbp_3.10;human_census_ortholog
+Arid3c	MGI:3650624	ARID3C	ARID/BRIGHT	Inferred motif	cisbp_3.10;human_census_ortholog
+Arid5a	MGI:2443039	ARID5A	ARID/BRIGHT	Known motif	cisbp_3.10;human_census_ortholog
+Arid5b	MGI:2175912	ARID5B	ARID/BRIGHT	Known motif	cisbp_3.10;human_census_ortholog
+Arnt	MGI:88071	ARNT	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Arnt2	MGI:107188	ARNT2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Arx	MGI:1097716	ARX	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Ascl1	MGI:96919	ASCL1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Ascl2	MGI:96920	ASCL2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Ascl3	MGI:1928820	ASCL3	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Ascl4	MGI:1914591	ASCL4	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Ascl5	MGI:2685043	ASCL5	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Ash1l	MGI:2183158	ASH1L	AT hook	Likely to be sequence specific TF	human_census_ortholog
+Atf1	MGI:1298366	ATF1	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Atf2	MGI:109349	ATF2	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Atf3	MGI:109384	ATF3	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Atf4	MGI:88096	ATF4	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Atf5	MGI:2141857	ATF5	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Atf6	MGI:1926157	ATF6	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Atf6b	MGI:105121	ATF6B	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Atf7	MGI:2443472	ATF7	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Atmin	MGI:2682328	ATMIN	C2H2 ZF	Known motif	human_census_ortholog
+Atoh1	MGI:104654	ATOH1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Atoh7	MGI:1355553	ATOH7	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Atoh8	MGI:1918343	ATOH8	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+AU041133			C2H2 ZF		cisbp_3.10_only_mouse_specific
+AW146154	MGI:2142212	ZNF136;ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+B020011L13Rik			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Bach1	MGI:894680	BACH1	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Bach2	MGI:894679	BACH2	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Barhl1	MGI:1859288	BARHL1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Barhl2	MGI:1859314	BARHL2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Barx1	MGI:103124	BARX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Barx2	MGI:109617	BARX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Batf	MGI:1859147	BATF	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Batf2	MGI:1921731	BATF2	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Batf3	MGI:1925491	BATF3	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Bbx	MGI:1917758	BBX	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Bcl11a	MGI:106190	BCL11A	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Bcl11b	MGI:1929913	BCL11B	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Bcl6	MGI:107187	BCL6	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Bcl6b	MGI:1278332	BCL6B	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Bhlha15	MGI:891976	BHLHA15	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Bhlha9	MGI:2444198	BHLHA9	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Bhlhe22	MGI:1930001	BHLHE22	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Bhlhe23	MGI:2153710	BHLHE23	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Bhlhe40	MGI:1097714	BHLHE40	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Bhlhe41	MGI:1930704	BHLHE41	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Bmal1	MGI:1096381	BMAL1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Bmal2	MGI:2684845	BMAL2	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Bnc1	MGI:1097164	BNC1	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Bnc2	MGI:2443805	BNC2	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Borcs8		BORCS8	MADS box	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+Bptf	MGI:2444008	BPTF	Unknown	Known motif	human_census_ortholog
+Brf2	MGI:1913903	BRF2	Unknown	Likely to be sequence specific TF	human_census_ortholog
+Bsx	MGI:2669849	BSX	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Camta1	MGI:2140230	CAMTA1	CG-1	Known motif	cisbp_3.10;human_census_ortholog
+Camta2	MGI:2135957	CAMTA2	CG-1	Known motif	cisbp_3.10;human_census_ortholog
+Carf	MGI:2182269	CARF	Unknown	Known motif	human_census_ortholog
+Casz1	MGI:1196251	CASZ1	C2H2 ZF	Known motif	human_census_ortholog
+Ccdc17	MGI:1915667	CCDC17	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Cdc5l	MGI:1918952	CDC5L	Myb/SANT	Known motif	cisbp_3.10;human_census_ortholog
+Cdc5lrt1	MGI:5591876	CDC5L	Myb/SANT	Known motif	human_census_ortholog
+Cdc5lrt10	MGI:3644216	CDC5L	Myb/SANT	Known motif	human_census_ortholog
+Cdc5lrt4	MGI:5591961	CDC5L	Myb/SANT	Known motif	human_census_ortholog
+Cdc5lrt5	MGI:3643524	CDC5L	Myb/SANT	Known motif	human_census_ortholog
+Cdc5lrt6	MGI:3647148	CDC5L	Myb/SANT	Known motif	human_census_ortholog
+Cdc5lrt7	MGI:3647146	CDC5L	Myb/SANT	Known motif	human_census_ortholog
+Cdc5lrt8	MGI:3647143	CDC5L	Myb/SANT	Known motif	human_census_ortholog
+Cdc5lrt9	MGI:3644213	CDC5L	Myb/SANT	Known motif	human_census_ortholog
+Cdx1	MGI:88360	CDX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Cdx2	MGI:88361	CDX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Cdx4	MGI:88362	CDX4	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Cebpa	MGI:99480	CEBPA	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Cebpb	MGI:88373	CEBPB	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Cebpd	MGI:103573	CEBPD	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Cebpe	MGI:103572	CEBPE	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Cebpg	MGI:104982	CEBPG	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Cebpz	MGI:109386	CEBPZ	Unknown	Known motif	human_census_ortholog
+Cenpb	MGI:88376	CENPB	CENPB	Known motif	cisbp_3.10;human_census_ortholog
+Cenps	MGI:1917178	CENPS	Unknown	Likely to be sequence specific TF	human_census_ortholog
+Cenpx	MGI:894324	CENPX	Unknown	Likely to be sequence specific TF	human_census_ortholog
+Cggbp1	MGI:2146370	CGGBP1	CGGBP	Known motif	human_census_ortholog
+Champ1	MGI:1196398	CHAMP1	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Chchd2l2	MGI:1919220	ZBED5	BED ZF	Known motif	human_census_ortholog
+Cic	MGI:1918972	CIC	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Clip1		CLIP1	bZIP	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+Clock	MGI:99698	CLOCK	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Cpeb1	MGI:108442	CPEB1	Unknown	Known motif	human_census_ortholog
+Cphx1		CPHXL;CPHXL2	Homeodomain	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+Creb1	MGI:88494	CREB1	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Creb3	MGI:99946	CREB3	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Creb3l1	MGI:1347062	CREB3L1	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Creb3l2	MGI:2442695	CREB3L2	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Creb3l3	MGI:2384786	CREB3L3	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Creb3l4	MGI:1916603	CREB3L4	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Creb5	MGI:2443973	CREB5	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Crebl2	MGI:1889385	CREBL2	bZIP	Inferred motif	cisbp_3.10;human_census_ortholog
+Crebzf	MGI:2675296	CREBZF	bZIP	Inferred motif	cisbp_3.10;human_census_ortholog
+Crem	MGI:88495	CREM	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Crx	MGI:1194883	CRX	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Csprs	MGI:1891441	SP100	SAND	Known motif	human_census_ortholog
+Ctcf	MGI:109447	CTCF	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Ctcfl	MGI:3652571	CTCFL	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Cttnbp2nl		CTTNBP2NL	Homeodomain	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+Cux1	MGI:88568	CUX1	CUT; Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Cux2	MGI:107321	CUX2	CUT; Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Cxxc1	MGI:1921572	CXXC1	CxxC	Known motif	cisbp_3.10;human_census_ortholog
+Cxxc4	MGI:2442112	CXXC4	CxxC	Known motif	cisbp_3.10;human_census_ortholog
+Cxxc5	MGI:1914643	CXXC5	CxxC	Known motif	cisbp_3.10;human_census_ortholog
+Dach1	MGI:1277991	DACH1	SKI/SNO/DAC	Known motif	human_census_ortholog
+Dach2	MGI:1890446	DACH2	SKI/SNO/DAC	Known motif	human_census_ortholog
+Dbp	MGI:94866	DBP	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Dbx1	MGI:94867	DBX1	Homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Dbx2	MGI:107445	DBX2	Homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Ddit3	MGI:109247	DDIT3	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Deaf1	MGI:1858496	DEAF1	SAND	Inferred motif	cisbp_3.10;human_census_ortholog
+Dlx1	MGI:94901	DLX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Dlx2	MGI:94902	DLX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Dlx3	MGI:94903	DLX3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Dlx4	MGI:94904	DLX4	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Dlx5	MGI:101926	DLX5	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Dlx6	MGI:101927	DLX6	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Dmbx1	MGI:2153518	DMBX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Dmrt1	MGI:1354733	DMRT1	DM	Known motif	cisbp_3.10;human_census_ortholog
+Dmrt2	MGI:1330307	DMRT2	DM	Known motif	cisbp_3.10;human_census_ortholog
+Dmrt3	MGI:2449470	DMRT3	DM	Known motif	cisbp_3.10;human_census_ortholog
+Dmrta1	MGI:2653627	DMRTA1	DM	Known motif	cisbp_3.10;human_census_ortholog
+Dmrta2	MGI:2653629	DMRTA2	DM	Known motif	cisbp_3.10;human_census_ortholog
+Dmrtb1	MGI:1927125	DMRTB1	DM	Known motif	cisbp_3.10;human_census_ortholog
+Dmrtc2	MGI:1918491	DMRTC2	DM	Known motif	cisbp_3.10;human_census_ortholog
+Dmtf1	MGI:1344415	DMTF1	Myb/SANT	Known motif	cisbp_3.10;human_census_ortholog
+Dnmt1	MGI:94912	DNMT1	CxxC	Known motif	cisbp_3.10;human_census_ortholog
+Dnttip1	MGI:1923483	DNTTIP1	AT hook	Known motif	human_census_ortholog
+Dpf1	MGI:1352748	DPF1	C2H2 ZF	Known motif	human_census_ortholog
+Dpf3	MGI:1917377	DPF3	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Dr1	MGI:1100515	DR1	Unknown	Likely to be sequence specific TF	human_census_ortholog
+Drap1	MGI:1913806	DRAP1	Unknown	Known motif	human_census_ortholog
+Drgx	MGI:2148204	DRGX	Homeodomain	Known motif	human_census_ortholog
+Duxbl1		DUXB	Homeodomain	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+Duxf3	MGI:1921649	DUX4	Homeodomain	Known motif	human_census_ortholog
+Duxf4	MGI:3645498	DUX4	Homeodomain	Known motif	human_census_ortholog
+E2f1	MGI:101941	E2F1	E2F	Known motif	cisbp_3.10;human_census_ortholog
+E2f2	MGI:1096341	E2F2	E2F	Known motif	cisbp_3.10;human_census_ortholog
+E2f3	MGI:1096340	E2F3	E2F	Known motif	cisbp_3.10;human_census_ortholog
+E2f4	MGI:103012	E2F4	E2F	Known motif	cisbp_3.10;human_census_ortholog
+E2f5	MGI:105091	E2F5	E2F	Known motif	cisbp_3.10;human_census_ortholog
+E2f6	MGI:1354159	E2F6	E2F	Known motif	cisbp_3.10;human_census_ortholog
+E2f7	MGI:1289147	E2F7	E2F	Known motif	cisbp_3.10;human_census_ortholog
+E2f8	MGI:1922038	E2F8	E2F	Known motif	cisbp_3.10;human_census_ortholog
+E4f1	MGI:109530	E4F1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Ebf1	MGI:95275	EBF1	EBF1	Known motif	cisbp_3.10;human_census_ortholog
+Ebf2	MGI:894332	EBF2	EBF1	Known motif	cisbp_3.10;human_census_ortholog
+Ebf3	MGI:894289	EBF3	EBF1	Known motif	cisbp_3.10;human_census_ortholog
+Ebf4	MGI:2385972	EBF4	EBF1	Known motif	cisbp_3.10;human_census_ortholog
+Efcc1		EFCC1	bZIP	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+Egr1	MGI:95295	EGR1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Egr2	MGI:95296	EGR2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Egr3	MGI:1306780	EGR3	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Egr4	MGI:99252	EGR4	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Ehf	MGI:1270840	EHF	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Elf1	MGI:107180	ELF1	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Elf2	MGI:1916507	ELF2	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Elf3	MGI:1101781	ELF3	Ets; AT hook	Known motif	cisbp_3.10;human_census_ortholog
+Elf4	MGI:1928377	ELF4	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Elf5	MGI:1335079	ELF5	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Elk1	MGI:101833	ELK1	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Elk3	MGI:101762	ELK3	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Elk4	MGI:102853	ELK4	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Emx1	MGI:95387	EMX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Emx2	MGI:95388	EMX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+En1	MGI:95389	EN1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+En2	MGI:95390	EN2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Eomes	MGI:1201683	EOMES	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Epas1	MGI:109169	EPAS1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Erf	MGI:109637	ERF	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Erg	MGI:95415	ERG	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Esr1	MGI:1352467	ESR1	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Esr2	MGI:109392	ESR2	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Esrra	MGI:1346831	ESRRA	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Esrrb	MGI:1346832	ESRRB	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Esrrg	MGI:1347056	ESRRG	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Esx1	MGI:1096388	ESX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Ets1	MGI:95455	ETS1	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Ets2	MGI:95456	ETS2	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Etv1	MGI:99254	ETV1	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Etv2	MGI:99253	ETV2	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Etv3	MGI:1350926	ETV3	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Etv3l	MGI:3646099	ETV3L	Ets	Known motif	human_census_ortholog
+Etv4	MGI:99423	ETV4	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Etv5	MGI:1096867	ETV5	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Etv6	MGI:109336	ETV6	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Evx1	MGI:95461	EVX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Evx2	MGI:95462	EVX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Fbxl19	MGI:3039600	FBXL19	CxxC	Known motif	cisbp_3.10;human_census_ortholog
+Ferd3l	MGI:2150010	FERD3L	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Fev	MGI:2449712	FEV	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Fezf1	MGI:1920441	FEZF1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Fezf2	MGI:1859823	FEZF2	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Figla	MGI:1349421	FIGLA	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Fiz1	MGI:1344336	FIZ1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Fli1	MGI:95554	FLI1	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Flywch1	MGI:2442638	FLYWCH1	FLYWCH	Known motif	cisbp_3.10;human_census_ortholog
+Fos	MGI:95574	FOS	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Fosb	MGI:95575	FOSB	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Fosl1	MGI:107179	FOSL1	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Fosl2	MGI:102858	FOSL2	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Foxa1	MGI:1347472	FOXA1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxa2	MGI:1347476	FOXA2	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxa3	MGI:1347477	FOXA3	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxb1	MGI:1927549	FOXB1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxb2	MGI:1347468	FOXB2	Forkhead	Inferred motif	cisbp_3.10;human_census_ortholog
+Foxc1	MGI:1347466	FOXC1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxc2	MGI:1347481	FOXC2	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxd1	MGI:1347463	FOXD1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxd2	MGI:1347471	FOXD2	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxd3	MGI:1347473	FOXD3	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxd4	MGI:1347467	FOXD4;FOXD4L1;FOXD4L3;FOXD4L4;FOXD4L5;FOXD4L6	Forkhead	Inferred motif;Known motif	cisbp_3.10;human_census_ortholog
+Foxe1	MGI:1353500	FOXE1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxe3	MGI:1353569	FOXE3	Forkhead	Inferred motif	cisbp_3.10;human_census_ortholog
+Foxf1	MGI:1347470	FOXF1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxf2	MGI:1347479	FOXF2	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxg1	MGI:1347464	FOXG1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxh1	MGI:1347465	FOXH1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxi1	MGI:1096329	FOXI1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxi2	MGI:3028075	FOXI2	Forkhead	Inferred motif	cisbp_3.10;human_census_ortholog
+Foxi3	MGI:3511278	FOXI3	Forkhead	Inferred motif	cisbp_3.10;human_census_ortholog
+Foxj1	MGI:1347474	FOXJ1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxj2	MGI:1926805	FOXJ2	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxj3	MGI:2443432	FOXJ3	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxk1	MGI:1347488	FOXK1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxk2	MGI:1916087	FOXK2	Forkhead	Inferred motif	cisbp_3.10;human_census_ortholog
+Foxl1	MGI:1347469	FOXL1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxl2	MGI:1349428	FOXL2	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxm1	MGI:1347487	FOXM1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxn1	MGI:102949	FOXN1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxn2	MGI:1347478	FOXN2	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxn3	MGI:1918625	FOXN3	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxn4	MGI:2151057	FOXN4	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxo1	MGI:1890077	FOXO1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxo3	MGI:1890081	FOXO3	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxo4	MGI:1891915	FOXO4	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxo6	MGI:2676586	FOXO6	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxp1	MGI:1914004	FOXP1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxp2	MGI:2148705	FOXP2	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxp3	MGI:1891436	FOXP3	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxp4	MGI:1921373	FOXP4	Forkhead	Inferred motif	cisbp_3.10;human_census_ortholog
+Foxq1	MGI:1298228	FOXQ1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxr1	MGI:2685961	FOXR1	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxr2	MGI:3511682	FOXR2	Forkhead	Known motif	cisbp_3.10;human_census_ortholog
+Foxs1	MGI:95546	FOXS1	Forkhead	Inferred motif	cisbp_3.10;human_census_ortholog
+Gabpa	MGI:95610	GABPA	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Gata1	MGI:95661	GATA1	GATA	Known motif	cisbp_3.10;human_census_ortholog
+Gata2	MGI:95662	GATA2	GATA	Known motif	cisbp_3.10;human_census_ortholog
+Gata3	MGI:95663	GATA3	GATA	Known motif	cisbp_3.10;human_census_ortholog
+Gata4	MGI:95664	GATA4	GATA	Known motif	cisbp_3.10;human_census_ortholog
+Gata5	MGI:109497	GATA5	GATA	Known motif	cisbp_3.10;human_census_ortholog
+Gata6	MGI:107516	GATA6	GATA	Known motif	cisbp_3.10;human_census_ortholog
+Gatad2a	MGI:2384585	GATAD2A	GATA	Known motif	cisbp_3.10;human_census_ortholog
+Gatad2b	MGI:2443225	GATAD2B	GATA	Known motif	cisbp_3.10;human_census_ortholog
+Gbx1	MGI:95667	GBX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Gbx2	MGI:95668	GBX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Gcm1	MGI:108045	GCM1	GCM	Known motif	cisbp_3.10;human_census_ortholog
+Gcm2	MGI:1861438	GCM2	GCM	Known motif	cisbp_3.10;human_census_ortholog
+Gfi1	MGI:103170	GFI1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gfi1b	MGI:1276578	GFI1B	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gli1	MGI:95727	GLI1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gli2	MGI:95728	GLI2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gli3	MGI:95729	GLI3	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Glis1	MGI:2386723	GLIS1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Glis2	MGI:1932535	GLIS2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Glis3	MGI:2444289	GLIS3	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Glyr1	MGI:1921272	GLYR1	AT hook	Known motif	human_census_ortholog
+Gm10778	MGI:3809656	ZNF880	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gm11009			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Gm12258			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Gm14308	MGI:3782921	ZNF136;ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gm14322	MGI:3652185	ZNF670	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Gm14325	MGI:3702875	ZNF136;ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gm14391	MGI:3709324	ZNF136;ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gm14399	MGI:3650082	ZNF880	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gm14401	MGI:3650075	ZNF501	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gm14403	MGI:3649813	ZNF670	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Gm14412	MGI:3652251	ZNF117;ZNF157;ZNF267;ZNF490;ZNF595;ZNF708;ZNF716;ZNF718;ZNF726;ZNF728;ZNF732;ZNF836;ZNF841;ZNF90	C2H2 ZF	Inferred motif;Known motif	cisbp_3.10;human_census_ortholog
+Gm14418	MGI:3702408	ZNF670	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Gm14430	MGI:3702412	ZNF136;ZNF333	C2H2 ZF	Known motif	human_census_ortholog
+Gm14434	MGI:3702417	ZNF136;ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gm14443	MGI:3652324	ZNF117;ZNF490;ZNF595;ZNF708;ZNF716;ZNF718;ZNF726;ZNF728;ZNF732;ZNF90	C2H2 ZF	Inferred motif;Known motif	cisbp_3.10;human_census_ortholog
+Gm14444	MGI:3652325	ZNF486;ZNF506;ZNF679;ZNF735	C2H2 ZF	Inferred motif;Known motif	cisbp_3.10;human_census_ortholog
+Gm15446	MGI:3709333	ZNF136	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gm17067	MGI:4937894	ZNF670	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Gm17655			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Gm2026	MGI:3780195	ZNF136;ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gm2381			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Gm32687	MGI:5591846	ZNF117;ZNF221;ZNF284;ZNF490;ZNF595;ZNF708;ZNF716;ZNF718;ZNF726;ZNF728;ZNF732;ZNF90	C2H2 ZF	Inferred motif;Known motif;Likely to be sequence specific TF	human_census_ortholog
+Gm3604	MGI:3781781	ZNF28	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gm4631	MGI:3782813	ZNF136;ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gm4724	MGI:3782904	ZNF136;ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gm4924			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Gm5141	MGI:3779466	ZNF320;ZNF415;ZNF528;ZNF534;ZNF616	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gm6710	MGI:3779623	ZNF136;ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gm6871	MGI:3643456	ZNF136	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gmeb1	MGI:2135604	GMEB1	SAND	Known motif	cisbp_3.10;human_census_ortholog
+Gmeb2	MGI:2652836	GMEB2	SAND	Known motif	cisbp_3.10;human_census_ortholog
+Gon4l		GON4L;YY1AP1	Myb/SANT	Lambert:No;Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+Grhl1	MGI:2182540	GRHL1	Grainyhead	Known motif	cisbp_3.10;human_census_ortholog
+Grhl2	MGI:2182543	GRHL2	Grainyhead	Known motif	cisbp_3.10;human_census_ortholog
+Grhl3	MGI:2655333	GRHL3	Grainyhead	Known motif	cisbp_3.10;human_census_ortholog
+Gsc	MGI:95841	GSC	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Gsc2	MGI:892006	GSC2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Gsx1	MGI:95842	GSX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Gsx2	MGI:95843	GSX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Gtf2b	MGI:2385191	GTF2B	Unknown	Known motif	human_census_ortholog
+Gtf2i	MGI:1202722	GTF2I	GTF2I-like	Known motif	cisbp_3.10;human_census_ortholog
+Gtf2ird1	MGI:1861942	GTF2IRD1	GTF2I-like	Known motif	cisbp_3.10;human_census_ortholog
+Gtf2ird2	MGI:2149780	GTF2IRD2;GTF2IRD2B	GTF2I-like	Known motif;Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Gtf3a	MGI:1913846	GTF3A	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Gzf1	MGI:1921783	GZF1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Hand1	MGI:103577	HAND1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Hand2	MGI:103580	HAND2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Hbp1	MGI:894659	HBP1	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Hdx	MGI:2685226	HDX	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Helt	MGI:3040955	HELT	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Hes1	MGI:104853	HES1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Hes2	MGI:1098624	HES2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Hes3	MGI:104877	HES3	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Hes5	MGI:104876	HES5	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Hes6	MGI:1859852	HES6	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Hes7	MGI:2135679	HES7	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Hesx1	MGI:96071	HESX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hey1	MGI:1341800	HEY1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Hey2	MGI:1341884	HEY2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Heyl	MGI:1860511	HEYL	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Hhex	MGI:96086	HHEX	Homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Hic1	MGI:1338010	HIC1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Hic2	MGI:1929869	HIC2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Hif1a	MGI:106918	HIF1A	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Hif3a	MGI:1859778	HIF3A	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Hinfp	MGI:2429620	HINFP	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Hivep1	MGI:96100	HIVEP1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Hivep2	MGI:1338076	HIVEP2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Hivep3	MGI:106589	HIVEP3	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Hlf	MGI:96108	HLF	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Hlx	MGI:96109	HLX	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hmbox1	MGI:2445066	HMBOX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hmg20a	MGI:1914117	HMG20A	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Hmg20b	MGI:1341190	HMG20B	HMG/Sox	Inferred motif	cisbp_3.10;human_census_ortholog
+Hmga1	MGI:96160	HMGA1	AT hook	Known motif	cisbp_3.10;human_census_ortholog
+Hmga1b	MGI:96161	HMGA1	AT hook	Known motif	human_census_ortholog
+Hmga2	MGI:101761	HMGA2	AT hook	Known motif	cisbp_3.10;human_census_ortholog
+Hmx1	MGI:107178	HMX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hmx2	MGI:107159	HMX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hmx3	MGI:107160	HMX3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hnf1a	MGI:98504	HNF1A	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hnf1b	MGI:98505	HNF1B	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hnf4a	MGI:109128	HNF4A	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Hnf4g	MGI:1353604	HNF4G	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Homez	MGI:2678023	HOMEZ	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxa1	MGI:96170	HOXA1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxa10	MGI:96171	HOXA10	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxa11	MGI:96172	HOXA11	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxa13	MGI:96173	HOXA13	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxa2	MGI:96174	HOXA2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxa3	MGI:96175	HOXA3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxa4	MGI:96176	HOXA4	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxa5	MGI:96177	HOXA5	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxa6	MGI:96178	HOXA6	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxa7	MGI:96179	HOXA7	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxa9	MGI:96180	HOXA9	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxb1	MGI:96182	HOXB1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxb13	MGI:107730	HOXB13	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxb2	MGI:96183	HOXB2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxb3	MGI:96184	HOXB3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxb4	MGI:96185	HOXB4	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxb5	MGI:96186	HOXB5	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxb6	MGI:96187	HOXB6	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxb7	MGI:96188	HOXB7	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxb8	MGI:96189	HOXB8	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxb9	MGI:96190	HOXB9	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxc10	MGI:96192	HOXC10	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxc11	MGI:96193	HOXC11	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxc12	MGI:96194	HOXC12	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxc13	MGI:99560	HOXC13	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxc4	MGI:96195	HOXC4	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxc5	MGI:96196	HOXC5	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxc6	MGI:96197	HOXC6	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxc8	MGI:96198	HOXC8	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxc9	MGI:96199	HOXC9	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxd1	MGI:96201	HOXD1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxd10	MGI:96202	HOXD10	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxd11	MGI:96203	HOXD11	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxd12	MGI:96204	HOXD12	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxd13	MGI:96205	HOXD13	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxd3	MGI:96207	HOXD3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxd4	MGI:96208	HOXD4	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxd8	MGI:96209	HOXD8	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hoxd9	MGI:96210	HOXD9	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Hsf1	MGI:96238	HSF1	HSF	Known motif	cisbp_3.10;human_census_ortholog
+Hsf2	MGI:96239	HSF2	HSF	Known motif	cisbp_3.10;human_census_ortholog
+Hsf3			HSF		cisbp_3.10_only_mouse_specific
+Hsf4	MGI:1347058	HSF4	HSF	Known motif	cisbp_3.10;human_census_ortholog
+Hsf5	MGI:2685585	HSF5	HSF	Known motif	cisbp_3.10;human_census_ortholog
+Hsfy2	MGI:1918316	HSFY1;HSFY2	HSF	Known motif	cisbp_3.10;human_census_ortholog
+Ikzf1	MGI:1342540	IKZF1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Ikzf2	MGI:1342541	IKZF2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Ikzf3	MGI:1342542	IKZF3	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Ikzf4	MGI:1343139	IKZF4	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Ikzf5	MGI:1914393	IKZF5	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Insm1	MGI:1859980	INSM1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Insm2	MGI:1930787	INSM2	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Irf1	MGI:96590	IRF1	IRF	Known motif	cisbp_3.10;human_census_ortholog
+Irf2	MGI:96591	IRF2	IRF	Known motif	cisbp_3.10;human_census_ortholog
+Irf3	MGI:1859179	IRF3	IRF	Known motif	cisbp_3.10;human_census_ortholog
+Irf4	MGI:1096873	IRF4	IRF	Known motif	cisbp_3.10;human_census_ortholog
+Irf5	MGI:1350924	IRF5	IRF	Known motif	cisbp_3.10;human_census_ortholog
+Irf6	MGI:1859211	IRF6	IRF	Known motif	cisbp_3.10;human_census_ortholog
+Irf7	MGI:1859212	IRF7	IRF	Known motif	cisbp_3.10;human_census_ortholog
+Irf8	MGI:96395	IRF8	IRF	Known motif	cisbp_3.10;human_census_ortholog
+Irf9	MGI:107587	IRF9	IRF	Known motif	cisbp_3.10;human_census_ortholog
+Irx1	MGI:1197515	IRX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Irx2	MGI:1197526	IRX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Irx3	MGI:1197522	IRX3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Irx4	MGI:1355275	IRX4	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Irx5	MGI:1859086	IRX5	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Irx6	MGI:1927642	IRX6	Homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Isl1	MGI:101791	ISL1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Isl2	MGI:109156	ISL2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Isx	MGI:1918847	ISX	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Jazf1	MGI:2141450	JAZF1	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Jdp2	MGI:1932093	JDP2	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Jrk	MGI:106214	JRK	CENPB	Known motif	cisbp_3.10;human_census_ortholog
+Jrkl	MGI:1924782	JRKL	CENPB	Inferred motif	cisbp_3.10;human_census_ortholog
+Jun	MGI:96646	JUN	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Junb	MGI:96647	JUNB	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Jund	MGI:96648	JUND	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Kat7	MGI:2182799	KAT7	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Kcmf1	MGI:1921537	KCMF1	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Kdm2a	MGI:1354736	KDM2A	CxxC	Known motif	cisbp_3.10;human_census_ortholog
+Kdm2b	MGI:1354737	KDM2B	CxxC	Known motif	cisbp_3.10;human_census_ortholog
+Kdm5b	MGI:1922855	KDM5B	ARID/BRIGHT	Known motif	cisbp_3.10;human_census_ortholog
+Klf1	MGI:1342771	KLF1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf10	MGI:1101353	KLF10	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf11	MGI:2653368	KLF11	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf12	MGI:1333796	KLF12	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf13	MGI:1354948	KLF13	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf14	MGI:3577024	KLF14	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf15	MGI:1929988	KLF15	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf16	MGI:2153049	KLF16	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf17	MGI:2181068	KLF17	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf2	MGI:1342772	KLF2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf3	MGI:1342773	KLF3	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf4	MGI:1342287	KLF4	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf5	MGI:1338056	KLF5	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf6	MGI:1346318	KLF6	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf7	MGI:1935151	KLF7	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf8	MGI:2442430	KLF8	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Klf9	MGI:1333856	KLF9	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Kmt2a	MGI:96995	KMT2A	CxxC; AT hook	Known motif	cisbp_3.10;human_census_ortholog
+Kmt2b	MGI:109565	KMT2B	CxxC; AT hook	Known motif	cisbp_3.10;human_census_ortholog
+L3mbtl1	MGI:2676663	L3MBTL1	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+L3mbtl3	MGI:2143628	L3MBTL3	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Lbx1	MGI:104867	LBX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Lbx2	MGI:1342288	LBX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Lcor	MGI:2443930	LCOR	Pipsqueak	Known motif	cisbp_3.10;human_census_ortholog
+Lcorl	MGI:2651932	LCORL	Pipsqueak	Known motif	cisbp_3.10;human_census_ortholog
+Lef1	MGI:96770	LEF1	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Lhx1	MGI:99783	LHX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Lhx2	MGI:96785	LHX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Lhx3	MGI:102673	LHX3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Lhx4	MGI:101776	LHX4	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Lhx5	MGI:107792	LHX5	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Lhx6	MGI:1306803	LHX6	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Lhx8	MGI:1096343	LHX8	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Lhx9	MGI:1316721	LHX9	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Lin28a	MGI:1890546	LIN28A	CSD	Inferred motif	cisbp_3.10;human_census_ortholog
+Lin28b	MGI:3584032	LIN28B	CSD	Known motif	cisbp_3.10;human_census_ortholog
+Lin54	MGI:2140902	LIN54	TCR/CxC	Inferred motif	cisbp_3.10;human_census_ortholog
+Lmx1a	MGI:1888519	LMX1A	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Lmx1b	MGI:1100513	LMX1B	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Lrrc59		LRRC59	BBR	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+Ltf	MGI:96837	LTF	Unknown	Known motif	human_census_ortholog
+Lyl1	MGI:96891	LYL1	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Maf	MGI:96909	MAF	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Mafa	MGI:2673307	MAFA	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Mafb	MGI:104555	MAFB	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Maff	MGI:96910	MAFF	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Mafg	MGI:96911	MAFG	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Mafk	MGI:99951	MAFK	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Max	MGI:96921	MAX	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Maz	MGI:1338823	MAZ	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Mbd1	MGI:1333811	MBD1	MBD; CxxC ZF	Known motif	cisbp_3.10;human_census_ortholog
+Mbd2	MGI:1333813	MBD2	MBD	Known motif	cisbp_3.10;human_census_ortholog
+Mbd3	MGI:1333812	MBD3	MBD	Known motif	cisbp_3.10;human_census_ortholog
+Mbd4	MGI:1333850	MBD4	MBD	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Mbd6	MGI:106378	MBD6	MBD	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Mbnl2	MGI:2145597	MBNL2	CCCH ZF	Known motif	human_census_ortholog
+Mecom	MGI:95457	MECOM	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Mecp2	MGI:99918	MECP2	MBD; AT hook	Known motif	cisbp_3.10;human_census_ortholog
+Mef2a	MGI:99532	MEF2A	MADS box	Known motif	cisbp_3.10;human_census_ortholog
+Mef2b	MGI:104526	BORCS8-MEF2B;MEF2B	MADS box	Known motif	cisbp_3.10;human_census_ortholog
+Mef2c	MGI:99458	MEF2C	MADS box	Known motif	cisbp_3.10;human_census_ortholog
+Mef2d	MGI:99533	MEF2D	MADS box	Known motif	cisbp_3.10;human_census_ortholog
+Meis1	MGI:104717	MEIS1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Meis2	MGI:108564	MEIS2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Meis3	MGI:108519	MEIS3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Meox1	MGI:103220	MEOX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Meox2	MGI:103219	MEOX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Mesp1	MGI:107785	MESP1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Mesp2	MGI:1096325	MESP2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Mga	MGI:1352483	MGA	T-box; bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Mitf	MGI:104554	MITF	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Mixl1	MGI:1351322	MIXL1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Mkx	MGI:2687286	MKX	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Mlx	MGI:108398	MLX	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Mlxip	MGI:2141183	MLXIP	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Mlxipl	MGI:1927999	MLXIPL	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Mnt	MGI:109150	MNT	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Mnx1	MGI:109160	MNX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Msantd1	MGI:2684990	MSANTD1	MADF	Known motif	cisbp_3.10;human_census_ortholog
+Msantd3	MGI:1913915	MSANTD3	MADF	Known motif	cisbp_3.10;human_census_ortholog
+Msantd4	MGI:1925350	MSANTD4	Myb/SANT	Known motif	cisbp_3.10;human_census_ortholog
+Msc	MGI:1333884	MSC	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Msgn1	MGI:1860483	MSGN1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Msx1	MGI:97168	MSX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Msx2	MGI:97169	MSX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Msx3			Homeodomain		cisbp_3.10_only_mouse_specific
+Mterf1a	MGI:1918240	MTERF1	mTERF	Known motif	cisbp_3.10;human_census_ortholog
+Mterf1b	MGI:3704243	MTERF1	mTERF	Known motif	cisbp_3.10;human_census_ortholog
+Mterf2	MGI:1921488	MTERF2	mTERF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Mterf3	MGI:1913660	MTERF3	mTERF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Mterf4	MGI:1918355	MTERF4	mTERF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Mtf1	MGI:101786	MTF1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Mtf2	MGI:105050	MTF2	Unknown	Known motif	human_census_ortholog
+Mthfs	MGI:1340032	MTERF1	mTERF	Known motif	human_census_ortholog
+Mxd1	MGI:96908	MXD1	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Mxd3	MGI:104987	MXD3	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Mxd4	MGI:104991	MXD4	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Mxi1	MGI:97245	MXI1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Myb	MGI:97249	MYB	Myb/SANT	Known motif	cisbp_3.10;human_census_ortholog
+Mybl1	MGI:99925	MYBL1	Myb/SANT	Known motif	cisbp_3.10;human_census_ortholog
+Mybl2	MGI:101785	MYBL2	Myb/SANT	Known motif	cisbp_3.10;human_census_ortholog
+Myc	MGI:97250	MYC	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Mycl	MGI:96799	MYCL	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Mycn	MGI:97357	MYCN	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Mycs	MGI:1332242	MYCN	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Myf5	MGI:97252	MYF5	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Myf6	MGI:97253	MYF6	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Mynn	MGI:1931415	MYNN	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Myod1	MGI:97275	MYOD1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Myog	MGI:97276	MYOG	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Mypop	MGI:2446472	MYPOP	Myb/SANT	Known motif	cisbp_3.10;human_census_ortholog
+Myrf	MGI:2684944	MYRF	Ndt80/PhoG	Known motif	cisbp_3.10;human_census_ortholog
+Myrfl	MGI:2685085	MYRFL	Ndt80/PhoG	Known motif	cisbp_3.10;human_census_ortholog
+Mysm1	MGI:2444584	MYSM1	Myb/SANT	Known motif	cisbp_3.10;human_census_ortholog
+Myt1	MGI:1100535	MYT1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Myt1l	MGI:1100511	MYT1L	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Mzf1	MGI:107457	MZF1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Nacc2	MGI:1915241	NACC2	BEN	Known motif	human_census_ortholog
+Naif1	MGI:1918504	NAIF1	MADF	Inferred motif	cisbp_3.10;human_census_ortholog
+Nanog	MGI:1919200	NANOG;NANOGP8	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Neurod1	MGI:1339708	NEUROD1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Neurod2	MGI:107755	NEUROD2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Neurod4	MGI:108055	NEUROD4	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Neurod6	MGI:106593	NEUROD6	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Neurog1	MGI:107754	NEUROG1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Neurog2	MGI:109619	NEUROG2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Neurog3	MGI:893591	NEUROG3	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Nfat5	MGI:1859333	NFAT5	Rel	Known motif	cisbp_3.10;human_census_ortholog
+Nfatc1	MGI:102469	NFATC1	Rel	Known motif	cisbp_3.10;human_census_ortholog
+Nfatc2	MGI:102463	NFATC2	Rel	Known motif	cisbp_3.10;human_census_ortholog
+Nfatc3	MGI:103296	NFATC3	Rel	Known motif	cisbp_3.10;human_census_ortholog
+Nfatc4	MGI:1920431	NFATC4	Rel	Known motif	cisbp_3.10;human_census_ortholog
+Nfe2	MGI:97308	NFE2	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Nfe2l1	MGI:99421	NFE2L1	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Nfe2l2	MGI:108420	NFE2L2	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Nfe2l3	MGI:1339958	NFE2L3	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Nfia	MGI:108056	NFIA	SMAD	Known motif	cisbp_3.10;human_census_ortholog
+Nfib	MGI:103188	NFIB	SMAD	Known motif	cisbp_3.10;human_census_ortholog
+Nfic	MGI:109591	NFIC	SMAD	Known motif	cisbp_3.10;human_census_ortholog
+Nfil3	MGI:109495	NFIL3	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Nfix	MGI:97311	NFIX	SMAD	Known motif	cisbp_3.10;human_census_ortholog
+Nfkb1	MGI:97312	NFKB1	Rel	Known motif	cisbp_3.10;human_census_ortholog
+Nfkb2	MGI:1099800	NFKB2	Rel	Known motif	cisbp_3.10;human_census_ortholog
+Nfx1	MGI:1921414	NFX1	NFX	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Nfxl1	MGI:1923646	NFXL1	NFX	Known motif	cisbp_3.10;human_census_ortholog
+Nfya	MGI:97316	NFYA	CBF/NF-Y	Known motif	cisbp_3.10;human_census_ortholog
+Nfyb	MGI:97317	NFYB	Unknown	Known motif	cisbp_3.10;human_census_ortholog
+Nfyc	MGI:107901	NFYC	Unknown	Known motif	cisbp_3.10;human_census_ortholog
+Nhlh1	MGI:98481	NHLH1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Nhlh2	MGI:97324	NHLH2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Nkx1-1	MGI:109346	NKX1-1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Nkx1-2	MGI:104806	NKX1-2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Nkx2-1	MGI:108067	NKX2-1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Nkx2-2	MGI:97347	NKX2-2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Nkx2-3	MGI:97348	NKX2-3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Nkx2-4	MGI:97349	NKX2-4	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Nkx2-5	MGI:97350	NKX2-5	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Nkx2-6	MGI:97351	NKX2-6	Homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Nkx2-9	MGI:1270158	NKX2-8	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Nkx3-1	MGI:97352	NKX3-1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Nkx3-2	MGI:108015	NKX3-2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Nkx6-1	MGI:1206039	NKX6-1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Nkx6-2	MGI:1352738	NKX6-2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Nkx6-3	MGI:1921811	NKX6-3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Nobox	MGI:108011	NOBOX	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Noto	MGI:3053002	NOTO	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Npas1	MGI:109205	NPAS1	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Npas2	MGI:109232	NPAS2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Npas3	MGI:1351610	NPAS3	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Npas4	MGI:2664186	NPAS4	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Nr0b1	MGI:1352460	NR0B1	Unknown	Known motif	human_census_ortholog
+Nr1d1	MGI:2444210	NR1D1	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr1d2	MGI:2449205	NR1D2	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr1h2	MGI:1352463	NR1H2	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr1h3	MGI:1352462	NR1H3	Nuclear receptor	Inferred motif	cisbp_3.10;human_census_ortholog
+Nr1h4	MGI:1352464	NR1H4	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr1h5		NR1H5P	Nuclear receptor	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+Nr1i2	MGI:1337040	NR1I2	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr1i3	MGI:1346307	NR1I3	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr2c1	MGI:1352465	NR2C1	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr2c2	MGI:1352466	NR2C2	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr2e1	MGI:1100526	NR2E1	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr2e3	MGI:1346317	NR2E3	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr2f1	MGI:1352451	NR2F1	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr2f2	MGI:1352452	NR2F2	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr2f6	MGI:1352453	NR2F6	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr3c1	MGI:95824	NR3C1	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr3c2	MGI:99459	NR3C2	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr4a1	MGI:1352454	NR4A1	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr4a2	MGI:1352456	NR4A2	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr4a3	MGI:1352457	NR4A3	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr5a1	MGI:1346833	NR5A1	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr5a2	MGI:1346834	NR5A2	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nr6a1	MGI:1352459	NR6A1	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Nrf1	MGI:1332235	NRF1	Unknown	Known motif	cisbp_3.10;human_census_ortholog
+Nrl	MGI:102567	NRL	bZIP	Known motif	human_census_ortholog
+Obox1			Homeodomain		cisbp_3.10_only_mouse_specific
+Obox3			Homeodomain		cisbp_3.10_only_mouse_specific
+Obox5			Homeodomain		cisbp_3.10_only_mouse_specific
+Obox6			Homeodomain		cisbp_3.10_only_mouse_specific
+Obox7			Homeodomain		cisbp_3.10_only_mouse_specific
+Olig1	MGI:1355334	OLIG1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Olig2	MGI:1355331	OLIG2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Olig3	MGI:2149955	OLIG3	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Onecut1	MGI:1196423	ONECUT1	CUT; Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Onecut2	MGI:1891408	ONECUT2	CUT; Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Onecut3	MGI:1891409	ONECUT3	CUT; Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Osr1	MGI:1344424	OSR1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Osr2	MGI:1930813	OSR2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Otp	MGI:99835	OTP	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Otx1	MGI:97450	OTX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Otx2	MGI:97451	OTX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Ovol1	MGI:1330290	OVOL1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Ovol2	MGI:1338039	OVOL2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Ovol3	MGI:2388075	OVOL3	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Patz1	MGI:1891832	PATZ1	C2H2 ZF; AT hook	Known motif	cisbp_3.10;human_census_ortholog
+Pax1	MGI:97485	PAX1	Paired box	Known motif	cisbp_3.10;human_census_ortholog
+Pax2	MGI:97486	PAX2	Homeodomain; Paired box	Known motif	cisbp_3.10;human_census_ortholog
+Pax3	MGI:97487	PAX3	Homeodomain; Paired box	Known motif	cisbp_3.10;human_census_ortholog
+Pax4	MGI:97488	PAX4	Homeodomain; Paired box	Known motif	cisbp_3.10;human_census_ortholog
+Pax5	MGI:97489	PAX5	Paired box	Known motif	cisbp_3.10;human_census_ortholog
+Pax6	MGI:97490	PAX6	Homeodomain; Paired box	Known motif	cisbp_3.10;human_census_ortholog
+Pax7	MGI:97491	PAX7	Homeodomain; Paired box	Known motif	cisbp_3.10;human_census_ortholog
+Pax8	MGI:97492	PAX8	Paired box	Known motif	cisbp_3.10;human_census_ortholog
+Pax9	MGI:97493	PAX9	Paired box	Known motif	cisbp_3.10;human_census_ortholog
+Pbx1	MGI:97495	PBX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Pbx2	MGI:1341793	PBX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Pbx3	MGI:97496	PBX3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Pbx4	MGI:1931321	PBX4	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Pdx1	MGI:102851	PDX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Peg3	MGI:104748	PEG3	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Pgr	MGI:97567	PGR	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Phf1	MGI:98647	PHF1	Unknown	Known motif	human_census_ortholog
+Phf19	MGI:1921266	PHF19	Unknown	Likely to be sequence specific TF	human_census_ortholog
+Phf21a	MGI:2384756	PHF21A	AT hook	Known motif	cisbp_3.10;human_census_ortholog
+Phox2a	MGI:106633	PHOX2A	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Phox2b	MGI:1100882	PHOX2B	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Pitx1	MGI:107374	PITX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Pitx2	MGI:109340	PITX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Pitx3	MGI:1100498	PITX3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Pknox1	MGI:1201409	PKNOX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Pknox2	MGI:2445415	PKNOX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Plag1	MGI:1891916	PLAG1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Plagl1	MGI:1100874	PLAGL1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Plagl2	MGI:1933165	PLAGL2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Pogk	MGI:1918842	POGK	Brinker	Known motif	cisbp_3.10;human_census_ortholog
+Pou1f1	MGI:97588	POU1F1	Homeodomain; POU	Known motif	cisbp_3.10;human_census_ortholog
+Pou2af1	MGI:105086	POU2AF1	Unknown	Known motif	human_census_ortholog
+Pou2f1	MGI:101898	POU2F1	Homeodomain; POU	Known motif	cisbp_3.10;human_census_ortholog
+Pou2f2	MGI:101897	POU2F2	Homeodomain; POU	Known motif	cisbp_3.10;human_census_ortholog
+Pou2f3	MGI:102565	POU2F3	Homeodomain; POU	Known motif	cisbp_3.10;human_census_ortholog
+Pou3f1	MGI:101896	POU3F1	Homeodomain; POU	Known motif	cisbp_3.10;human_census_ortholog
+Pou3f2	MGI:101895	POU3F2	Homeodomain; POU	Known motif	cisbp_3.10;human_census_ortholog
+Pou3f3	MGI:102564	POU3F3	Homeodomain; POU	Known motif	cisbp_3.10;human_census_ortholog
+Pou3f4	MGI:101894	POU3F4	Homeodomain; POU	Known motif	cisbp_3.10;human_census_ortholog
+Pou4f1	MGI:102525	POU4F1	Homeodomain; POU	Known motif	cisbp_3.10;human_census_ortholog
+Pou4f2	MGI:102524	POU4F2	Homeodomain; POU	Known motif	cisbp_3.10;human_census_ortholog
+Pou4f3	MGI:102523	POU4F3	Homeodomain; POU	Known motif	cisbp_3.10;human_census_ortholog
+Pou5f1	MGI:101893	POU5F1;POU5F1B	Homeodomain; POU	Known motif	cisbp_3.10;human_census_ortholog
+Pou6f1	MGI:102935	POU6F1	Homeodomain; POU	Known motif	cisbp_3.10;human_census_ortholog
+Pou6f2	MGI:2443631	POU6F2	Homeodomain; POU	Known motif	cisbp_3.10;human_census_ortholog
+Ppara	MGI:104740	PPARA	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Ppard	MGI:101884	PPARD	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Pparg	MGI:97747	PPARG	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Prdm1	MGI:99655	PRDM1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Prdm10	MGI:2682952	PRDM10	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Prdm12	MGI:2685844	PRDM12	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Prdm13	MGI:2448528	PRDM13	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Prdm14	MGI:3588194	PRDM14	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Prdm15	MGI:1930121	PRDM15	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Prdm16	MGI:1917923	PRDM16	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Prdm2	MGI:107628	PRDM2	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Prdm4	MGI:1920093	PRDM4	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Prdm5	MGI:1918029	PRDM5	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Prdm6	MGI:2684938	PRDM6	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Prdm8	MGI:1924880	PRDM8	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Prdm9	MGI:2384854	PRDM9	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Prop1	MGI:109330	PROP1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Prox1	MGI:97772	PROX1	Prospero; homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Prox2	MGI:1920672	PROX2	Prospero; homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Prrx1	MGI:97712	PRRX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Prrx2	MGI:98218	PRRX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Ptf1a	MGI:1328312	PTF1A	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Pura	MGI:103079	PURA	Unknown	Known motif	human_census_ortholog
+Purb	MGI:1338779	PURB	Unknown	Known motif	human_census_ortholog
+Purg	MGI:1922279	PURG	Unknown	Likely to be sequence specific TF	human_census_ortholog
+Rag1	MGI:97848	RAG1	Unknown	Likely to be sequence specific TF	human_census_ortholog
+Rara	MGI:97856	RARA	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Rarb	MGI:97857	RARB	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Rarg	MGI:97858	RARG	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Rax	MGI:109632	RAX	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Rbak	MGI:1927369	RBAK	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Rbpj	MGI:96522	RBPJ	CSL	Known motif	cisbp_3.10;human_census_ortholog
+Rbpjl	MGI:1196616	RBPJL	CSL	Inferred motif	cisbp_3.10;human_census_ortholog
+Rel	MGI:97897	REL	Rel	Known motif	cisbp_3.10;human_census_ortholog
+Rela	MGI:103290	RELA	Rel	Known motif	cisbp_3.10;human_census_ortholog
+Relb	MGI:103289	RELB	Rel	Known motif	cisbp_3.10;human_census_ortholog
+Repin1	MGI:1889817	REPIN1	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Rest	MGI:104897	REST	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Rex2			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Rfx1	MGI:105982	RFX1	RFX	Known motif	cisbp_3.10;human_census_ortholog
+Rfx2	MGI:106583	RFX2	RFX	Known motif	cisbp_3.10;human_census_ortholog
+Rfx3	MGI:106582	RFX3	RFX	Known motif	cisbp_3.10;human_census_ortholog
+Rfx4	MGI:1918387	RFX4	RFX	Known motif	cisbp_3.10;human_census_ortholog
+Rfx5	MGI:1858421	RFX5	RFX	Known motif	cisbp_3.10;human_census_ortholog
+Rfx6	MGI:2445208	RFX6	RFX	Inferred motif	cisbp_3.10;human_census_ortholog
+Rfx7	MGI:2442675	RFX7	RFX	Known motif	cisbp_3.10;human_census_ortholog
+Rhox1			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox10	MGI:3580249	RHOXF1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Rhox11	MGI:2681831	RHOXF1;RHOXF2B	Homeodomain	Inferred motif;Known motif	cisbp_3.10;human_census_ortholog
+Rhox12	MGI:2685994	RHOXF1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Rhox13	MGI:1920864	RHOXF1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Rhox2a			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox2b			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox2c			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox2d			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox2e			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox2f			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox2g	MGI:3648776	RHOXF2B	Homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Rhox2h			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox3a	MGI:2676626	RHOXF2B	Homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Rhox3a2	MGI:5434440	RHOXF2B	Homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Rhox3c	MGI:3770268	RHOXF2B	Homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Rhox3e	MGI:3770274	RHOXF2B	Homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Rhox3f			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox3g			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox3h			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox4a			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox4a2			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox4b			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox4c			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox4d			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox4e			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox4f			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox4g	MGI:3613394	RHOXF2;RHOXF2B	Homeodomain	Inferred motif;Known motif	cisbp_3.10;human_census_ortholog
+Rhox5			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox6			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox8			Homeodomain		cisbp_3.10_only_mouse_specific
+Rhox9			Homeodomain		cisbp_3.10_only_mouse_specific
+Rlf	MGI:1924705	RLF	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Rora	MGI:104661	RORA	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Rorb	MGI:1343464	RORB	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Rorc	MGI:104856	RORC	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Rpgrip1l		RPGRIP1L	bZIP	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+Rreb1	MGI:2443664	RREB1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Rsl1			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Runx1	MGI:99852	RUNX1	Runt	Known motif	cisbp_3.10;human_census_ortholog
+Runx2	MGI:99829	RUNX2	Runt	Known motif	cisbp_3.10;human_census_ortholog
+Runx3	MGI:102672	RUNX3	Runt	Known motif	cisbp_3.10;human_census_ortholog
+Rxra	MGI:98214	RXRA	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Rxrb	MGI:98215	RXRB	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Rxrg	MGI:98216	RXRG	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Sall1	MGI:1889585	SALL1	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Sall2	MGI:1354373	SALL2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Sall3	MGI:109295	SALL3	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Sall4	MGI:2139360	SALL4	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Satb1	MGI:105084	SATB1	CUT; Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Satb2	MGI:2679336	SATB2	CUT; Homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Scrt1	MGI:2176606	SCRT1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Scrt2	MGI:2139287	SCRT2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Scx	MGI:102934	SCX	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Sebox	MGI:108012	SEBOX	Homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Setbp1	MGI:1933199	SETBP1	AT hook	Known motif	cisbp_3.10;human_census_ortholog
+Setdb1	MGI:1934229	SETDB1	MBD	Known motif	cisbp_3.10;human_census_ortholog
+Setdb2	MGI:2685139	SETDB2	MBD	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Shox2	MGI:1201673	SHOX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Sim1	MGI:98306	SIM1	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Sim2	MGI:98307	SIM2	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Six1	MGI:102780	SIX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Six2	MGI:102778	SIX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Six3	MGI:102764	SIX3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Six4	MGI:106034	SIX4	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Six5	MGI:106220	SIX5	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Six6	MGI:1341840	SIX6	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Ski	MGI:98310	SKI	SKI/SNO/DAC	Likely to be sequence specific TF	human_census_ortholog
+Skil	MGI:106203	SKIL	SKI/SNO/DAC	Likely to be sequence specific TF	human_census_ortholog
+Skor1	MGI:2443473	SKOR1	Unknown	Known motif	human_census_ortholog
+Skor2	MGI:3645984	SKOR2	SAND	Known motif	human_census_ortholog
+Smad1	MGI:109452	SMAD1	SMAD	Known motif	cisbp_3.10;human_census_ortholog
+Smad3	MGI:1201674	SMAD3	SMAD	Known motif	cisbp_3.10;human_census_ortholog
+Smad4	MGI:894293	SMAD4	SMAD	Known motif	cisbp_3.10;human_census_ortholog
+Smad5	MGI:1328787	SMAD5	SMAD	Known motif	cisbp_3.10;human_census_ortholog
+Smad9	MGI:1859993	SMAD9	SMAD	Known motif	cisbp_3.10;human_census_ortholog
+Snai1	MGI:98330	SNAI1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Snai2	MGI:1096393	SNAI2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Snai3	MGI:1353563	SNAI3	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Snapc4	MGI:2443935	SNAPC4	Myb/SANT	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Snx29		SNX29;SNX29P2	bZIP	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+Sohlh1	MGI:2684956	SOHLH1	bHLH	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Sohlh2	MGI:1921684	CCDC169-SOHLH2;SOHLH2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Sox1	MGI:98357	SOX1	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox10	MGI:98358	SOX10	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox11	MGI:98359	SOX11	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox12	MGI:98360	SOX12	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox13	MGI:98361	SOX13	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox14	MGI:98362	SOX14	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox15	MGI:98363	SOX15	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox17	MGI:107543	SOX17	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox18	MGI:103559	SOX18	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox2	MGI:98364	SOX2	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox21	MGI:2654070	SOX21	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox3	MGI:98365	SOX3	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox30	MGI:1341157	SOX30	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox4	MGI:98366	SOX4	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox5	MGI:98367	SOX5	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox6	MGI:98368	SOX6	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox7	MGI:98369	SOX7	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox8	MGI:98370	SOX8	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sox9	MGI:98371	SOX9	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Sp1	MGI:98372	SP1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Sp100	MGI:109561	SP100	SAND	Known motif	cisbp_3.10;human_census_ortholog
+Sp110	MGI:1923364	SP110	SAND	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Sp140	MGI:3702467	SP140;SP140L	SAND	Known motif	cisbp_3.10;human_census_ortholog
+Sp2	MGI:1926162	SP2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Sp3	MGI:1277166	SP3	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Sp4	MGI:107595	SP4	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Sp5	MGI:1927715	SP5	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Sp6	MGI:1932575	SP6	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Sp7	MGI:2153568	SP7	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Sp8	MGI:2443471	SP8	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Sp9	MGI:3574660	SP9	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Spdef	MGI:1353422	SPDEF	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Spen	MGI:1891706	SPEN	Unknown	Likely to be sequence specific TF	human_census_ortholog
+Spi1	MGI:98282	SPI1	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Spib	MGI:892986	SPIB	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Spic	MGI:1341168	SPIC	Ets	Known motif	cisbp_3.10;human_census_ortholog
+Spz1	MGI:1930801	SPZ1	Unknown	Known motif	cisbp_3.10;human_census_ortholog
+Srcap	MGI:2444036	SRCAP	AT hook	Likely to be sequence specific TF	human_census_ortholog
+Srebf1	MGI:107606	SREBF1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Srebf2	MGI:107585	SREBF2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Srf	MGI:106658	SRF	MADS box	Known motif	cisbp_3.10;human_census_ortholog
+Sry	MGI:98660	SRY	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+St18	MGI:2446700	ST18	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Stat1	MGI:103063	STAT1	STAT	Known motif	cisbp_3.10;human_census_ortholog
+Stat2	MGI:103039	STAT2	STAT	Known motif	cisbp_3.10;human_census_ortholog
+Stat3	MGI:103038	STAT3	STAT	Known motif	cisbp_3.10;human_census_ortholog
+Stat4	MGI:103062	STAT4	STAT	Known motif	cisbp_3.10;human_census_ortholog
+Stat5a	MGI:103036	STAT5A	STAT	Known motif	cisbp_3.10;human_census_ortholog
+Stat5b	MGI:103035	STAT5B	STAT	Known motif	cisbp_3.10;human_census_ortholog
+Stat6	MGI:103034	STAT6	STAT	Known motif	cisbp_3.10;human_census_ortholog
+T	MGI:98472	TBXT	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Tal1	MGI:98480	TAL1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Tal2	MGI:99540	TAL2	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Tbp	MGI:101838	TBP	TBP	Known motif	cisbp_3.10;human_census_ortholog
+Tbpl1	MGI:1339946	TBPL1	TBP	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Tbpl2	MGI:2684058	TBPL2	TBP	Inferred motif	cisbp_3.10;human_census_ortholog
+Tbr1	MGI:107404	TBR1	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Tbx1	MGI:98493	TBX1	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Tbx10	MGI:1261436	TBX10	T-box	Inferred motif	cisbp_3.10;human_census_ortholog
+Tbx15	MGI:1277234	TBX15	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Tbx18	MGI:1923615	TBX18	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Tbx19	MGI:1891158	TBX19	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Tbx2	MGI:98494	TBX2	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Tbx20	MGI:1888496	TBX20	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Tbx21	MGI:1888984	TBX21	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Tbx22	MGI:2389465	TBX22	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Tbx3	MGI:98495	TBX3	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Tbx4	MGI:102556	TBX4	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Tbx5	MGI:102541	TBX5	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Tbx6	MGI:102539	TBX6	T-box	Known motif	cisbp_3.10;human_census_ortholog
+Tcf12	MGI:101877	TCF12	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Tcf15	MGI:104664	TCF15	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Tcf20	MGI:108399	TCF20	AT-hook	Known motif	human_census_ortholog
+Tcf21	MGI:1202715	TCF21	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Tcf23	MGI:1934960	TCF23	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Tcf24	MGI:3780500	TCF24	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+Tcf3	MGI:98510	TCF3	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Tcf4	MGI:98506	TCF4	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Tcf7	MGI:98507	TCF7	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Tcf7l1	MGI:1202876	TCF7L1	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Tcf7l2	MGI:1202879	TCF7L2	HMG/Sox	Known motif	cisbp_3.10;human_census_ortholog
+Tcfl5	MGI:2672878	TCFL5	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Tead1	MGI:101876	TEAD1	TEA	Known motif	cisbp_3.10;human_census_ortholog
+Tead2	MGI:104904	TEAD2	TEA	Known motif	cisbp_3.10;human_census_ortholog
+Tead3	MGI:109241	TEAD3	TEA	Known motif	cisbp_3.10;human_census_ortholog
+Tead4	MGI:106907	TEAD4	TEA	Known motif	cisbp_3.10;human_census_ortholog
+Tef	MGI:98663	TEF	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Terb1	MGI:2443187	TERB1	Myb/SANT	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Terf1	MGI:109634	TERF1	Myb/SANT	Known motif	cisbp_3.10;human_census_ortholog
+Terf2	MGI:1195972	TERF2	Myb/SANT	Inferred motif	cisbp_3.10;human_census_ortholog
+Tet1	MGI:1098693	TET1	CxxC	Known motif	cisbp_3.10;human_census_ortholog
+Tet3	MGI:2446229	TET3	CxxC	Known motif	cisbp_3.10;human_census_ortholog
+Tfap2a	MGI:104671	TFAP2A	AP-2	Known motif	cisbp_3.10;human_census_ortholog
+Tfap2b	MGI:104672	TFAP2B	AP-2	Known motif	cisbp_3.10;human_census_ortholog
+Tfap2c	MGI:106032	TFAP2C	AP-2	Known motif	cisbp_3.10;human_census_ortholog
+Tfap2d	MGI:2153466	TFAP2D	AP-2	Known motif	cisbp_3.10;human_census_ortholog
+Tfap2e	MGI:2679630	TFAP2E	AP-2	Known motif	cisbp_3.10;human_census_ortholog
+Tfap4	MGI:103239	TFAP4	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Tfcp2	MGI:98509	TFCP2	Grainyhead	Known motif	cisbp_3.10;human_census_ortholog
+Tfcp2l1	MGI:2444691	TFCP2L1	Grainyhead	Known motif	human_census_ortholog
+Tfdp1	MGI:101934	TFDP1;TFDP3	E2F	Inferred motif;Known motif	cisbp_3.10;human_census_ortholog
+Tfdp2	MGI:107167	TFDP2	E2F	Inferred motif	cisbp_3.10;human_census_ortholog
+Tfe3	MGI:98511	TFE3	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Tfeb	MGI:103270	TFEB	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Tfec	MGI:1333760	TFEC	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Tgif1	MGI:1194497	TGIF1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Tgif2	MGI:1915299	TGIF2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Tgif2lx1	MGI:2387796	TGIF2LX;TGIF2LY	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Tgif2lx2	MGI:3800824	TGIF2LX;TGIF2LY	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Thap1	MGI:1921004	THAP1	THAP finger	Known motif	cisbp_3.10;human_census_ortholog
+Thap12	MGI:1920231	THAP12	THAP finger	Known motif	cisbp_3.10;human_census_ortholog
+Thap3	MGI:1917126	THAP3	THAP finger	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Thra	MGI:98742	THRA	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Thrb	MGI:98743	THRB	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Tigd2	MGI:1915390	TIGD2	CENPB	Inferred motif	cisbp_3.10;human_census_ortholog
+Tigd3	MGI:2681860	TIGD3	CENPB	Known motif	cisbp_3.10;human_census_ortholog
+Tigd4	MGI:2685264	TIGD4	CENPB	Known motif	cisbp_3.10;human_census_ortholog
+Tigd5	MGI:2145902	TIGD5	CENPB	Known motif	cisbp_3.10;human_census_ortholog
+Tlx1	MGI:98769	TLX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Tlx2	MGI:1350935	TLX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Tlx3	MGI:1351209	TLX3	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Topors	MGI:2146189	TOPORS	Unknown	Known motif	human_census_ortholog
+Trerf1	MGI:2442086	TRERF1	C2H2 ZF; Myb/SANT	Inferred motif	human_census_ortholog
+Trp53	MGI:98834	TP53	p53	Known motif	cisbp_3.10;human_census_ortholog
+Trp63	MGI:1330810	TP63	p53	Known motif	cisbp_3.10;human_census_ortholog
+Trp73	MGI:1336991	TP73	p53	Known motif	cisbp_3.10;human_census_ortholog
+Trps1	MGI:1927616	TRPS1	GATA	Known motif	cisbp_3.10;human_census_ortholog
+Tshz1	MGI:1346031	TSHZ1	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Tshz2	MGI:2153084	TSHZ2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Tshz3	MGI:2442819	TSHZ3	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Ttf1	MGI:105044	TTF1	Myb/SANT	Known motif	cisbp_3.10;human_census_ortholog
+Twist1	MGI:98872	TWIST1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Twist2	MGI:104685	TWIST2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Ubp1	MGI:104889	UBP1	Grainyhead	Known motif	cisbp_3.10;human_census_ortholog
+Uncx	MGI:108013	UNCX	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Usf1	MGI:99542	USF1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Usf2	MGI:99961	USF2	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Usf3	MGI:2685454	USF3	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Vax1	MGI:1277163	VAX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Vax2	MGI:1346018	VAX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Vdr	MGI:103076	VDR	Nuclear receptor	Known motif	cisbp_3.10;human_census_ortholog
+Vezf1	MGI:1313291	VEZF1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Vsx1	MGI:1890816	VSX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Vsx2	MGI:88401	VSX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Wiz	MGI:1332638	WIZ	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Wt1	MGI:98968	WT1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Xbp1	MGI:98970	XBP1	bZIP	Known motif	cisbp_3.10;human_census_ortholog
+Xpa	MGI:99135	XPA	Unknown	Known motif	human_census_ortholog
+Ybx1	MGI:99146	YBX1	CSD	Known motif	cisbp_3.10;human_census_ortholog
+Ybx2	MGI:1096372	YBX2	CSD	Inferred motif	cisbp_3.10;human_census_ortholog
+Ybx3	MGI:2137670	YBX3	CSD	Known motif	cisbp_3.10;human_census_ortholog
+Yy1	MGI:99150	YY1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Yy2	MGI:3837947	YY2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbed3	MGI:1919364	ZBED3	BED ZF	Likely to be sequence specific TF	human_census_ortholog
+Zbed4	MGI:2682302	ZBED4	BED ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbed6	MGI:3828086	ZBED6	BED ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Zbtb1	MGI:2442326	ZBTB1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb10	MGI:2139883	ZBTB10	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb11	MGI:2443876	ZBTB11	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb12	MGI:88133	ZBTB12	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb14	MGI:1195345	ZBTB14	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb16	MGI:103222	ZBTB16	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb17	MGI:107410	ZBTB17	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb18	MGI:1353609	ZBTB18	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb2	MGI:2685949	ZBTB2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb20	MGI:1929213	ZBTB20	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb21	MGI:1927240	ZBTB21	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zbtb22	MGI:1931870	ZBTB22	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb24	MGI:3039618	ZBTB24	C2H2 ZF; AT hook	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb25	MGI:99197	ZBTB25	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zbtb26	MGI:2444402	ZBTB26	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb3	MGI:1922541	ZBTB3	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb32	MGI:1891838	ZBTB32	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb33	MGI:1927290	ZBTB33	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb34	MGI:2685195	ZBTB34	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Zbtb37	MGI:2444467	ZBTB37	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb38	MGI:2442866	ZBTB38	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zbtb39	MGI:2443316	ZBTB39	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zbtb4	MGI:1922830	ZBTB4	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb40	MGI:2682254	ZBTB40	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb41	MGI:2444487	ZBTB41	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb42	MGI:3644133	ZBTB42	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb43	MGI:1919084	ZBTB43	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb44	MGI:1925123	ZBTB44	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb45	MGI:2685003	ZBTB45	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb46	MGI:1919397	ZBTB46	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zbtb47	MGI:2670992	ZBTB47	C2H2 ZF	Known motif	human_census_ortholog
+Zbtb48	MGI:2140248	ZBTB48	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb49	MGI:1922329	ZBTB49	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb5	MGI:1924601	ZBTB5	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb6	MGI:2442998	ZBTB6	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb7a	MGI:1335091	ZBTB7A	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb7b	MGI:102755	ZBTB7B	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb7c	MGI:2443302	ZBTB7C	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb8a	MGI:1920930	ZBTB8A	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb8b	MGI:2387181	ZBTB8B	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zbtb9	MGI:1918022	ZBTB9	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zeb1	MGI:1344313	ZEB1	C2H2 ZF; Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Zeb2	MGI:1344407	ZEB2	C2H2 ZF; Homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Zfa-ps	MGI:99153	ZFY	C2H2 ZF	Inferred motif	human_census_ortholog
+Zfat	MGI:2681865	ZFAT	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfhx2	MGI:2686934	ZFHX2	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Zfhx3	MGI:99948	ZFHX3	C2H2 ZF; Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Zfhx4	MGI:2137668	ZFHX4	C2H2 ZF; Homeodomain	Inferred motif	cisbp_3.10;human_census_ortholog
+Zfp1	MGI:99154	ZFP1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp1000	MGI:3642815	ZNF835	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp1002	MGI:5439751	ZNF501	C2H2 ZF	Known motif	human_census_ortholog
+Zfp1004	MGI:3836251	ZNF320;ZNF415;ZNF528;ZNF534;ZNF616	C2H2 ZF	Known motif	human_census_ortholog
+Zfp1005	MGI:3652002	ZNF234;ZNF254;ZNF267;ZNF432;ZNF493;ZNF600;ZNF615;ZNF676;ZNF836;ZNF841	C2H2 ZF	Known motif	human_census_ortholog
+Zfp1006	MGI:1919389	ZNF486;ZNF506;ZNF679;ZNF735	C2H2 ZF	Inferred motif;Known motif	human_census_ortholog
+Zfp1007	MGI:1924450	ZNF611	C2H2 ZF	Known motif	human_census_ortholog
+Zfp101			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp1010	MGI:3649811	ZNF625	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp105	MGI:1277119	ZNF35	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp108	MGI:1891198	ZNF235	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp109	MGI:1929099	ZNF235	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp11			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp110	MGI:1890378	ZNF274	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp111	MGI:1929114	ZNF235	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp112	MGI:1929115	ZNF112	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp113	MGI:1929116	ZNF3	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp114	MGI:3037815	ZNF235	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp119a			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp119b			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp12	MGI:99157	ZNF12	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp120			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp128	MGI:2389445	ZNF8	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp13	MGI:99159	ZNF205	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp14	MGI:99160	ZFP14	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp141			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp142	MGI:1924514	ZNF142	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp143	MGI:1277969	ZNF143	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp146	MGI:1347092	ZNF146	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp148	MGI:1332234	ZNF148	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp157			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp160	MGI:108187	ZNF160;ZNF347;ZNF665	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp169	MGI:1915161	ZNF169	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp174	MGI:2686600	ZNF174	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp180	MGI:1923701	ZNF180	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp182	MGI:2442220	ZNF182	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp184	MGI:1922244	ZNF184	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp189	MGI:2444707	ZNF189	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp2	MGI:99167	ZFP2	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Zfp202	MGI:1933401	ZNF202	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp212	MGI:2682609	ZNF212	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp213	MGI:3053094	ZNF213	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp217	MGI:2685408	ZNF217	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp219	MGI:1917140	ZNF219	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp229	MGI:2679295	ZNF267;ZNF836;ZNF841	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp235	MGI:1929117	ZNF235	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp236	MGI:1926950	ZNF236	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp239	MGI:1306812	ZNF239	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp24	MGI:1929704	ZNF24	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp248	MGI:1919970	ZNF248	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp251	MGI:1918841	ZNF251	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp26	MGI:99173	ZNF267;ZNF836;ZNF841	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp260	MGI:1347071	ZNF260	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp263	MGI:1921370	ZNF263	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp266	MGI:1924769	ZNF266;ZNF561;ZNF562	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp267	MGI:1098769	ZNF267	C2H2 ZF	Known motif	human_census_ortholog
+Zfp268	MGI:3651014	ZNF268;ZNF484	C2H2 ZF	Known motif;Likely to be sequence specific TF	human_census_ortholog
+Zfp27	MGI:99174	ZNF585A;ZNF585B	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp273	MGI:3036278	ZNF93	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp275	MGI:1350985	ZNF275	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp276	MGI:1888495	ZNF276	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp277	MGI:1890393	ZNF277	C2H2 ZF; BED ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp28	MGI:99175	ZFP28	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp280b	MGI:1927865	ZNF280B	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp280c	MGI:2387585	ZNF280C	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp280d	MGI:2384583	ZNF280D	C2H2 ZF	Known motif	human_census_ortholog
+Zfp281	MGI:3029290	ZNF281	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp282	MGI:2141413	ZNF282	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp286	MGI:2384758	ZNF286A;ZNF286B	C2H2 ZF	Known motif;Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp287	MGI:2176561	ZNF287	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp292	MGI:1353423	ZNF292	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp296	MGI:1926956	ZNF296	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp3	MGI:99177	ZFP3	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp30	MGI:99178	ZFP30	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Zfp300			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp316	MGI:1860402	ZNF316	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp317	MGI:107775	ZNF317	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp319	MGI:1890618	ZNF319	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp322a	MGI:2442566	ZNF322	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp324	MGI:2444641	ZNF324;ZNF324B	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp329	MGI:1921283	ZNF329	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp334	MGI:2388656	ZNF334	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp335	MGI:2682313	ZNF335	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp341	MGI:2682937	ZNF341	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp345	MGI:3652219	ZNF320;ZNF415;ZNF528;ZNF534;ZNF616	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp346	MGI:1349417	ZNF346	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp35			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp352		KLF18	C2H2 ZF	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+Zfp354a	MGI:103172	ZNF354A	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp354b	MGI:1351476	ZNF354B	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp354c	MGI:1353621	ZNF354C	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp358	MGI:2153740	ZNF358	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp362	MGI:2652839	ZNF362	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp365	MGI:2143676	ZNF365	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp366	MGI:2178429	ZNF366	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp367	MGI:2442266	ZNF367	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp369	MGI:2176229	ZNF274	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp37	MGI:99181	ZFP37	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp382	MGI:3588204	ZNF382	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp383	MGI:1920979	ZNF383	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp384	MGI:2443203	ZNF384	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp386			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp39			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp395	MGI:2682318	ZNF395	C2H2 ZF	Known motif	human_census_ortholog
+Zfp397	MGI:1916506	ZNF397	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp398	MGI:1917856	ZNF398	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp40			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp407	MGI:2685179	ZNF407	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp408	MGI:2685857	ZNF408	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp41	MGI:99186	ZFP41	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp410	MGI:1289280	ZNF410	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp414	MGI:1915641	ZNF414	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp418			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp42	MGI:99187	ZFP42	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp420	MGI:2444666	ZNF420	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp422	MGI:1914505	ZNF22	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp423	MGI:1891217	ZNF423	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp426	MGI:1920248	ZNF426	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp428	MGI:1916463	ZNF428	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp429			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp433	MGI:1920860	ZNF880	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp438	MGI:2444919	ZNF438	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp442	MGI:3651999	ZNF611	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp444	MGI:1923365	ZNF444	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp445	MGI:2143340	ZNF445	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp446	MGI:2442185	ZNF446	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp449	MGI:1925869	ZNF449	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp451	MGI:2137896	ZNF451	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp454	MGI:2679253	ZNF454	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp455			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp456			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp457	MGI:2664334	ZNF493;ZNF600;ZNF724	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp458	MGI:3040691	ZNF493;ZNF600	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp46	MGI:99192	ZNF436	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp462	MGI:107690	ZNF462	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp467	MGI:1916160	ZNF467	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp469	MGI:2684868	ZNF469	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp472			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp473	MGI:2442697	ZNF473	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp488	MGI:2686052	ZNF488	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp503	MGI:1353644	ZNF503	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp507	MGI:1916378	ZNF507	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp51			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp511	MGI:1917002	ZNF511	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp512	MGI:1917345	ZNF512	C2H2 ZF; BED ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp512b	MGI:2685478	ZNF512B	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp513	MGI:2141255	ZNF513	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp516	MGI:2443957	ZNF516	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp518a	MGI:1919922	ZNF518A	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp518b	MGI:2140750	ZNF518B	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp52			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp521	MGI:95459	ZNF521	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp523	MGI:2687278	ZNF76	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp524	MGI:1916740	ZNF524	C2H2 ZF; AT hook	Known motif	cisbp_3.10;human_census_ortholog
+Zfp526	MGI:2445181	ZNF526	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp53	MGI:99200	ZNF320;ZNF415;ZNF528;ZNF534;ZNF616	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp532	MGI:3036282	ZNF532	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp534			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp536	MGI:1926102	ZNF536	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp541	MGI:3647699	ZNF541	C2H2 ZF; Myb/SANT	Known motif	cisbp_3.10;human_census_ortholog
+Zfp551	MGI:3588205	ZNF551	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp553	MGI:2384725	ZNF48	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp558	MGI:1921681	ZNF557;ZNF558	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp560	MGI:1915280	ZNF121	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp563			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp566	MGI:1919806	ZNF566	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp57	MGI:99204	ZFP57	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp574	MGI:2442951	ZNF574	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp575	MGI:2141921	ZNF575	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp579	MGI:1915740	ZNF579	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp58	MGI:99205	ZNF595;ZNF728	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp580	MGI:1916242	ZNF580	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp582	MGI:3782026	ZNF582	C2H2 ZF	Known motif	human_census_ortholog
+Zfp583	MGI:2682297	ZNF583	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp59	MGI:99206	ZNF780A	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp592	MGI:2443541	ZNF592	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp595	MGI:3040707	ZNF595;ZNF678	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp597	MGI:1918313	ZNF597	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp599			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp60	MGI:99207	ZNF780A	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp600	MGI:3705222	ZNF234;ZNF254;ZNF432;ZNF484;ZNF493;ZNF600;ZNF615;ZNF676	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp605	MGI:2444933	ZNF605	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp606	MGI:1914620	ZNF606	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp607a	MGI:3584526	ZNF780A	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp607b	MGI:2148237	ZNF780A	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp608	MGI:2442338	ZNF608	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp609	MGI:2674092	ZNF609	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp61	MGI:99663	ZNF226	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp612	MGI:2443465	ZNF23	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp617	MGI:2684459	ZNF878	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp618	MGI:1919950	ZNF618	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp619	MGI:1917477	ZNF850	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp62	MGI:99662	ZFP62	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp623	MGI:1926084	ZNF623	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp626	MGI:1918413	ZNF780A;ZNF780B	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp628	MGI:2665174	ZNF628	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp629	MGI:2444524	ZNF629	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp637	MGI:2448537	ZNF32	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp639	MGI:1915028	ZNF639	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp64	MGI:107342	ZFP64	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp641	MGI:2442788	ZNF641	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp644	MGI:1277212	ZNF644	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp646	MGI:3665412	ZNF646	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp647	MGI:3052806	ZNF250	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp648	MGI:2685049	ZNF648	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp652	MGI:2442221	ZNF652	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Zfp653	MGI:2442362	ZNF653	C2H2 ZF; AT hook	Known motif	cisbp_3.10;human_census_ortholog
+Zfp654	MGI:1919270	ZNF654	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp655	MGI:1919861	ZNF655	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp658	MGI:3648947	ZNF485;ZNF525	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp661	MGI:1919430	ZNF2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp663		ZNF663P	C2H2 ZF	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+Zfp664	MGI:2442505	ZNF664	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Zfp667	MGI:2442757	ZNF667	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp668	MGI:2442943	ZNF668	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp672	MGI:2442105	ZNF672	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp677	MGI:3053207	ZNF320;ZNF415;ZNF528;ZNF534;ZNF616	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp68			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp683	MGI:3650254	ZNF683	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp687	MGI:1925516	ZNF687	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp688	MGI:1916484	ZNF688	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp689	MGI:1918381	ZNF689	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp69	MGI:107794	ZFP69	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp691	MGI:3041163	ZNF691	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Zfp692	MGI:2144276	ZNF692	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp696	MGI:2442738	ZNF696	C2H2 ZF	Known motif	human_census_ortholog
+Zfp697	MGI:2139736	ZNF697	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Zfp7	MGI:99208	ZNF7	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp703	MGI:2662729	ZNF703	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp704	MGI:2180715	ZNF704	C-Clamp	Known motif	human_census_ortholog
+Zfp706	MGI:1915286	ZNF706	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp707	MGI:1916270	ZNF707	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp708	MGI:3040674	ZNF93	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp709			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp710	MGI:1921747	ZNF710	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp711	MGI:3045342	ZNF711	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp712	MGI:1925501	ZNF254;ZNF681	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp715			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp719			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp729a	MGI:3036250	ZNF107;ZNF208;ZNF729;ZNF91;ZNF99	C2H2 ZF	Known motif;Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp729b	MGI:2145180	ZNF729	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp738	MGI:3040706	ZNF208;ZNF729;ZNF91;ZNF99	C2H2 ZF	Known motif;Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp74	MGI:107784	ZNF569	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp740	MGI:1915994	ZNF740	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp746	MGI:1916478	ZNF746	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp747	MGI:2443581	ZNF764	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp747l1	MGI:1926171	ZNF764	C2H2 ZF	Known motif	human_census_ortholog
+Zfp748			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp750	MGI:2442210	ZNF750	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp758			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp763			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp764	MGI:2443580	ZNF764	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp764l1	MGI:2141981	ZNF747;ZNF764	C2H2 ZF	Known motif;Likely to be sequence specific TF	human_census_ortholog
+Zfp768	MGI:2384582	ZNF768	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp770	MGI:2445100	ZNF770	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp771	MGI:2442050	ZNF771	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp772	MGI:2385265	ZNF419;ZNF773	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp773	MGI:1923623	ZNF419;ZNF773	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp775	MGI:2683557	ZNF775	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp777	MGI:1919556	ZNF777	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp78	MGI:107783	ZNF471	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp780b	MGI:2444764	ZNF780A;ZNF780B	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp784	MGI:3606042	ZNF784	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp786	MGI:3026883	ZNF786	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp787	MGI:1914359	ZNF787	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp788			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp790	MGI:1923431	ZNF790	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp791	MGI:3648473	ZNF791	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp799	MGI:2443934	ZNF878	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp800	MGI:1889334	ZNF800	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp804b	MGI:2685287	ZNF804B	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp808	MGI:3704127	ZNF267;ZNF836;ZNF841	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp809			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp81			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp810			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp811	MGI:2682944	ZNF878	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp819			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp82	MGI:1890753	ZFP82	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp820			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp821	MGI:1923121	ZNF821	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp825	MGI:2385315	ZNF625	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp827	MGI:2444807	ZNF827	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp830	MGI:1914233	ZNF830	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfp831	MGI:3641861	ZNF831	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp84	MGI:107780	ZNF607	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp846	MGI:1924012	ZNF846	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp85	MGI:107767	ZNF595;ZNF728	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp850	MGI:3036281	ZNF780A	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp853	MGI:2685638	ZNF853	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp865	MGI:2442656	ZNF865	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp866	MGI:3584369	ZNF136;ZNF490	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp867	MGI:2681848	ZNF124;ZNF136;ZNF670	C2H2 ZF	Known motif;Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp868			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp869			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp87	MGI:107768	ZNF429	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp870			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp871			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp872	MGI:3588272	ZNF709	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp873	MGI:3040689	ZNF320;ZNF415;ZNF528;ZNF534;ZNF616	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp874a	MGI:3040703	ZNF595	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp874b			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp879	MGI:3053099	ZNF879	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp882			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp9	MGI:99210	ZNF25	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp90	MGI:104786	ZFP90	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp91	MGI:104854	ZFP91	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp92	MGI:108094	ZFP92	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp93	MGI:107611	ZNF235	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp930	MGI:2675306	ZNF486;ZNF506;ZNF679;ZNF735	C2H2 ZF	Inferred motif;Known motif	cisbp_3.10;human_census_ortholog
+Zfp931	MGI:2441662	ZNF670	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp932			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp933	MGI:1922865	ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp934	MGI:1924367	ZNF320;ZNF415;ZNF528;ZNF534;ZNF616	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp935	MGI:1918758	ZNF501	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp936	MGI:3642994	ZNF117;ZNF490;ZNF595;ZNF708;ZNF716;ZNF718;ZNF726;ZNF728;ZNF732;ZNF90	C2H2 ZF	Inferred motif;Known motif	cisbp_3.10;human_census_ortholog
+Zfp937	MGI:3644476	ZNF880	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp938			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp94	MGI:107610	ZNF45	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp940			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp941	MGI:3039601	ZNF519	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp942			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp943			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp944			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp945			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp946			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp947			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp948	MGI:3040683	ZNF484	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp949			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp950	MGI:2652824	ZNF880	C2H2 ZF	Known motif	human_census_ortholog
+Zfp951	MGI:2441896	ZNF670	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp952			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp954	MGI:1917764	ZNF419;ZNF773	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp955a			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp955b			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp956			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp958	MGI:2385298	ZNF117;ZNF490;ZNF595;ZNF708;ZNF716;ZNF718;ZNF726;ZNF728;ZNF732;ZNF90	C2H2 ZF	Inferred motif;Known motif	cisbp_3.10;human_census_ortholog
+Zfp959			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp960			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp961			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp963			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp964			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp965	MGI:3779822	ZNF501	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp966	MGI:3709288	ZNF136;ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp967	MGI:3709638	ZNF136;ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp97			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp970	MGI:3652255	ZNF880	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp971	MGI:1261426	ZNF136;ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp973	MGI:3615331	ZNF501	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp974	MGI:1920680	ZNF780A;ZNF780B	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp975			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp976	MGI:3036263	ZNF320;ZNF415;ZNF528;ZNF534;ZNF616	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfp977	MGI:3645327	ZNF670	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfp979			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp980			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp981			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp982	MGI:3701121	ZNF486;ZNF506;ZNF679;ZNF735	C2H2 ZF	Inferred motif;Known motif	cisbp_3.10;human_census_ortholog
+Zfp984			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp985			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp987			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp988			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp989			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp990			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp991			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp992			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp994			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp995			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfp998	MGI:1924053	ZNF117;ZNF490;ZNF595;ZNF708;ZNF716;ZNF718;ZNF726;ZNF728;ZNF732;ZNF90	C2H2 ZF	Inferred motif;Known motif	human_census_ortholog
+Zfp999	MGI:3704404	ZNF835	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zfpm1	MGI:1095400	ZFPM1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfpm2	MGI:1334444	ZFPM2	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zfta	MGI:1919667	ZFTA	BED ZF	Known motif	human_census_ortholog
+Zfx	MGI:99211	ZFX	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zfy1			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zfy2			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zglp1	MGI:3696042	ZGLP1	GATA	Known motif	cisbp_3.10;human_census_ortholog
+Zhx1	MGI:109271	ZHX1	Homeodomain	Known motif	cisbp_3.10;human_census_ortholog
+Zhx2	MGI:2683087	ZHX2	Homeodomain	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zhx3	MGI:2444772	ZHX3	Homeodomain	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zic1	MGI:106683	ZIC1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zic2	MGI:106679	ZIC2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zic3	MGI:106676	ZIC3	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zic4	MGI:107201	ZIC4	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zic5	MGI:1929518	ZIC5	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zik1	MGI:108070	ZIK1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zim1			C2H2 ZF		cisbp_3.10_only_mouse_specific
+Zkscan1	MGI:1921820	ZKSCAN1	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zkscan14	MGI:1914485	ZNF394	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zkscan16	MGI:3510405	ZNF483	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zkscan17	MGI:2679270	ZNF496	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zkscan2	MGI:2444060	ZKSCAN2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zkscan3	MGI:1919989	ZKSCAN3;ZKSCAN4	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zkscan4	MGI:3649412	ZKSCAN4	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zkscan5	MGI:107533	ZKSCAN5	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zkscan6	MGI:1289293	ZNF18	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zkscan7	MGI:3040678	ZKSCAN7;ZNF852	C2H2 ZF	Inferred motif;Known motif	cisbp_3.10;human_census_ortholog
+Zkscan8	MGI:1913815	ZKSCAN8	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zmat1	MGI:2442284	ZMAT1	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zscan10	MGI:3040700	ZSCAN10	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
+Zscan12	MGI:1099444	ZSCAN12	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zscan18	MGI:3643810	ZSCAN18	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
+Zscan2	MGI:99176	ZSCAN2	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zscan20	MGI:2679268	ZSCAN20	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zscan21	MGI:99182	ZSCAN21	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zscan22	MGI:2443312	ZSCAN22	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zscan25	MGI:3647079	ZSCAN25	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zscan26	MGI:3531417	ZSCAN26	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zscan29	MGI:2139317	ZSCAN29	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zscan30	MGI:2685600	ZSCAN30	C2H2 ZF	Known motif	human_census_ortholog
+Zscan4-ps1	MGI:3645953	ZSCAN4	C2H2 ZF	Known motif	human_census_ortholog
+Zscan4-ps2	MGI:3708487	ZSCAN4	C2H2 ZF	Known motif	human_census_ortholog
+Zscan4-ps3	MGI:3708489	ZSCAN4	C2H2 ZF	Known motif	human_census_ortholog
+Zscan4b	MGI:3645447	ZSCAN4	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zscan4c	MGI:2685243	ZSCAN4	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zscan4d	MGI:3645954	ZSCAN4	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zscan4e	MGI:3643613	ZSCAN4	C2H2 ZF	Known motif	human_census_ortholog
+Zscan4f	MGI:3708485	ZSCAN4	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zscan5b	MGI:2159640	ZSCAN5A;ZSCAN5B;ZSCAN5C	C2H2 ZF	Known motif;Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
+Zxdb	MGI:3694898	ZXDA;ZXDB	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zxdc	MGI:1933108	ZXDC	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
+Zzz3	MGI:1920453	ZZZ3	Myb/SANT	Known motif	cisbp_3.10;human_census_ortholog
