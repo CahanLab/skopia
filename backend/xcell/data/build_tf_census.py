@@ -17,13 +17,22 @@ in ``DROPPED`` or the build refuses.
 Mouse: ``mouse_tfs.tsv`` was built on 2026-11-03 (see
 ``docs/measurements/2026-11-03-tf-annotation-sources.md``): MGI orthologs
 of the human census (1,339), plus CIS-BP 3.10 mouse TFs with no human
-ortholog (120), plus 17 CIS-BP-only genes whose human ortholog was never
-assessed, kept and tagged for review. 1,476 rows.
+ortholog (120), plus 16 CIS-BP-only genes whose human ortholog was never
+assessed, kept and tagged for review; on 2026-11-04 Bmal1 and Bmal2 were
+added and T re-filed as a census ortholog, since the ortholog step had run
+on the stale symbols ARNTL, ARNTL2 and T. 1,478 rows.
+
+Three human rows resolve to what Ensembl now calls them: CENPBD1 to the
+pseudogene symbol CENPBD1P, ZNF705E to ZNF705EP, AC023509.3 to the
+readthrough ATF7-NPFF. Faithful to Table 14's IDs; match on those symbols.
 
 Each bundle holds one ``All TFs (<species>)`` set and folders that split it:
 by DNA-binding domain (a gene with two domains is in both sets; families
-under ``MIN_FAMILY`` genes are pooled), by motif evidence (human) and by
-provenance (mouse). Sets are sorted alphabetically.
+under ``MIN_FAMILY`` genes are pooled; the table spells a few families two
+ways, folded by ``FAMILY_ALIASES``), by motif evidence (human) and by
+provenance (mouse). Every set name carries the species, since Gene Panel
+sets are global and the *Show only* picker shows names without folders.
+Sets are sorted alphabetically.
 """
 from __future__ import annotations
 
@@ -42,6 +51,9 @@ UNLIKELY = 'Unlikely to be sequence specific TF'
 #: a one-gene set clutters the picker without saying anything.
 MIN_FAMILY = 5
 OTHER_FAMILIES = 'Other DBD families'
+#: Second spellings of a family in the tables ('Prospero; homeodomain',
+#: 'AT-hook', 'MBD; CxxC ZF'), folded into the usual one.
+FAMILY_ALIASES = {'homeodomain': 'Homeodomain', 'AT-hook': 'AT hook', 'CxxC ZF': 'CxxC'}
 
 #: Symbols the build leaves out, with the reason. Anything else that the
 #: bundled Ensembl table does not know is a build failure.
@@ -78,12 +90,12 @@ DESCRIPTION = {
         're-assessed as unlikely to be sequence-specific; 4 more with no Ensembl gene or symbol are left out. '
         'Lambert-era symbols are updated through their Ensembl IDs (ARNTL is BMAL1, T is TBXT). '
         'All TFs is the census; the folders split it by DNA-binding domain (a gene with two domains is in '
-        'both) and by motif evidence (known motif 1,317; inferred 104; likely TF with no motif 135).'
+        'both) and by motif evidence (known motif 1,314; inferred 104; likely TF with no motif 134).'
     ),
     'mouse': (
         'A mouse transcription-factor list built on 2026-11-03, since no curated mouse census exists: '
-        'MGI orthologs of the 1,556-TF human Codebook census (1,339 genes), plus CIS-BP 3.10 mouse TFs with no '
-        'human ortholog (120: Rhox, Obox, Duxbl, mouse Zfp expansions), plus 17 CIS-BP-only genes whose human '
+        'MGI orthologs of the 1,556-TF human Codebook census (1,342 genes), plus CIS-BP 3.10 mouse TFs with no '
+        'human ortholog (120: Rhox, Obox, Duxbl, mouse Zfp expansions), plus 16 CIS-BP-only genes whose human '
         'ortholog was never assessed, kept for review; 3 absent from the shipped GENCODE table are left out. '
         'All TFs is the list; the folders split it by DNA-binding domain (a gene with two domains is in both) '
         'and by provenance. Known gap: the mouse KRAB-Zfp expansion is only partly covered.'
@@ -110,7 +122,7 @@ def read_rows(species: str) -> list[dict[str, str]]:
 def _families(dbd: str) -> list[str]:
     out = []
     for part in dbd.split(';'):
-        fam = part.strip()
+        fam = FAMILY_ALIASES.get(part.strip(), part.strip())
         if fam and fam not in out:
             out.append(fam)
     return out or ['Unknown']
@@ -130,14 +142,15 @@ def _resolve(species: str, rows: list[dict[str, str]], table: dict[str, str]
         sym = r['symbol']
         if sym in dropped:
             continue
-        if sym not in known:
-            gid = r.get('ensembl_id', '')
-            current = table.get(gid)
-            if current and current != gid:
-                sym = current
-            else:
-                problems.append(f'{species}: {sym} ({gid or "no Ensembl ID"}) is not in the Ensembl table')
-                continue
+        gid = r.get('ensembl_id', '')
+        current = table.get(gid)
+        if current and current != gid:
+            # The ID is the identity: HGNC has moved symbols between genes,
+            # so a known symbol on another gene's ID follows the ID too.
+            sym = current
+        elif sym not in known:
+            problems.append(f'{species}: {sym} ({gid or "no Ensembl ID"}) is not in the Ensembl table')
+            continue
         kept.append({**r, 'symbol': sym})
     seen = [g['symbol'] for g in kept]
     for dup in sorted({s for s in seen if seen.count(s) > 1}):
@@ -149,8 +162,8 @@ def problems(species: str, rows: list[dict[str, str]], table: dict[str, str]) ->
     return _resolve(species, rows, table)[1]
 
 
-def _set(name: str, genes: list[str], folder: str | None = None) -> dict:
-    out = {'name': name, 'genes': sorted(set(genes))}
+def _set(name: str, genes: list[str], folder: str | None = None, species: str = '') -> dict:
+    out = {'name': f'{name} ({species})' if species else name, 'genes': sorted(set(genes))}
     if folder:
         out['folder'] = folder
     return out
@@ -160,7 +173,7 @@ def build(species: str, rows: list[dict[str, str]], table: dict[str, str]) -> di
     kept, bad = _resolve(species, rows, table)
     if bad:
         raise ValueError('\n'.join(bad))
-    sets = [_set(f'All TFs ({species})', [g['symbol'] for g in kept])]
+    sets = [_set('All TFs', [g['symbol'] for g in kept], species=species)]
 
     by_family: dict[str, list[str]] = {}
     for g in kept:
@@ -170,24 +183,24 @@ def build(species: str, rows: list[dict[str, str]], table: dict[str, str]) -> di
     other: list[str] = []
     for fam in sorted(by_family, key=lambda f: (-len(by_family[f]), f)):
         if len(by_family[fam]) >= MIN_FAMILY:
-            sets.append(_set('Unknown DBD' if fam == 'Unknown' else fam, by_family[fam], folder))
+            sets.append(_set('Unknown DBD' if fam == 'Unknown' else fam, by_family[fam], folder, species))
         else:
             other += by_family[fam]
     if other:
-        sets.append(_set(OTHER_FAMILIES, other, folder))
+        sets.append(_set(OTHER_FAMILIES, other, folder, species))
 
     if species == 'human':
         folder = 'TFs by motif evidence (human)'
         for value, name in EVIDENCE_SETS.items():
             genes = [g['symbol'] for g in kept if g['evidence'] == value]
             if genes:
-                sets.append(_set(name, genes, folder))
+                sets.append(_set(name, genes, folder, species))
     else:
         folder = 'TFs by provenance (mouse)'
         for name in dict.fromkeys(PROVENANCE_SETS.values()):
             genes = [g['symbol'] for g in kept if PROVENANCE_SETS.get(g['source']) == name]
             if genes:
-                sets.append(_set(name, genes, folder))
+                sets.append(_set(name, genes, folder, species))
 
     return {'name': f'Transcription factors ({species})', 'description': DESCRIPTION[species], 'sets': sets}
 

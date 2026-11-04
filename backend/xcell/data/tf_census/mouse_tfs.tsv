@@ -7,9 +7,6 @@ mouse_symbol	mgi_id	human_orthologs	dbd	human_codebook_status	source
 4930522L14Rik			C2H2 ZF		cisbp_3.10_only_mouse_specific
 5730507C01Rik	MGI:1917882	ZNF670	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
 A430033K04Rik			C2H2 ZF		cisbp_3.10_only_mouse_specific
-AI987944	MGI:2142079	ZNF670	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
-AU041133			C2H2 ZF		cisbp_3.10_only_mouse_specific
-AW146154	MGI:2142212	ZNF136;ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
 Adnp	MGI:1338758	ADNP	Homeodomain	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
 Adnp2	MGI:2448562	ADNP2	Homeodomain	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
 Aebp2	MGI:1338038	AEBP2	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
@@ -17,6 +14,7 @@ Afdn		AFDN	Leafy	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
 Ahctf1	MGI:1915033	AHCTF1	AT hook	Known motif	cisbp_3.10;human_census_ortholog
 Ahr	MGI:105043	AHR	bHLH	Known motif	cisbp_3.10;human_census_ortholog
 Ahrr	MGI:1333776	AHRR	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+AI987944	MGI:2142079	ZNF670	C2H2 ZF	Likely to be sequence specific TF	cisbp_3.10;human_census_ortholog
 Aire	MGI:1338803	AIRE	SAND	Known motif	cisbp_3.10;human_census_ortholog
 Akap8	MGI:1928488	AKAP8	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
 Akap8l	MGI:1860606	AKAP8L	C2H2 ZF	Likely to be sequence specific TF	human_census_ortholog
@@ -50,6 +48,8 @@ Atmin	MGI:2682328	ATMIN	C2H2 ZF	Known motif	human_census_ortholog
 Atoh1	MGI:104654	ATOH1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
 Atoh7	MGI:1355553	ATOH7	bHLH	Known motif	cisbp_3.10;human_census_ortholog
 Atoh8	MGI:1918343	ATOH8	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
+AU041133			C2H2 ZF		cisbp_3.10_only_mouse_specific
+AW146154	MGI:2142212	ZNF136;ZNF333	C2H2 ZF	Known motif	cisbp_3.10;human_census_ortholog
 B020011L13Rik			C2H2 ZF		cisbp_3.10_only_mouse_specific
 Bach1	MGI:894680	BACH1	bZIP	Known motif	cisbp_3.10;human_census_ortholog
 Bach2	MGI:894679	BACH2	bZIP	Known motif	cisbp_3.10;human_census_ortholog
@@ -71,6 +71,8 @@ Bhlhe22	MGI:1930001	BHLHE22	bHLH	Known motif	cisbp_3.10;human_census_ortholog
 Bhlhe23	MGI:2153710	BHLHE23	bHLH	Known motif	cisbp_3.10;human_census_ortholog
 Bhlhe40	MGI:1097714	BHLHE40	bHLH	Known motif	cisbp_3.10;human_census_ortholog
 Bhlhe41	MGI:1930704	BHLHE41	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Bmal1	MGI:1096381	BMAL1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
+Bmal2	MGI:2684845	BMAL2	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
 Bnc1	MGI:1097164	BNC1	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
 Bnc2	MGI:2443805	BNC2	C2H2 ZF	Inferred motif	cisbp_3.10;human_census_ortholog
 Borcs8		BORCS8	MADS box	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
@@ -901,7 +903,7 @@ Stat4	MGI:103062	STAT4	STAT	Known motif	cisbp_3.10;human_census_ortholog
 Stat5a	MGI:103036	STAT5A	STAT	Known motif	cisbp_3.10;human_census_ortholog
 Stat5b	MGI:103035	STAT5B	STAT	Known motif	cisbp_3.10;human_census_ortholog
 Stat6	MGI:103034	STAT6	STAT	Known motif	cisbp_3.10;human_census_ortholog
-T		TBXT	T-box	Lambert:absent	cisbp_3.10_only_human_ortholog_unassessed
+T	MGI:98472	TBXT	T-box	Known motif	cisbp_3.10;human_census_ortholog
 Tal1	MGI:98480	TAL1	bHLH	Known motif	cisbp_3.10;human_census_ortholog
 Tal2	MGI:99540	TAL2	bHLH	Inferred motif	cisbp_3.10;human_census_ortholog
 Tbp	MGI:101838	TBP	TBP	Known motif	cisbp_3.10;human_census_ortholog

@@ -1,6 +1,5 @@
 human_symbol	dbd
 ZBED1	BED ZF
-ARNTL	bHLH
 AC023509.3	bZIP
 AC138696.1	C2H2 ZF
 GLI4	C2H2 ZF
@@ -182,9 +181,7 @@ DUXA	Homeodomain
 RAX2	Homeodomain
 SHOX	Homeodomain
 VENTX	Homeodomain
-T	T-box
 NFE4	Unknown
-ARNTL2	bHLH
 HES4	bHLH
 ZNF705A	C2H2 ZF
 ZNF705B	C2H2 ZF

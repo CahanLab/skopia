@@ -70,10 +70,12 @@ def test_all_set_sizes_follow_the_source_tables():
     # Human: the 1,639 Lambert TFs in Codebook Supplementary Table 14, minus
     # the 83 re-assessed as unlikely to be sequence-specific TFs (1,556),
     # minus 4 with no Ensembl gene or no Ensembl symbol (DUX1, DUX3, two
-    # AC0... clone names). Mouse: the 1,476 rows of mouse_tfs.tsv minus 3
-    # absent from the shipped GENCODE table. Both as of 2026-11-03.
+    # AC0... clone names), as of 2026-11-03.
+    # Mouse: the 1,478 rows of mouse_tfs.tsv (1,476 built 2026-11-03 plus
+    # Bmal1 and Bmal2, whose human symbols the ortholog step had missed as
+    # ARNTL / ARNTL2) minus 3 absent from the shipped GENCODE table.
     assert len(_all(_bundle('human'))['genes']) == 1552
-    assert len(_all(_bundle('mouse'))['genes']) == 1473
+    assert len(_all(_bundle('mouse'))['genes']) == 1475
 
 
 @pytest.mark.parametrize('species', SPECIES)
@@ -95,11 +97,16 @@ def test_every_grouped_set_is_a_subset_of_all_with_no_duplicates_or_empties(spec
 @pytest.mark.parametrize('species', SPECIES)
 def test_the_dbd_folder_splits_shared_domains_and_pools_small_families(species):
     folder = next(f for f in _folders(_bundle(species)) if 'DNA-binding domain' in f)
-    sets = {s['name']: set(s['genes']) for s in _folders(_bundle(species))[folder]}
+    sets = {s['name'].removesuffix(f' ({species})'): set(s['genes']) for s in _folders(_bundle(species))[folder]}
+    assert all(s['name'].endswith(f' ({species})') for s in _folders(_bundle(species))[folder])
     assert len(sets['C2H2 ZF']) > 500 and len(sets['Homeodomain']) > 150
     # 'Homeodomain; POU' puts a gene in both family sets
     pou = 'Pou5f1' if species == 'mouse' else 'POU5F1'
     assert pou in sets['POU'] and pou in sets['Homeodomain']
+    # the table spells some families two ways: 'Prospero; homeodomain', 'AT-hook'
+    prox, tcf20 = ('Prox1', 'Tcf20') if species == 'mouse' else ('PROX1', 'TCF20')
+    assert prox in sets['Homeodomain'] and tcf20 in sets['AT hook']
+    assert not {'homeodomain', 'AT-hook', 'CxxC ZF'} & set(sets)
     other = btc.OTHER_FAMILIES
     assert other in sets
     for name, genes in sets.items():
@@ -110,9 +117,12 @@ def test_the_dbd_folder_splits_shared_domains_and_pools_small_families(species):
 def test_the_human_evidence_folder_partitions_all_tfs():
     bundle = _bundle('human')
     folder = next(f for f in _folders(bundle) if 'motif evidence' in f)
-    sets = [set(s['genes']) for s in _folders(bundle)[folder]]
-    assert sum(len(s) for s in sets) == len(_all(bundle)['genes'])
-    assert set().union(*sets) == set(_all(bundle)['genes'])
+    sets = {s['name']: set(s['genes']) for s in _folders(bundle)[folder]}
+    assert sum(len(s) for s in sets.values()) == len(_all(bundle)['genes'])
+    assert set().union(*sets.values()) == set(_all(bundle)['genes'])
+    # Table 14 says 1,317 / 104 / 135; the 4 dropped rows were 3 known + 1 likely
+    assert {k: len(v) for k, v in sets.items()} == {
+        'Known motif (human)': 1314, 'Inferred motif (human)': 104, 'Likely TF, no motif (human)': 134}
 
 
 def test_the_mouse_provenance_folder_partitions_all_tfs():
@@ -120,9 +130,11 @@ def test_the_mouse_provenance_folder_partitions_all_tfs():
     folder = next(f for f in _folders(bundle) if 'provenance' in f)
     sets = {s['name']: set(s['genes']) for s in _folders(bundle)[folder]}
     assert sum(len(s) for s in sets.values()) == len(_all(bundle)['genes'])
-    assert 'T' in sets['Ortholog unassessed (review)']   # brachyury: the shipped GENCODE table and CIS-BP both say T, not Tbxt
-    assert 'Obox1' in sets['Mouse-specific (CIS-BP)']
-    assert 'Sox2' in sets['Human census ortholog']
+    # brachyury: the shipped GENCODE table and CIS-BP both say T, not Tbxt;
+    # its human ortholog TBXT is in the census
+    assert {'T', 'Bmal1', 'Bmal2', 'Sox2'} <= sets['Human census ortholog (mouse)']
+    assert 'Obox1' in sets['Mouse-specific (CIS-BP) (mouse)']
+    assert len(sets['Ortholog unassessed (review) (mouse)']) == 16
 
 
 def test_stale_human_symbols_are_resolved_through_their_ensembl_ids():
@@ -154,6 +166,13 @@ def test_the_build_names_a_symbol_the_table_does_not_know():
     assert btc.problems('human', rows, table) == ['human: NOTAGENE (ENSG00000000002) is not in the Ensembl table']
     with pytest.raises(ValueError, match='NOTAGENE'):
         btc.build('human', rows, table)
+
+
+def test_a_known_symbol_whose_ensembl_id_now_names_another_gene_follows_the_id():
+    # HGNC has reassigned symbols between genes; the ID is the identity
+    table = {'ENSG00000000001': 'NEWNAME', 'ENSG00000000002': 'OLDNAME'}
+    rows = [{'symbol': 'OLDNAME', 'ensembl_id': 'ENSG00000000001', 'dbd': 'bHLH', 'evidence': 'Known motif'}]
+    assert _all(btc.build('human', rows, table))['genes'] == ['NEWNAME']
 
 
 def test_the_build_leaves_out_a_row_codebook_re_assessed_as_unlikely():

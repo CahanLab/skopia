@@ -1,6 +1,6 @@
 {
   "name": "Transcription factors (mouse)",
-  "description": "A mouse transcription-factor list built on 2026-11-03, since no curated mouse census exists: MGI orthologs of the 1,556-TF human Codebook census (1,339 genes), plus CIS-BP 3.10 mouse TFs with no human ortholog (120: Rhox, Obox, Duxbl, mouse Zfp expansions), plus 17 CIS-BP-only genes whose human ortholog was never assessed, kept for review; 3 absent from the shipped GENCODE table are left out. All TFs is the list; the folders split it by DNA-binding domain (a gene with two domains is in both) and by provenance. Known gap: the mouse KRAB-Zfp expansion is only partly covered.",
+  "description": "A mouse transcription-factor list built on 2026-11-03, since no curated mouse census exists: MGI orthologs of the 1,556-TF human Codebook census (1,342 genes), plus CIS-BP 3.10 mouse TFs with no human ortholog (120: Rhox, Obox, Duxbl, mouse Zfp expansions), plus 16 CIS-BP-only genes whose human ortholog was never assessed, kept for review; 3 absent from the shipped GENCODE table are left out. All TFs is the list; the folders split it by DNA-binding domain (a gene with two domains is in both) and by provenance. Known gap: the mouse KRAB-Zfp expansion is only partly covered.",
   "sets": [
     {
       "name": "All TFs (mouse)",
@@ -77,6 +77,8 @@
         "Bhlhe23",
         "Bhlhe40",
         "Bhlhe41",
+        "Bmal1",
+        "Bmal2",
         "Bnc1",
         "Bnc2",
         "Borcs8",
@@ -1481,7 +1483,7 @@
       ]
     },
     {
-      "name": "C2H2 ZF",
+      "name": "C2H2 ZF (mouse)",
       "genes": [
         "1700034E13Rik",
         "2010315B03Rik",
@@ -2120,7 +2122,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "Homeodomain",
+      "name": "Homeodomain (mouse)",
       "genes": [
         "Adnp",
         "Adnp2",
@@ -2309,6 +2311,8 @@
         "Pou6f1",
         "Pou6f2",
         "Prop1",
+        "Prox1",
+        "Prox2",
         "Prrx1",
         "Prrx2",
         "Rax",
@@ -2378,7 +2382,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "bHLH",
+      "name": "bHLH (mouse)",
       "genes": [
         "Ahr",
         "Ahrr",
@@ -2398,6 +2402,8 @@
         "Bhlhe23",
         "Bhlhe40",
         "Bhlhe41",
+        "Bmal1",
+        "Bmal2",
         "Clock",
         "Epas1",
         "Ferd3l",
@@ -2487,7 +2493,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "bZIP",
+      "name": "bZIP (mouse)",
       "genes": [
         "Atf1",
         "Atf2",
@@ -2550,7 +2556,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "Nuclear receptor",
+      "name": "Nuclear receptor (mouse)",
       "genes": [
         "Ar",
         "Esr1",
@@ -2603,7 +2609,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "Forkhead",
+      "name": "Forkhead (mouse)",
       "genes": [
         "Foxa1",
         "Foxa2",
@@ -2653,7 +2659,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "HMG/Sox",
+      "name": "HMG/Sox (mouse)",
       "genes": [
         "Bbx",
         "Cic",
@@ -2688,7 +2694,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "Unknown DBD",
+      "name": "Unknown DBD (mouse)",
       "genes": [
         "Bptf",
         "Brf2",
@@ -2722,7 +2728,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "Ets",
+      "name": "Ets (mouse)",
       "genes": [
         "Ehf",
         "Elf1",
@@ -2755,7 +2761,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "Myb/SANT",
+      "name": "Myb/SANT (mouse)",
       "genes": [
         "Cdc5l",
         "Cdc5lrt1",
@@ -2786,7 +2792,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "AT hook",
+      "name": "AT hook (mouse)",
       "genes": [
         "Ahctf1",
         "Ash1l",
@@ -2803,6 +2809,7 @@
         "Phf21a",
         "Setbp1",
         "Srcap",
+        "Tcf20",
         "Zbtb24",
         "Zfp524",
         "Zfp653"
@@ -2810,7 +2817,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "T-box",
+      "name": "T-box (mouse)",
       "genes": [
         "Eomes",
         "Mga",
@@ -2833,7 +2840,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "POU",
+      "name": "POU (mouse)",
       "genes": [
         "Pou1f1",
         "Pou2f1",
@@ -2853,7 +2860,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "CxxC",
+      "name": "CxxC (mouse)",
       "genes": [
         "Cxxc1",
         "Cxxc4",
@@ -2864,13 +2871,14 @@
         "Kdm2b",
         "Kmt2a",
         "Kmt2b",
+        "Mbd1",
         "Tet1",
         "Tet3"
       ],
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "E2F",
+      "name": "E2F (mouse)",
       "genes": [
         "E2f1",
         "E2f2",
@@ -2886,7 +2894,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "GATA",
+      "name": "GATA (mouse)",
       "genes": [
         "Gata1",
         "Gata2",
@@ -2902,7 +2910,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "Rel",
+      "name": "Rel (mouse)",
       "genes": [
         "Nfat5",
         "Nfatc1",
@@ -2918,7 +2926,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "IRF",
+      "name": "IRF (mouse)",
       "genes": [
         "Irf1",
         "Irf2",
@@ -2933,7 +2941,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "Paired box",
+      "name": "Paired box (mouse)",
       "genes": [
         "Pax1",
         "Pax2",
@@ -2948,7 +2956,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "SAND",
+      "name": "SAND (mouse)",
       "genes": [
         "Aire",
         "Csprs",
@@ -2963,7 +2971,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "SMAD",
+      "name": "SMAD (mouse)",
       "genes": [
         "Nfia",
         "Nfib",
@@ -2978,7 +2986,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "MBD",
+      "name": "MBD (mouse)",
       "genes": [
         "Mbd1",
         "Mbd2",
@@ -2992,7 +3000,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "CENPB",
+      "name": "CENPB (mouse)",
       "genes": [
         "Cenpb",
         "Jrk",
@@ -3005,7 +3013,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "CUT",
+      "name": "CUT (mouse)",
       "genes": [
         "Cux1",
         "Cux2",
@@ -3018,7 +3026,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "DM",
+      "name": "DM (mouse)",
       "genes": [
         "Dmrt1",
         "Dmrt2",
@@ -3031,7 +3039,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "RFX",
+      "name": "RFX (mouse)",
       "genes": [
         "Rfx1",
         "Rfx2",
@@ -3044,7 +3052,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "STAT",
+      "name": "STAT (mouse)",
       "genes": [
         "Stat1",
         "Stat2",
@@ -3057,7 +3065,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "ARID/BRIGHT",
+      "name": "ARID/BRIGHT (mouse)",
       "genes": [
         "Arid3a",
         "Arid3b",
@@ -3069,7 +3077,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "BED ZF",
+      "name": "BED ZF (mouse)",
       "genes": [
         "Zbed3",
         "Zbed4",
@@ -3081,7 +3089,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "Grainyhead",
+      "name": "Grainyhead (mouse)",
       "genes": [
         "Grhl1",
         "Grhl2",
@@ -3093,7 +3101,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "HSF",
+      "name": "HSF (mouse)",
       "genes": [
         "Hsf1",
         "Hsf2",
@@ -3105,7 +3113,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "MADS box",
+      "name": "MADS box (mouse)",
       "genes": [
         "Borcs8",
         "Mef2a",
@@ -3117,7 +3125,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "mTERF",
+      "name": "mTERF (mouse)",
       "genes": [
         "Mterf1a",
         "Mterf1b",
@@ -3129,7 +3137,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "AP-2",
+      "name": "AP-2 (mouse)",
       "genes": [
         "Tfap2a",
         "Tfap2b",
@@ -3140,7 +3148,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "CSD",
+      "name": "CSD (mouse)",
       "genes": [
         "Lin28a",
         "Lin28b",
@@ -3151,7 +3159,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "Other DBD families",
+      "name": "Other DBD families (mouse)",
       "genes": [
         "2310033P09Rik",
         "Afdn",
@@ -3174,7 +3182,6 @@
         "Lcorl",
         "Lin54",
         "Lrrc59",
-        "Mbd1",
         "Mbnl2",
         "Msantd1",
         "Msantd3",
@@ -3198,7 +3205,6 @@
         "Tbp",
         "Tbpl1",
         "Tbpl2",
-        "Tcf20",
         "Tead1",
         "Tead2",
         "Tead3",
@@ -3214,7 +3220,7 @@
       "folder": "TFs by DNA-binding domain (mouse)"
     },
     {
-      "name": "Human census ortholog",
+      "name": "Human census ortholog (mouse)",
       "genes": [
         "2010315B03Rik",
         "5730507C01Rik",
@@ -3279,6 +3285,8 @@
         "Bhlhe23",
         "Bhlhe40",
         "Bhlhe41",
+        "Bmal1",
+        "Bmal2",
         "Bnc1",
         "Bnc2",
         "Bptf",
@@ -4060,6 +4068,7 @@
         "Stat5a",
         "Stat5b",
         "Stat6",
+        "T",
         "Tal1",
         "Tal2",
         "Tbp",
@@ -4556,7 +4565,7 @@
       "folder": "TFs by provenance (mouse)"
     },
     {
-      "name": "Mouse-specific (CIS-BP)",
+      "name": "Mouse-specific (CIS-BP) (mouse)",
       "genes": [
         "2610008E11Rik",
         "2610021A01Rik",
@@ -4682,7 +4691,7 @@
       "folder": "TFs by provenance (mouse)"
     },
     {
-      "name": "Ortholog unassessed (review)",
+      "name": "Ortholog unassessed (review) (mouse)",
       "genes": [
         "1700034E13Rik",
         "2310033P09Rik",
@@ -4698,7 +4707,6 @@
         "Nr1h5",
         "Rpgrip1l",
         "Snx29",
-        "T",
         "Zfp352",
         "Zfp663"
       ],

@@ -1,6 +1,6 @@
 {
   "name": "Transcription factors (human)",
-  "description": "The 1,556 human transcription factors of the Codebook update (Jolma et al. 2026, Nature, Supplementary Table 14) to the Lambert 2018 census: the 1,639 Lambert TFs minus the 83 Codebook re-assessed as unlikely to be sequence-specific; 4 more with no Ensembl gene or symbol are left out. Lambert-era symbols are updated through their Ensembl IDs (ARNTL is BMAL1, T is TBXT). All TFs is the census; the folders split it by DNA-binding domain (a gene with two domains is in both) and by motif evidence (known motif 1,317; inferred 104; likely TF with no motif 135).",
+  "description": "The 1,556 human transcription factors of the Codebook update (Jolma et al. 2026, Nature, Supplementary Table 14) to the Lambert 2018 census: the 1,639 Lambert TFs minus the 83 Codebook re-assessed as unlikely to be sequence-specific; 4 more with no Ensembl gene or symbol are left out. Lambert-era symbols are updated through their Ensembl IDs (ARNTL is BMAL1, T is TBXT). All TFs is the census; the folders split it by DNA-binding domain (a gene with two domains is in both) and by motif evidence (known motif 1,314; inferred 104; likely TF with no motif 134).",
   "sets": [
     {
       "name": "All TFs (human)",
@@ -1560,7 +1560,7 @@
       ]
     },
     {
-      "name": "C2H2 ZF",
+      "name": "C2H2 ZF (human)",
       "genes": [
         "AEBP2",
         "AKAP8",
@@ -2301,7 +2301,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "Homeodomain",
+      "name": "Homeodomain (human)",
       "genes": [
         "ADNP",
         "ADNP2",
@@ -2488,6 +2488,8 @@
         "POU6F1",
         "POU6F2",
         "PROP1",
+        "PROX1",
+        "PROX2",
         "PRRX1",
         "PRRX2",
         "RAX",
@@ -2532,7 +2534,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "bHLH",
+      "name": "bHLH (human)",
       "genes": [
         "AHR",
         "AHRR",
@@ -2644,7 +2646,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "bZIP",
+      "name": "bZIP (human)",
       "genes": [
         "ATF1",
         "ATF2",
@@ -2704,7 +2706,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "Forkhead",
+      "name": "Forkhead (human)",
       "genes": [
         "FOXA1",
         "FOXA2",
@@ -2759,7 +2761,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "Nuclear receptor",
+      "name": "Nuclear receptor (human)",
       "genes": [
         "AR",
         "ESR1",
@@ -2811,7 +2813,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "HMG/Sox",
+      "name": "HMG/Sox (human)",
       "genes": [
         "BBX",
         "CIC",
@@ -2846,7 +2848,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "Unknown DBD",
+      "name": "Unknown DBD (human)",
       "genes": [
         "BPTF",
         "BRF2",
@@ -2881,7 +2883,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "Ets",
+      "name": "Ets (human)",
       "genes": [
         "EHF",
         "ELF1",
@@ -2915,7 +2917,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "AT hook",
+      "name": "AT hook (human)",
       "genes": [
         "AHCTF1",
         "ASH1L",
@@ -2931,6 +2933,7 @@
         "PHF21A",
         "SETBP1",
         "SRCAP",
+        "TCF20",
         "ZBTB24",
         "ZNF524",
         "ZNF653"
@@ -2938,7 +2941,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "T-box",
+      "name": "T-box (human)",
       "genes": [
         "EOMES",
         "MGA",
@@ -2961,7 +2964,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "Myb/SANT",
+      "name": "Myb/SANT (human)",
       "genes": [
         "CDC5L",
         "DMTF1",
@@ -2983,7 +2986,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "POU",
+      "name": "POU (human)",
       "genes": [
         "POU1F1",
         "POU2F1",
@@ -3004,7 +3007,25 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "BED ZF",
+      "name": "CxxC (human)",
+      "genes": [
+        "CXXC1",
+        "CXXC4",
+        "CXXC5",
+        "DNMT1",
+        "FBXL19",
+        "KDM2A",
+        "KDM2B",
+        "KMT2A",
+        "KMT2B",
+        "MBD1",
+        "TET1",
+        "TET3"
+      ],
+      "folder": "TFs by DNA-binding domain (human)"
+    },
+    {
+      "name": "BED ZF (human)",
       "genes": [
         "FAM200B",
         "SCAND3",
@@ -3021,7 +3042,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "CENPB",
+      "name": "CENPB (human)",
       "genes": [
         "CENPB",
         "CENPBD1P",
@@ -3038,24 +3059,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "CxxC",
-      "genes": [
-        "CXXC1",
-        "CXXC4",
-        "CXXC5",
-        "DNMT1",
-        "FBXL19",
-        "KDM2A",
-        "KDM2B",
-        "KMT2A",
-        "KMT2B",
-        "TET1",
-        "TET3"
-      ],
-      "folder": "TFs by DNA-binding domain (human)"
-    },
-    {
-      "name": "E2F",
+      "name": "E2F (human)",
       "genes": [
         "E2F1",
         "E2F2",
@@ -3072,7 +3076,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "GATA",
+      "name": "GATA (human)",
       "genes": [
         "GATA1",
         "GATA2",
@@ -3088,7 +3092,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "Rel",
+      "name": "Rel (human)",
       "genes": [
         "NFAT5",
         "NFATC1",
@@ -3104,7 +3108,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "IRF",
+      "name": "IRF (human)",
       "genes": [
         "IRF1",
         "IRF2",
@@ -3119,7 +3123,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "Paired box",
+      "name": "Paired box (human)",
       "genes": [
         "PAX1",
         "PAX2",
@@ -3134,7 +3138,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "SAND",
+      "name": "SAND (human)",
       "genes": [
         "AIRE",
         "DEAF1",
@@ -3149,7 +3153,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "SMAD",
+      "name": "SMAD (human)",
       "genes": [
         "NFIA",
         "NFIB",
@@ -3164,7 +3168,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "HSF",
+      "name": "HSF (human)",
       "genes": [
         "HSF1",
         "HSF2",
@@ -3178,7 +3182,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "MBD",
+      "name": "MBD (human)",
       "genes": [
         "MBD1",
         "MBD2",
@@ -3192,7 +3196,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "CUT",
+      "name": "CUT (human)",
       "genes": [
         "CUX1",
         "CUX2",
@@ -3205,7 +3209,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "DM",
+      "name": "DM (human)",
       "genes": [
         "DMRT1",
         "DMRT2",
@@ -3218,7 +3222,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "RFX",
+      "name": "RFX (human)",
       "genes": [
         "RFX1",
         "RFX2",
@@ -3231,7 +3235,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "STAT",
+      "name": "STAT (human)",
       "genes": [
         "STAT1",
         "STAT2",
@@ -3244,7 +3248,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "ARID/BRIGHT",
+      "name": "ARID/BRIGHT (human)",
       "genes": [
         "ARID3A",
         "ARID3B",
@@ -3256,7 +3260,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "Grainyhead",
+      "name": "Grainyhead (human)",
       "genes": [
         "GRHL1",
         "GRHL2",
@@ -3268,7 +3272,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "MADS box",
+      "name": "MADS box (human)",
       "genes": [
         "BORCS8-MEF2B",
         "MEF2A",
@@ -3280,7 +3284,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "AP-2",
+      "name": "AP-2 (human)",
       "genes": [
         "TFAP2A",
         "TFAP2B",
@@ -3291,7 +3295,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "CSD",
+      "name": "CSD (human)",
       "genes": [
         "LIN28A",
         "LIN28B",
@@ -3302,7 +3306,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "Other DBD families",
+      "name": "Other DBD families (human)",
       "genes": [
         "CAMTA1",
         "CAMTA2",
@@ -3323,7 +3327,6 @@
         "LCOR",
         "LCORL",
         "LIN54",
-        "MBD1",
         "MBNL2",
         "MSANTD1",
         "MSANTD3",
@@ -3351,7 +3354,6 @@
         "TBP",
         "TBPL1",
         "TBPL2",
-        "TCF20",
         "TEAD1",
         "TEAD2",
         "TEAD3",
@@ -3367,7 +3369,7 @@
       "folder": "TFs by DNA-binding domain (human)"
     },
     {
-      "name": "Known motif",
+      "name": "Known motif (human)",
       "genes": [
         "AHCTF1",
         "AHR",
@@ -4687,7 +4689,7 @@
       "folder": "TFs by motif evidence (human)"
     },
     {
-      "name": "Inferred motif",
+      "name": "Inferred motif (human)",
       "genes": [
         "AHRR",
         "ARID3B",
@@ -4797,7 +4799,7 @@
       "folder": "TFs by motif evidence (human)"
     },
     {
-      "name": "Likely TF, no motif",
+      "name": "Likely TF, no motif (human)",
       "genes": [
         "ADNP",
         "ADNP2",
