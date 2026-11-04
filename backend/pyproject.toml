@@ -39,5 +39,5 @@ include = ["xcell*"]
 # used everywhere in development hides both.
 xcell = [
     "data/*.h5ad", "data/*.tsv.gz", "data/*.csv",
-    "data/gene_sets/*.json", "config.yaml",
+    "data/gene_sets/*.json", "data/tf_census/*.tsv", "config.yaml",
 ]
