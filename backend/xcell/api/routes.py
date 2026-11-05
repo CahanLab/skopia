@@ -335,6 +335,9 @@ class CombineSpatialRequest(BaseModel):
     #: suggestion /combine/columns reports.
     obs_policy: dict[str, str] | None = None
     var_policy: dict[str, str] | None = None
+    #: ``{source: target}``: pool a column into another's output under the
+    #: target's name (the same labels under two names).
+    obs_merge_into: dict[str, str] | None = None
 
 
 class CombineColumnsRequest(BaseModel):
@@ -439,6 +442,7 @@ def combine(request: CombineSpatialRequest):
         combined = combine_datasets(
             paths, labels, gap_fraction=request.gap_fraction,
             obs_policy=request.obs_policy, var_policy=request.var_policy,
+            obs_merge_into=request.obs_merge_into,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -439,3 +439,119 @@ def test_a_category_pooled_with_free_text_keeps_every_value(tmp_path):
     out = combine_datasets([pa, pb], ['A', 'B'], obs_policy={'cell_type': 'merge'})
     assert out.obs['cell_type'].notna().all()
     assert set(out.obs['cell_type'].cat.categories) == {'T cell', 'B cell', 'Mono'}
+
+
+# ---------------------------------------------------------------------------
+# obs_merge_into: the same labels under different names
+# ---------------------------------------------------------------------------
+def _renamed(tmp_path, kind_a='category', kind_b='category'):
+    """`celltype` in A and `cell_type` in B, one scheme under two names."""
+    a, b = _base(30, 1), _base(40, 2)
+    va = np.resize(['T cell', 'B cell', 'NK'], 30)
+    vb = np.resize(['T cell', 'B cell', 'Mono'], 40)
+    a.obs['celltype'] = pd.Categorical(va) if kind_a == 'category' else va
+    b.obs['cell_type'] = pd.Categorical(vb) if kind_b == 'category' else vb
+    a.obs['leiden'] = pd.Categorical(np.resize(['0', '1'], 30))
+    return _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+
+
+def test_merge_into_pools_two_names_into_the_target(tmp_path):
+    pa, pb = _renamed(tmp_path)
+    out = combine_datasets([pa, pb], ['A', 'B'], obs_merge_into={'celltype': 'cell_type'})
+    assert 'cell_type' in out.obs.columns
+    assert 'celltype' not in out.obs.columns
+    assert out.obs['cell_type'].notna().all()
+    assert list(out.obs['cell_type'].cat.categories) == ['B cell', 'NK', 'T cell', 'Mono']
+    assert out.obs.loc[out.obs['sample'] == 'A', 'cell_type'].iloc[0] == 'T cell'
+    rec = out.uns['xcell_combine']
+    assert rec['obs_merge_into'] == {'celltype': 'cell_type'}
+    assert rec['obs_policy']['celltype'] == 'merge'
+    assert rec['obs_policy']['cell_type'] == 'merge'
+
+
+def test_merge_into_overrides_a_drop_on_the_source(tmp_path):
+    """Saying a column is the same as another is the stronger statement."""
+    pa, pb = _renamed(tmp_path)
+    out = combine_datasets(
+        [pa, pb], ['A', 'B'],
+        obs_policy={'celltype': 'drop', 'cell_type': 'separate'},
+        obs_merge_into={'celltype': 'cell_type'},
+    )
+    assert out.obs['cell_type'].notna().all()
+    assert 'cell_type__B' not in out.obs.columns
+
+
+def test_merge_into_refuses_unknown_self_chain_and_shared_holders(tmp_path):
+    pa, pb = _renamed(tmp_path)
+    with pytest.raises(ValueError, match="No input dataset has .* 'nope'"):
+        combine_datasets([pa, pb], ['A', 'B'], obs_merge_into={'nope': 'cell_type'})
+    with pytest.raises(ValueError, match="No input dataset has .* 'nope'"):
+        combine_datasets([pa, pb], ['A', 'B'], obs_merge_into={'celltype': 'nope'})
+    with pytest.raises(ValueError, match='into itself'):
+        combine_datasets([pa, pb], ['A', 'B'], obs_merge_into={'celltype': 'celltype'})
+    with pytest.raises(ValueError, match='itself merged into'):
+        combine_datasets([pa, pb], ['A', 'B'],
+                         obs_merge_into={'leiden': 'celltype', 'celltype': 'cell_type'})
+    # `leiden` and `celltype` are both in A: a cell would have two values.
+    with pytest.raises(ValueError, match="'A' holds both"):
+        combine_datasets([pa, pb], ['A', 'B'], obs_merge_into={'leiden': 'celltype'})
+    with pytest.raises(ValueError, match='sample'):
+        combine_datasets([pa, pb], ['A', 'B'], obs_merge_into={'celltype': 'sample'})
+
+
+def test_merge_into_refuses_a_class_mismatch(tmp_path):
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['score'] = np.random.default_rng(1).random(30)
+    b.obs['cell_type'] = pd.Categorical(np.resize(['T cell', 'B cell'], 40))
+    pa, pb = _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+    with pytest.raises(ValueError, match='numeric.*label|label.*numeric'):
+        combine_datasets([pa, pb], ['A', 'B'], obs_merge_into={'score': 'cell_type'})
+
+
+def test_describe_names_a_same_as_candidate(tmp_path):
+    pa, pb = _renamed(tmp_path)
+    obs = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])
+    col = obs['celltype']
+    # Only A has it, so on its own it keeps its default; the hint is added.
+    assert col['suggested'] == 'merge'
+    assert col['same_as'][0] == {'name': 'cell_type', 'shared': 2, 'union': 4}
+    assert 'looks like `cell_type`' in col['reason']
+    assert '2 of 4 labels shared' in col['reason']
+    # Symmetric: the other side names this one.
+    assert obs['cell_type']['same_as'][0]['name'] == 'celltype'
+    # `leiden` is a vocabulary of ids and shares nothing with the names.
+    assert all(e['name'] != 'leiden' for e in col['same_as'])
+    assert obs['leiden']['same_as'] == []
+    assert obs['leiden']['reason'].startswith('only A has it')
+
+
+def test_same_as_skips_numeric_vocabularies_and_same_dataset_columns(tmp_path):
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['clusters_a'] = pd.Categorical(np.resize(['0', '1'], 30))
+    a.obs['annot'] = pd.Categorical(np.resize(['x', 'y'], 30))
+    b.obs['clusters_b'] = pd.Categorical(np.resize(['0', '1'], 40))
+    pa, pb = _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+    obs = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])
+    assert obs['clusters_a']['same_as'] == []
+    assert obs['annot']['same_as'] == []
+    assert 'looks like' not in obs['clusters_a']['reason']
+
+
+def test_combine_route_accepts_obs_merge_into(tmp_path):
+    pa, pb = _renamed(tmp_path)
+    r = _client().post('/api/combine', json={
+        'files': [{'file_path': str(pa), 'label': 'A'}, {'file_path': str(pb), 'label': 'B'}],
+        'slot': 'merge_into_test',
+        'obs_merge_into': {'celltype': 'cell_type'},
+    })
+    assert r.status_code == 200, r.text
+    from xcell.api.routes import get_adaptor
+    ad = get_adaptor('merge_into_test').adata
+    assert ad.obs['cell_type'].notna().all()
+    r = _client().post('/api/combine', json={
+        'files': [{'file_path': str(pa), 'label': 'A'}, {'file_path': str(pb), 'label': 'B'}],
+        'slot': 'merge_into_test',
+        'obs_merge_into': {'leiden': 'celltype', 'celltype': 'cell_type'},
+    })
+    assert r.status_code == 400
+    assert 'itself merged into' in r.json()['detail']

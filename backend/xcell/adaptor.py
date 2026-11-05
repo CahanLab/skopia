@@ -328,11 +328,18 @@ def describe_combine_columns(
         suggested, reason = _suggest_obs_policy(
             holders, facts['kind'], facts['n_unique'], facts['overlap'], facts['mixed'])
         overlap = facts['overlap']
+        same_as = _same_as_candidates(obs_frames, labels, name)
+        if same_as and len(holders) < 2:
+            best = same_as[0]
+            where = [lbl for lbl, f in zip(labels, obs_frames) if best['name'] in f.columns]
+            reason += (f"; looks like `{best['name']}` in {', '.join(where)}: "
+                       f"{best['shared']} of {best['union']} labels shared")
         obs_out.append({
             'name': name, 'datasets': holders, 'kind': facts['kind'],
             'n_unique': facts['n_unique'], 'suggested': suggested, 'reason': reason,
             'labels': ({'shared': overlap['shared'], 'union': overlap['union']}
                        if overlap is not None else None),
+            'same_as': same_as,
         })
 
     var_out: list[dict[str, Any]] = []
@@ -351,6 +358,84 @@ def describe_combine_columns(
         })
 
     return {'obs': obs_out, 'var': var_out}
+
+
+def _same_as_candidates(frames, labels, name) -> list[dict[str, Any]]:
+    """Other label columns this one could be pooled with under `obs_merge_into`:
+    held by datasets that do not hold `name`, named labels (not ids), and
+    sharing at least `_SHARED_LABEL_MIN_JACCARD` of the union. Best first."""
+    held = [f[name] for f in frames if name in f.columns]
+    if not held or any(_column_kind(col) not in _LABEL_KINDS for col in held):
+        return []
+    mine = _label_vocabulary(pd.concat([col.astype(object) for col in held]))
+    holders = {lbl for lbl, f in zip(labels, frames) if name in f.columns}
+    out: list[dict[str, Any]] = []
+    for other in sorted({c for f in frames for c in f.columns}):
+        if other == name or other == 'sample':
+            continue
+        other_holders = {lbl for lbl, f in zip(labels, frames) if other in f.columns}
+        if other_holders & holders:
+            continue
+        cols = [f[other] for f in frames if other in f.columns]
+        if any(_column_kind(col) not in _LABEL_KINDS for col in cols):
+            continue
+        theirs = _label_vocabulary(pd.concat([col.astype(object) for col in cols]))
+        overlap = _label_overlap([mine, theirs])
+        if overlap['numeric'] or not overlap['union']:
+            continue
+        if overlap['shared'] / overlap['union'] < _SHARED_LABEL_MIN_JACCARD:
+            continue
+        out.append({'name': other, 'shared': overlap['shared'], 'union': overlap['union']})
+    out.sort(key=lambda e: (-e['shared'] / e['union'], e['name']))
+    return out
+
+
+def _resolve_merge_into(frames, labels, merge_into, resolved) -> dict[str, str]:
+    """Validate `obs_merge_into` and force both ends to `merge` in `resolved`.
+
+    A source is pooled into its target's output column, so no dataset may
+    hold both (or two sources of one target): a cell would have two values.
+    Chains are refused rather than followed, so the mapping in the record is
+    the mapping that was applied.
+    """
+    merge_into = {str(k): str(v) for k, v in (merge_into or {}).items()}
+    known = {c for f in frames for c in f.columns}
+    for source, target in merge_into.items():
+        for col in (source, target):
+            if col not in known:
+                raise ValueError(
+                    f"No input dataset has a .obs column named '{col}'; "
+                    f"available: {sorted(known)}")
+            if col == 'sample':
+                raise ValueError("'sample' is written by the combine itself and cannot be merged.")
+        if source == target:
+            raise ValueError(f"'{source}' cannot be merged into itself.")
+        if target in merge_into:
+            raise ValueError(
+                f"'{target}' is itself merged into '{merge_into[target]}'; "
+                f"merge '{source}' into '{merge_into[target]}' instead.")
+        src_class = {_kind_class(_column_kind(f[source])) for f in frames if source in f.columns}
+        tgt_class = {_kind_class(_column_kind(f[target])) for f in frames if target in f.columns}
+        if src_class != tgt_class or len(src_class) != 1:
+            raise ValueError(
+                f"'{source}' ({', '.join(sorted(src_class))}) and '{target}' "
+                f"({', '.join(sorted(tgt_class))}) are different kinds of column; "
+                "only label with label or numeric with numeric can be pooled.")
+    by_target: dict[str, list[str]] = {}
+    for source, target in merge_into.items():
+        by_target.setdefault(target, []).append(source)
+    for target, sources in by_target.items():
+        group = [target] + sources
+        for lbl, f in zip(labels, frames):
+            present = [c for c in group if c in f.columns]
+            if len(present) > 1:
+                raise ValueError(
+                    f"Dataset '{lbl}' holds both '{present[0]}' and '{present[1]}', "
+                    "so its cells would have two values for the merged column.")
+    for source, target in merge_into.items():
+        resolved[source] = 'merge'
+        resolved[target] = 'merge'
+    return merge_into
 
 
 def _resolve_policy(
@@ -397,6 +482,7 @@ def combine_datasets(
     *,
     obs_policy: dict[str, str] | None = None,
     var_policy: dict[str, str] | None = None,
+    obs_merge_into: dict[str, str] | None = None,
 ) -> anndata.AnnData:
     """Combine multiple datasets into one adata, spatially aware when possible.
 
@@ -438,6 +524,11 @@ def combine_datasets(
         var_policy: Per .var column, one of ``first`` (one copy), ``separate``
             or ``drop``. Genes are shared, so the default is ``first`` when
             every dataset already agrees and ``separate`` when they do not.
+        obs_merge_into: ``{source: target}`` pooling a .obs column into
+            another column's output under the target's name — the same
+            labels under two names (``celltype`` in one file, ``cell_type``
+            in the other). Both ends are forced to ``merge``; see
+            :func:`_resolve_merge_into` for what is refused.
 
     Raises:
         ValueError: if fewer than 2 files, no shared genes, or an input
@@ -484,6 +575,7 @@ def combine_datasets(
     # `sample` is written by the concat itself; a policy for it is meaningless.
     obs_requested = {k: v for k, v in (obs_policy or {}).items() if k != 'sample'}
     obs_resolved = _resolve_policy(obs_frames, unique_labels, obs_requested, 'obs')
+    merge_into = _resolve_merge_into(obs_frames, unique_labels, obs_merge_into, obs_resolved)
     var_resolved = _resolve_policy(
         var_frames, unique_labels, var_policy, 'var', shared=shared
     )
@@ -494,8 +586,10 @@ def combine_datasets(
     obs_alloc = _NameAllocator({'sample'})
     merged_obs: dict[str, str] = {}
     for name in sorted(obs_resolved):
-        if obs_resolved[name] == 'merge':
+        if obs_resolved[name] == 'merge' and name not in merge_into:
             merged_obs[name] = obs_alloc.take(name)
+    for source, target in merge_into.items():
+        merged_obs[source] = merged_obs[target]
     split_obs: dict[tuple[str, str], str] = {}
     for name in sorted(obs_resolved):
         if obs_resolved[name] != 'separate':
@@ -506,9 +600,11 @@ def combine_datasets(
 
     # Categorical columns lose their dtype when reindexed in with NaN, so the
     # categories are carried across the concat and restored afterwards.
+    # Datasets outer, columns inner, so a merge group's categories run in
+    # input order whatever the source columns are called.
     obs_categories: dict[str, list] = {}
-    for name, policy in obs_resolved.items():
-        for lbl, f in zip(unique_labels, obs_frames):
+    for lbl, f in zip(unique_labels, obs_frames):
+        for name, policy in obs_resolved.items():
             if name not in f.columns or policy == 'drop':
                 continue
             col = f[name]
@@ -622,6 +718,7 @@ def combine_datasets(
         'labels': list(unique_labels),
         'obs_policy': dict(obs_resolved),
         'var_policy': dict(var_resolved),
+        'obs_merge_into': dict(merge_into),
     }
     return combined
 
