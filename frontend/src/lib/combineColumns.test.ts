@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mergeTargets, seedPolicy, splitObsPolicy, summarizePolicy, type ColumnInfo } from './combineColumns'
+import { chooseSameAs, mergeTargets, offerableSameAs, seedPolicy, splitObsPolicy, summarizePolicy, type ColumnInfo } from './combineColumns'
 
 const cols: ColumnInfo[] = [
   { name: 'nCount_RNA', datasets: ['A', 'B'], kind: 'numeric', suggested: 'merge', reason: 'r' },
@@ -48,9 +48,9 @@ describe('summarizePolicy', () => {
 describe('same-as policies', () => {
   const renamed: ColumnInfo[] = [
     { name: 'celltype', datasets: ['A'], kind: 'category', suggested: 'merge', reason: 'r',
-      same_as: [{ name: 'cell_type', shared: 2, union: 4 }] },
+      same_as: [{ name: 'cell_type', shared: 2, union: 4, likely: true }] },
     { name: 'cell_type', datasets: ['B'], kind: 'category', suggested: 'merge', reason: 'r',
-      same_as: [{ name: 'celltype', shared: 2, union: 4 }] },
+      same_as: [{ name: 'celltype', shared: 2, union: 4, likely: true }] },
     { name: 'nCount_RNA', datasets: ['A', 'B'], kind: 'numeric', suggested: 'merge', reason: 'r' },
   ]
 
@@ -84,5 +84,30 @@ describe('same-as policies', () => {
 
   it('keeps a same-as whose target is still offered', () => {
     expect(seedPolicy(renamed, { celltype: 'same:cell_type' }).celltype).toBe('same:cell_type')
+  })
+})
+
+describe('chooseSameAs', () => {
+  it('sets the source and forces the target to one column, whatever it held', () => {
+    expect(chooseSameAs({ a: 'merge', b: 'drop' }, 'a', 'b')).toEqual({ a: 'same:b', b: 'merge' })
+  })
+  it('leaves other columns alone', () => {
+    expect(chooseSameAs({ a: 'merge', b: 'separate', c: 'drop' }, 'a', 'b').c).toBe('drop')
+  })
+})
+
+describe('offerableSameAs', () => {
+  const col: ColumnInfo = {
+    name: 'a', datasets: ['A'], kind: 'category', suggested: 'merge', reason: 'r',
+    same_as: [
+      { name: 'b', shared: 2, union: 4, likely: true },
+      { name: 'c', shared: 0, union: 5, likely: false },
+    ],
+  }
+  it('offers every candidate the backend listed', () => {
+    expect(offerableSameAs(col, { a: 'merge', b: 'merge', c: 'merge' }).map((c) => c.name)).toEqual(['b', 'c'])
+  })
+  it('never offers a column that is itself a same-as source, so no chain can be built', () => {
+    expect(offerableSameAs(col, { a: 'merge', b: 'same:c', c: 'merge' }).map((c) => c.name)).toEqual(['c'])
   })
 })

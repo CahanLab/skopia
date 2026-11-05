@@ -17,7 +17,7 @@ export type Policy = ObsPolicy | VarPolicy
 
 export const SAME_PREFIX = 'same:'
 
-export interface SameAsCandidate { name: string; shared: number; union: number }
+export interface SameAsCandidate { name: string; shared: number; union: number; likely: boolean }
 
 export interface ColumnInfo {
   name: string
@@ -58,6 +58,23 @@ export function seedPolicy(
       : chosen
   }
   return out
+}
+
+/** Declare `source` the same as `target`: the target is then one column
+ *  whatever it held, since a same-as needs somewhere to land. */
+export function chooseSameAs(
+  policy: Record<string, string>, source: string, target: string,
+): Record<string, string> {
+  return { ...policy, [source]: `${SAME_PREFIX}${target}`, [target]: 'merge' }
+}
+
+/** The candidates a column may be declared the same as: every one the
+ *  backend listed except columns that are themselves same-as sources, so a
+ *  chain (which the backend refuses) cannot be built. */
+export function offerableSameAs(
+  col: ColumnInfo, policy: Record<string, string>,
+): SameAsCandidate[] {
+  return (col.same_as ?? []).filter((c) => sameTarget(policy[c.name]) === null)
 }
 
 /** The request body fields: plain policies, and the same-as map apart. */

@@ -514,26 +514,29 @@ def test_describe_names_a_same_as_candidate(tmp_path):
     col = obs['celltype']
     # Only A has it, so on its own it keeps its default; the hint is added.
     assert col['suggested'] == 'merge'
-    assert col['same_as'][0] == {'name': 'cell_type', 'shared': 2, 'union': 4}
+    assert col['same_as'][0] == {'name': 'cell_type', 'shared': 2, 'union': 4, 'likely': True}
     assert 'looks like `cell_type`' in col['reason']
     assert '2 of 4 labels shared' in col['reason']
     # Symmetric: the other side names this one.
     assert obs['cell_type']['same_as'][0]['name'] == 'celltype'
-    # `leiden` is a vocabulary of ids and shares nothing with the names.
+    # `leiden` is held by A too, so it is never a candidate for A's column.
     assert all(e['name'] != 'leiden' for e in col['same_as'])
-    assert obs['leiden']['same_as'] == []
+    # B's `cell_type` could be declared the same as `leiden`, but nothing
+    # suggests it: ids and names share no label.
+    assert obs['leiden']['same_as'] == [
+        {'name': 'cell_type', 'shared': 0, 'union': 5, 'likely': False}]
     assert obs['leiden']['reason'].startswith('only A has it')
 
 
-def test_same_as_skips_numeric_vocabularies_and_same_dataset_columns(tmp_path):
+def test_same_as_never_offers_a_column_from_the_same_dataset(tmp_path):
     a, b = _base(30, 1), _base(40, 2)
     a.obs['clusters_a'] = pd.Categorical(np.resize(['0', '1'], 30))
     a.obs['annot'] = pd.Categorical(np.resize(['x', 'y'], 30))
     b.obs['clusters_b'] = pd.Categorical(np.resize(['0', '1'], 40))
     pa, pb = _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
     obs = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])
-    assert obs['clusters_a']['same_as'] == []
-    assert obs['annot']['same_as'] == []
+    assert [e['name'] for e in obs['clusters_a']['same_as']] == ['clusters_b']
+    assert [e['name'] for e in obs['annot']['same_as']] == ['clusters_b']
     assert 'looks like' not in obs['clusters_a']['reason']
 
 
@@ -558,3 +561,84 @@ def test_combine_route_accepts_obs_merge_into(tmp_path):
     finally:
         # A slot left registered makes later "nothing loaded" tests see data.
         routes._adaptors.pop('merge_into_test', None)
+
+
+# ---------------------------------------------------------------------------
+# after review: the Same as list, stage labels, mixed category types
+# ---------------------------------------------------------------------------
+def test_same_as_lists_every_disjoint_label_column_and_marks_the_likely_ones(tmp_path):
+    """The user may know two columns are one scheme even when few names
+    overlap, so every candidate is offered; the overlap says which is likely."""
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['ct'] = pd.Categorical(np.resize(['T cell', 'B cell', 'NK'], 30))
+    a.obs['other_a'] = pd.Categorical(np.resize(['p', 'q'], 30))
+    b.obs['celltype'] = pd.Categorical(np.resize(['T cell', 'B cell', 'Mono'], 40))
+    b.obs['region'] = pd.Categorical(np.resize(['x', 'y'], 40))
+    b.obs['depth'] = np.random.default_rng(3).random(40)
+    pa, pb = _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+    obs = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])
+    assert obs['ct']['same_as'] == [
+        {'name': 'celltype', 'shared': 2, 'union': 4, 'likely': True},
+        {'name': 'region', 'shared': 0, 'union': 5, 'likely': False},
+    ]
+    assert 'looks like `celltype`' in obs['ct']['reason']
+    assert obs['other_a']['same_as'] == [
+        {'name': 'celltype', 'shared': 0, 'union': 5, 'likely': False},
+        {'name': 'region', 'shared': 0, 'union': 4, 'likely': False},
+    ]
+    assert 'looks like' not in obs['other_a']['reason']
+    assert obs['depth']['same_as'] == []
+
+
+def test_the_hint_names_a_likely_candidate_whatever_the_holder_count(tmp_path):
+    a, b, c = _base(30, 1), _base(40, 2), _base(20, 3)
+    for ad, n in ((a, 30), (b, 40)):
+        ad.obs['ct'] = pd.Categorical(np.resize(['T cell', 'B cell'], n))
+    c.obs['celltype'] = pd.Categorical(np.resize(['T cell', 'B cell'], 20))
+    paths = [_write(tmp_path, f'{k}.h5ad', ad) for k, ad in (('a', a), ('b', b), ('c', c))]
+    obs = _by_name(describe_combine_columns(paths, ['A', 'B', 'C'])['obs'])
+    assert obs['ct']['suggested'] == 'merge'
+    assert 'looks like `celltype` in C' in obs['ct']['reason']
+
+
+def test_an_existing_sample_column_gets_no_same_as(tmp_path):
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['sample'] = pd.Categorical(['s1'] * 30)
+    b.obs['batch'] = pd.Categorical(['s1'] * 40)
+    pa, pb = _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+    obs = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])
+    assert obs['sample']['same_as'] == []
+    assert obs['batch']['same_as'] == []
+
+
+def test_numeric_vocabularies_are_offered_but_never_likely(tmp_path):
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['clusters_a'] = pd.Categorical(np.resize(['0', '1'], 30))
+    b.obs['clusters_b'] = pd.Categorical(np.resize(['0', '1'], 40))
+    pa, pb = _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+    obs = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])
+    assert obs['clusters_a']['same_as'] == [
+        {'name': 'clusters_b', 'shared': 2, 'union': 2, 'likely': False}]
+    assert 'looks like' not in obs['clusters_a']['reason']
+
+
+def test_embryonic_stages_are_labels_not_cluster_ids(tmp_path):
+    """E7.5 is a stage every gastrulation dataset carries; C3 and 0 are ids."""
+    pa, pb = _labelled(tmp_path, ['E7.5', 'E8.5'], ['E7.5', 'E8.5', 'E9.5'])
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+    assert col['suggested'] == 'merge'
+    for vocab in (['C3', 'C4'], ['0', '1'], ['1.0', '2.0'], ['cl12', 'cl13']):
+        pa, pb = _labelled(tmp_path, vocab, vocab)
+        col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+        assert col['suggested'] == 'separate', vocab
+
+
+def test_an_integer_categorical_pooled_with_text_writes_to_h5ad(tmp_path):
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['ct'] = pd.Categorical(np.resize([1, 2], 30))
+    b.obs['ct'] = pd.Series(np.resize(['1', '2', '3'], 40), index=b.obs_names, dtype=object)
+    pa, pb = _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+    out = combine_datasets([pa, pb], ['A', 'B'], obs_policy={'ct': 'merge'})
+    assert out.obs['ct'].notna().all()
+    assert list(out.obs['ct'].cat.categories) == ['1', '2', '3']
+    out.write_h5ad(tmp_path / 'out.h5ad')

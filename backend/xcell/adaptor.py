@@ -162,9 +162,10 @@ def _column_kind(series: pd.Series) -> str:
     return 'string'
 
 
-#: A label vocabulary made of these is cluster ids, not names: `0`, `C3`,
-#: `cl12`. Ids overlap across files by construction and mean nothing there.
-_LABEL_ID_PATTERN = re.compile(r'^[A-Za-z]{0,2}-?\d+(\.\d+)?$')
+#: A label vocabulary made of these is cluster ids, not names: `0`, `1.0`,
+#: `C3`, `cl12`. Ids overlap across files by construction and mean nothing
+#: there. A letter prefix with a decimal (`E7.5`) is a stage, not an id.
+_LABEL_ID_PATTERN = re.compile(r'^(-?\d+(\.\d+)?|[A-Za-z]{1,2}-?\d+)$')
 
 #: Share of the label union that every holder must carry before two
 #: same-named label columns are pooled by default. Two annotations of one
@@ -329,7 +330,7 @@ def describe_combine_columns(
             holders, facts['kind'], facts['n_unique'], facts['overlap'], facts['mixed'])
         overlap = facts['overlap']
         same_as = _same_as_candidates(obs_frames, labels, name)
-        if same_as and len(holders) < 2:
+        if same_as and same_as[0]['likely']:
             best = same_as[0]
             where = [lbl for lbl, f in zip(labels, obs_frames) if best['name'] in f.columns]
             reason += (f"; looks like `{best['name']}` in {', '.join(where)}: "
@@ -362,10 +363,12 @@ def describe_combine_columns(
 
 def _same_as_candidates(frames, labels, name) -> list[dict[str, Any]]:
     """Other label columns this one could be pooled with under `obs_merge_into`:
-    held by datasets that do not hold `name`, named labels (not ids), and
-    sharing at least `_SHARED_LABEL_MIN_JACCARD` of the union. Best first."""
+    every label column held only by datasets that do not hold `name`. The
+    user may know two columns are one scheme when few names overlap, so all
+    are offered; `likely` marks named (not id) vocabularies sharing at least
+    `_SHARED_LABEL_MIN_JACCARD` of the union, and those come first."""
     held = [f[name] for f in frames if name in f.columns]
-    if not held or any(_column_kind(col) not in _LABEL_KINDS for col in held):
+    if name == 'sample' or not held or any(_column_kind(col) not in _LABEL_KINDS for col in held):
         return []
     mine = _label_vocabulary(pd.concat([col.astype(object) for col in held]))
     holders = {lbl for lbl, f in zip(labels, frames) if name in f.columns}
@@ -381,12 +384,11 @@ def _same_as_candidates(frames, labels, name) -> list[dict[str, Any]]:
             continue
         theirs = _label_vocabulary(pd.concat([col.astype(object) for col in cols]))
         overlap = _label_overlap([mine, theirs])
-        if overlap['numeric'] or not overlap['union']:
-            continue
-        if overlap['shared'] / overlap['union'] < _SHARED_LABEL_MIN_JACCARD:
-            continue
-        out.append({'name': other, 'shared': overlap['shared'], 'union': overlap['union']})
-    out.sort(key=lambda e: (-e['shared'] / e['union'], e['name']))
+        likely = (bool(overlap['union']) and not overlap['numeric']
+                  and overlap['shared'] / overlap['union'] >= _SHARED_LABEL_MIN_JACCARD)
+        out.append({'name': other, 'shared': overlap['shared'],
+                    'union': overlap['union'], 'likely': likely})
+    out.sort(key=lambda e: (not e['likely'], -(e['shared'] / e['union'] if e['union'] else 0), e['name']))
     return out
 
 
@@ -690,9 +692,18 @@ def combine_datasets(
             # A string column pooled with a categorical one contributes values
             # the recorded categories never saw; restoring without them would
             # turn those cells into missing.
+            # Categories are compared as strings: an integer categorical
+            # pooled with text would otherwise hold `1` and `'1'` apart, and
+            # mixed-type categories cannot be written to h5ad.
             values = combined.obs[col]
+            cats = list(cats)
+            if any(not isinstance(c, str) for c in cats) or any(
+                    not isinstance(v, str) for v in pd.unique(values.dropna())):
+                values = values.astype(object).where(values.notna(), None).map(
+                    lambda v: v if v is None else str(v))
+                cats = list(dict.fromkeys(str(c) for c in cats))
             extra = [v for v in pd.unique(values.dropna()) if v not in cats]
-            combined.obs[col] = pd.Categorical(values, categories=list(cats) + extra)
+            combined.obs[col] = pd.Categorical(values, categories=cats + extra)
 
     # Every combined gene is present in every input (join='inner'), so these
     # reindexes are exact and a boolean flag stays boolean.
