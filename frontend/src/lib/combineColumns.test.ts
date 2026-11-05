@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { summarizePolicy, seedPolicy, type ColumnInfo } from './combineColumns'
+import { mergeTargets, seedPolicy, splitObsPolicy, summarizePolicy, type ColumnInfo } from './combineColumns'
 
 const cols: ColumnInfo[] = [
   { name: 'nCount_RNA', datasets: ['A', 'B'], kind: 'numeric', suggested: 'merge', reason: 'r' },
@@ -42,5 +42,47 @@ describe('summarizePolicy', () => {
 
   it('handles an empty column list', () => {
     expect(summarizePolicy([], {})).toBe('none')
+  })
+})
+
+describe('same-as policies', () => {
+  const renamed: ColumnInfo[] = [
+    { name: 'celltype', datasets: ['A'], kind: 'category', suggested: 'merge', reason: 'r',
+      same_as: [{ name: 'cell_type', shared: 2, union: 4 }] },
+    { name: 'cell_type', datasets: ['B'], kind: 'category', suggested: 'merge', reason: 'r',
+      same_as: [{ name: 'celltype', shared: 2, union: 4 }] },
+    { name: 'nCount_RNA', datasets: ['A', 'B'], kind: 'numeric', suggested: 'merge', reason: 'r' },
+  ]
+
+  it('splits the request into a policy and a merge map', () => {
+    expect(splitObsPolicy({ celltype: 'same:cell_type', cell_type: 'merge', nCount_RNA: 'drop' })).toEqual({
+      obs_policy: { cell_type: 'merge', nCount_RNA: 'drop' },
+      obs_merge_into: { celltype: 'cell_type' },
+    })
+  })
+
+  it('splits on the first colon only, so a target name may contain one', () => {
+    expect(splitObsPolicy({ a: 'same:x:y' }).obs_merge_into).toEqual({ a: 'x:y' })
+  })
+
+  it('lists the sources each target receives', () => {
+    expect(mergeTargets({ celltype: 'same:cell_type', other: 'same:cell_type', cell_type: 'merge' }))
+      .toEqual({ cell_type: ['celltype', 'other'] })
+  })
+
+  it('counts a same-as column as merged', () => {
+    expect(summarizePolicy(renamed, { celltype: 'same:cell_type', cell_type: 'merge', nCount_RNA: 'merge' }))
+      .toBe('3 merged')
+  })
+
+  it('forgets a same-as whose target is no longer offered', () => {
+    // Removing B's file removes cell_type; the backend rejects a merge into
+    // a column no dataset has.
+    const withoutB = renamed.filter((c) => c.name !== 'cell_type')
+    expect(seedPolicy(withoutB, { celltype: 'same:cell_type' }).celltype).toBe('merge')
+  })
+
+  it('keeps a same-as whose target is still offered', () => {
+    expect(seedPolicy(renamed, { celltype: 'same:cell_type' }).celltype).toBe('same:cell_type')
   })
 })
