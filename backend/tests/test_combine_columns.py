@@ -538,20 +538,23 @@ def test_same_as_skips_numeric_vocabularies_and_same_dataset_columns(tmp_path):
 
 
 def test_combine_route_accepts_obs_merge_into(tmp_path):
+    from xcell.api import routes
     pa, pb = _renamed(tmp_path)
-    r = _client().post('/api/combine', json={
-        'files': [{'file_path': str(pa), 'label': 'A'}, {'file_path': str(pb), 'label': 'B'}],
-        'slot': 'merge_into_test',
-        'obs_merge_into': {'celltype': 'cell_type'},
-    })
-    assert r.status_code == 200, r.text
-    from xcell.api.routes import get_adaptor
-    ad = get_adaptor('merge_into_test').adata
-    assert ad.obs['cell_type'].notna().all()
-    r = _client().post('/api/combine', json={
-        'files': [{'file_path': str(pa), 'label': 'A'}, {'file_path': str(pb), 'label': 'B'}],
-        'slot': 'merge_into_test',
-        'obs_merge_into': {'leiden': 'celltype', 'celltype': 'cell_type'},
-    })
-    assert r.status_code == 400
-    assert 'itself merged into' in r.json()['detail']
+    files = [{'file_path': str(pa), 'label': 'A'}, {'file_path': str(pb), 'label': 'B'}]
+    try:
+        r = _client().post('/api/combine', json={
+            'files': files, 'slot': 'merge_into_test',
+            'obs_merge_into': {'celltype': 'cell_type'},
+        })
+        assert r.status_code == 200, r.text
+        ad = routes.get_adaptor('merge_into_test').adata
+        assert ad.obs['cell_type'].notna().all()
+        r = _client().post('/api/combine', json={
+            'files': files, 'slot': 'merge_into_test',
+            'obs_merge_into': {'leiden': 'celltype', 'celltype': 'cell_type'},
+        })
+        assert r.status_code == 400
+        assert 'itself merged into' in r.json()['detail']
+    finally:
+        # A slot left registered makes later "nothing loaded" tests see data.
+        routes._adaptors.pop('merge_into_test', None)
