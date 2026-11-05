@@ -180,3 +180,35 @@ export function formatPreview(col: ObsColumnInfo): string {
   if (p.min === null) return 'no values'
   return `${fmtNum(p.min)} · ${fmtNum(p.median)} · ${fmtNum(p.max)}`
 }
+
+const SEPARATORS = new Set(['_', '.', '-', ' ', ':'])
+
+/** Default name for a column merged from `names`: their common prefix cut
+ *  back to a word boundary (`cell_type__A` + `cell_type__B` → `cell_type`,
+ *  `leiden_1` + `leiden_2` → `leiden`), else `merged`; suffixed until it is
+ *  not in `taken`. */
+export function mergeDefaultName(names: readonly string[], taken: readonly string[] = []): string {
+  let prefix = names.length ? names[0] : ''
+  for (const n of names) {
+    let i = 0
+    while (i < prefix.length && i < n.length && prefix[i] === n[i]) i += 1
+    prefix = prefix.slice(0, i)
+  }
+  for (;;) {
+    while (prefix && SEPARATORS.has(prefix[prefix.length - 1])) prefix = prefix.slice(0, -1)
+    if (!prefix) break
+    const atBoundary = names.every((n) => n.length === prefix.length || SEPARATORS.has(n[prefix.length]))
+    if (atBoundary) break
+    let cut = prefix.length - 1
+    while (cut > 0 && !SEPARATORS.has(prefix[cut])) cut -= 1
+    prefix = prefix.slice(0, cut)
+  }
+  const base = prefix || 'merged'
+  const used = new Set(taken)
+  if (!used.has(base)) return base
+  const stem = prefix ? `${prefix}_merged` : base
+  if (!used.has(stem)) return stem
+  for (let k = 2; ; k += 1) {
+    if (!used.has(`${stem}_${k}`)) return `${stem}_${k}`
+  }
+}

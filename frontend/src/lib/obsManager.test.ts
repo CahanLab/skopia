@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   clickSelection,
+  mergeDefaultName,
   convertTargets,
   countByKind,
   defaultTrueValue,
@@ -150,5 +151,27 @@ describe('names and conversions', () => {
     expect(formatPreview(col('s', 'float', { preview: { min: null, median: null, max: null } }))).toBe('no values')
     expect(formatPreview(col('s', 'float', { preview: { min: 1663, median: 12435.5, max: 25000000.5 } })))
       .toBe('1,663 · 12,435.5 · 2.50e+7')
+  })
+})
+
+describe('mergeDefaultName', () => {
+  it('strips the per-dataset suffix a combine added', () => {
+    expect(mergeDefaultName(['cell_type__A', 'cell_type__B'])).toBe('cell_type')
+  })
+  it('takes the common prefix without a trailing separator', () => {
+    expect(mergeDefaultName(['leiden_1', 'leiden_2'])).toBe('leiden')
+    expect(mergeDefaultName(['annot.fine', 'annot.coarse'])).toBe('annot')
+  })
+  it('does not cut a word in half', () => {
+    // 'cell' is shared, but 'celltype' and 'cell_type' are not 'cell'.
+    expect(mergeDefaultName(['celltype', 'cell_type'])).toBe('merged')
+  })
+  it('falls back when nothing is shared', () => {
+    expect(mergeDefaultName(['a', 'b'])).toBe('merged')
+    expect(mergeDefaultName([])).toBe('merged')
+  })
+  it('never returns a name in the taken list', () => {
+    expect(mergeDefaultName(['cell_type', 'cell_type_copy'], ['cell_type', 'cell_type_copy'])).toBe('cell_type_merged')
+    expect(mergeDefaultName(['a', 'b'], ['merged'])).toBe('merged_2')
   })
 })
