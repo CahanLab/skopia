@@ -7,6 +7,7 @@ analysis functions.
 """
 
 import json
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Callable
@@ -161,16 +162,86 @@ def _column_kind(series: pd.Series) -> str:
     return 'string'
 
 
-def _suggest_obs_policy(datasets, kind, n_unique) -> tuple[str, str]:
+#: A label vocabulary made of these is cluster ids, not names: `0`, `C3`,
+#: `cl12`. Ids overlap across files by construction and mean nothing there.
+_LABEL_ID_PATTERN = re.compile(r'^[A-Za-z]{0,2}-?\d+(\.\d+)?$')
+
+#: Share of the label union that every holder must carry before two
+#: same-named label columns are pooled by default. Two annotations of one
+#: scheme on different tissues share most names, rarely all; 0.5 is a
+#: judgment call, recorded in docs/superpowers/specs/2026-11-04-obs-column-merge-design.md.
+_SHARED_LABEL_MIN_JACCARD = 0.5
+
+_LABEL_KINDS = ('category', 'string')
+_NUMBER_KINDS = ('integer', 'numeric')
+
+
+def _kind_class(kind: str) -> str:
+    """'label', 'number' or the kind itself: what may be pooled with what."""
+    if kind in _LABEL_KINDS:
+        return 'label'
+    if kind in _NUMBER_KINDS:
+        return 'number'
+    return kind
+
+
+def _label_vocabulary(series: pd.Series) -> set[str]:
+    return {str(v) for v in series.dropna().unique()}
+
+
+def _label_overlap(vocabularies: list[set[str]]) -> dict[str, Any]:
+    """How far label sets agree: intersection over every holder vs. the union.
+
+    One outlier holder sinks the overlap, which is the conservative side.
+    `numeric` says every label is an id (see `_LABEL_ID_PATTERN`).
+    """
+    union: set[str] = set().union(*vocabularies)
+    shared = set.intersection(*vocabularies) if vocabularies else set()
+    numeric = bool(union) and all(_LABEL_ID_PATTERN.match(v) for v in union)
+    return {'shared': len(shared), 'union': len(union), 'numeric': numeric}
+
+
+def _obs_column_facts(frames, name) -> dict[str, Any]:
+    """What the suggestion rule needs about one .obs column across inputs:
+    the first holder's kind, whether holders disagree in class, the label
+    cardinality and the vocabulary overlap (label columns held by >= 2)."""
+    held = [f[name] for f in frames if name in f.columns]
+    kinds = [_column_kind(col) for col in held]
+    kind = kinds[0]
+    n_unique = None
+    if kind in ('integer', 'category', 'string'):
+        n_unique = int(max(col.nunique(dropna=True) for col in held))
+    overlap = None
+    if kind in _LABEL_KINDS and len(held) >= 2 and all(k in _LABEL_KINDS for k in kinds):
+        overlap = _label_overlap([_label_vocabulary(col) for col in held])
+    return {
+        'kind': kind, 'n_unique': n_unique, 'overlap': overlap,
+        'mixed': len({_kind_class(k) for k in kinds}) > 1,
+    }
+
+
+def _suggest_obs_policy(datasets, kind, n_unique, overlap=None, mixed=False) -> tuple[str, str]:
     """Default handling for one .obs column, with the reason to show the user.
 
     Merging is only safe when a value means the same thing in every dataset. A
     per-cell measurement does; a cluster id from an independent clustering does
-    not, and pooling those invents a comparison nobody made.
+    not, and pooling those invents a comparison nobody made. Named labels that
+    the datasets share (`overlap`) are the one kind of label that does mean
+    the same thing: one annotation scheme applied to each file.
     """
     if len(datasets) < 2:
         return 'merge', f"only {datasets[0]} has it — nothing to collide with"
-    if kind in ('category', 'string'):
+    if mixed:
+        return 'separate', 'types differ across datasets'
+    if kind in _LABEL_KINDS:
+        if overlap is not None and overlap['union']:
+            shared, union = overlap['shared'], overlap['union']
+            if overlap['numeric']:
+                return 'separate', 'labels are numbers: cluster ids, not comparable'
+            if shared / union >= _SHARED_LABEL_MIN_JACCARD:
+                if shared == union:
+                    return 'merge', f'same {shared} labels in every dataset'
+                return 'merge', f'{shared} of {union} labels shared across datasets'
         return 'separate', 'labels from independent analyses are not comparable'
     if kind == 'integer' and n_unique is not None and n_unique <= _LABEL_LIKE_MAX_CARDINALITY:
         return 'separate', f'looks like ids, not a measurement ({n_unique} distinct values)'
@@ -253,17 +324,15 @@ def describe_combine_columns(
     obs_out: list[dict[str, Any]] = []
     for name in sorted({c for f in obs_frames for c in f.columns}):
         holders = [lbl for lbl, f in zip(labels, obs_frames) if name in f.columns]
-        first = next(f[name] for f in obs_frames if name in f.columns)
-        kind = _column_kind(first)
-        n_unique = None
-        if kind in ('integer', 'category', 'string'):
-            n_unique = int(max(
-                f[name].nunique(dropna=True) for f in obs_frames if name in f.columns
-            ))
-        suggested, reason = _suggest_obs_policy(holders, kind, n_unique)
+        facts = _obs_column_facts(obs_frames, name)
+        suggested, reason = _suggest_obs_policy(
+            holders, facts['kind'], facts['n_unique'], facts['overlap'], facts['mixed'])
+        overlap = facts['overlap']
         obs_out.append({
-            'name': name, 'datasets': holders, 'kind': kind,
-            'n_unique': n_unique, 'suggested': suggested, 'reason': reason,
+            'name': name, 'datasets': holders, 'kind': facts['kind'],
+            'n_unique': facts['n_unique'], 'suggested': suggested, 'reason': reason,
+            'labels': ({'shared': overlap['shared'], 'union': overlap['union']}
+                       if overlap is not None else None),
         })
 
     var_out: list[dict[str, Any]] = []
@@ -310,14 +379,9 @@ def _resolve_policy(
             continue
         holders = [lbl for lbl, f in zip(labels, frames) if name in f.columns]
         if axis == 'obs':
-            first = next(f[name] for f in frames if name in f.columns)
-            kind = _column_kind(first)
-            n_unique = None
-            if kind in ('integer', 'category', 'string'):
-                n_unique = int(max(
-                    f[name].nunique(dropna=True) for f in frames if name in f.columns
-                ))
-            resolved[name] = _suggest_obs_policy(holders, kind, n_unique)[0]
+            facts = _obs_column_facts(frames, name)
+            resolved[name] = _suggest_obs_policy(
+                holders, facts['kind'], facts['n_unique'], facts['overlap'], facts['mixed'])[0]
         else:
             held = [f for f in frames if name in f.columns]
             rendered = [f[name].reindex(shared).astype(str).tolist() for f in held]
@@ -527,7 +591,12 @@ def combine_datasets(
         )
     for col, cats in obs_categories.items():
         if col in combined.obs.columns:
-            combined.obs[col] = pd.Categorical(combined.obs[col], categories=cats)
+            # A string column pooled with a categorical one contributes values
+            # the recorded categories never saw; restoring without them would
+            # turn those cells into missing.
+            values = combined.obs[col]
+            extra = [v for v in pd.unique(values.dropna()) if v not in cats]
+            combined.obs[col] = pd.Categorical(values, categories=list(cats) + extra)
 
     # Every combined gene is present in every input (join='inner'), so these
     # reindexes are exact and a boolean flag stays boolean.

@@ -338,3 +338,104 @@ def test_combine_route_rejects_a_bad_policy_value(tmp_path):
     })
     assert r.status_code == 400
     assert 'policy' in r.json()['detail']
+
+
+# ---------------------------------------------------------------------------
+# shared label vocabularies: same name, same labels → one column by default
+# ---------------------------------------------------------------------------
+def _labelled(tmp_path, labels_a, labels_b, kind_b='category'):
+    """Two datasets with a `cell_type` column drawn from the given vocabularies."""
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['cell_type'] = pd.Categorical(np.resize(list(labels_a), 30)) if labels_a else np.nan
+    vals_b = np.resize(list(labels_b), 40)
+    b.obs['cell_type'] = pd.Categorical(vals_b) if kind_b == 'category' else pd.Series(
+        vals_b, index=b.obs_names, dtype=object)
+    return _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+
+
+def test_a_label_shared_by_every_dataset_defaults_to_merge(tmp_path):
+    """Two files annotated with the same cell-type scheme want one column."""
+    pa, pb = _labelled(tmp_path, ['T cell', 'B cell', 'NK'], ['T cell', 'B cell', 'NK'])
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+    assert col['suggested'] == 'merge'
+    assert col['labels'] == {'shared': 3, 'union': 3}
+    assert 'same 3 labels' in col['reason']
+
+
+def test_a_label_mostly_shared_defaults_to_merge(tmp_path):
+    """Same scheme, different tissues: most names overlap, not all."""
+    pa, pb = _labelled(tmp_path, ['T cell', 'B cell', 'NK'], ['T cell', 'B cell', 'Mono'])
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+    assert col['suggested'] == 'merge'
+    assert col['labels'] == {'shared': 2, 'union': 4}
+    assert '2 of 4 labels shared' in col['reason']
+
+
+def test_numeric_looking_labels_stay_separate(tmp_path):
+    """Cluster ids overlap by construction and mean nothing across files."""
+    for vocab in (['0', '1', '2'], ['C0', 'C1', 'C2']):
+        pa, pb = _labelled(tmp_path, vocab, vocab)
+        col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+        assert col['suggested'] == 'separate', vocab
+        assert 'numbers' in col['reason']
+        assert col['labels'] == {'shared': 3, 'union': 3}
+
+
+def test_a_label_with_little_overlap_stays_separate(tmp_path):
+    pa, pb = _labelled(tmp_path, ['T cell', 'B cell'], ['Neuron', 'Glia'])
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+    assert col['suggested'] == 'separate'
+    assert col['labels'] == {'shared': 0, 'union': 4}
+
+
+def test_an_all_missing_label_column_stays_separate(tmp_path):
+    """No vocabulary on one side is no evidence of a shared scheme. An
+    all-missing column comes back from disk as float, so there is nothing to
+    compare and the kinds disagree."""
+    pa, pb = _labelled(tmp_path, [], ['T cell', 'B cell'])
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+    assert col['suggested'] == 'separate'
+    assert col['labels'] is None
+
+
+def test_a_label_whose_kinds_differ_across_datasets_stays_separate(tmp_path):
+    """A categorical in one file and free text in the other still share a
+    vocabulary; the kinds agree in class, so the overlap rule applies."""
+    pa, pb = _labelled(tmp_path, ['T cell', 'B cell'], ['T cell', 'B cell'], kind_b='string')
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+    assert col['suggested'] == 'merge'
+    # But a number column against a label column is a different thing.
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['score'] = np.random.default_rng(1).random(30)
+    b.obs['score'] = pd.Categorical(['hi', 'lo'] * 20)
+    pa, pb = _write(tmp_path, 'a2.h5ad', a), _write(tmp_path, 'b2.h5ad', b)
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['score']
+    assert col['suggested'] == 'separate'
+    assert 'types differ' in col['reason']
+
+
+def test_a_measurement_reports_no_labels(tmp_path):
+    pa, pb = _pair(tmp_path)
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['nCount_RNA']
+    assert col['labels'] is None
+
+
+def test_combine_with_no_policy_pools_a_shared_vocabulary(tmp_path):
+    """The combine and the picker share one rule, so a caller that sends no
+    policy gets the same default the picker shows."""
+    pa, pb = _labelled(tmp_path, ['T cell', 'B cell', 'NK'], ['T cell', 'B cell', 'Mono'])
+    out = combine_datasets([pa, pb], ['A', 'B'])
+    assert 'cell_type' in out.obs.columns
+    assert 'cell_type__A' not in out.obs.columns
+    assert out.obs['cell_type'].notna().all()
+    assert list(out.obs['cell_type'].cat.categories) == ['B cell', 'NK', 'T cell', 'Mono']
+    assert out.uns['xcell_combine']['obs_policy']['cell_type'] == 'merge'
+
+
+def test_a_category_pooled_with_free_text_keeps_every_value(tmp_path):
+    """Restoring the recorded categories after the concat must not turn the
+    string side's values into missing."""
+    pa, pb = _labelled(tmp_path, ['T cell', 'B cell'], ['T cell', 'Mono'], kind_b='string')
+    out = combine_datasets([pa, pb], ['A', 'B'], obs_policy={'cell_type': 'merge'})
+    assert out.obs['cell_type'].notna().all()
+    assert set(out.obs['cell_type'].cat.categories) == {'T cell', 'B cell', 'Mono'}
