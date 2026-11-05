@@ -824,6 +824,24 @@ def duplicate_obs_column(request: DuplicateObsColumnRequest, dataset: str | None
         raise HTTPException(status_code=400, detail=str(e))
 
 
+class MergeObsColumnsRequest(BaseModel):
+    columns: list[str]
+    new_name: str
+    keep_sources: bool = True
+
+
+@router.post("/obs/merge_columns")
+def merge_obs_columns(request: MergeObsColumnsRequest, dataset: str | None = Query(None)):
+    """Fold several .obs columns into one: the first with a value wins, in order."""
+    adaptor = get_adaptor(dataset)
+    try:
+        return adaptor.merge_obs_columns(request.columns, request.new_name, request.keep_sources)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 class ConvertObsColumnRequest(BaseModel):
     column: str
     #: 'categorical' | 'string' | 'numeric' | 'boolean'. A plain str so an

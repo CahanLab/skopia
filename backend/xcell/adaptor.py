@@ -893,6 +893,10 @@ _GRAPH_META_KEY = '_xcell_graph'
 # prepare_cluster_cells_by_gene_set already uses — so the dataset's own X_pca /
 # connectivities / X_umap / leiden are never overwritten by a sub-clustering.
 CELL_SUBSETS_UNS = 'xcell_cell_subsets'
+#: Label values a column merge reads as "no value here", besides null:
+#: `unassigned` is what xcell writes outside a mask (CNV clones, subset
+#: Leiden), and an empty string is an empty cell in any export.
+OBS_EMPTY_LABELS = ('', 'unassigned')
 SUBSET_OBS_PREFIX = 'subset_'
 # A subset's graph entry goes to uns[<name>], and its graph-named results
 # (X_umap_<name>, leiden_<name>) are what a dataset run over a graph called
@@ -3495,6 +3499,105 @@ class DataAdaptor:
             self.adata.uns[f'{name}_colors'] = list(colors)
         result = {'column': column, 'new_name': name, 'copied_colors': colors is not None}
         self._log_action('duplicate_obs_column', {'column': column, 'new_name': name}, result)
+        return result
+
+    def merge_obs_columns(
+        self, columns: list[str], new_name: str, keep_sources: bool = True,
+    ) -> dict[str, Any]:
+        """Fold several .obs columns into one: per cell, the first column in
+        the given order with a value wins.
+
+        Labels (categorical / string) merge to a categorical whose categories
+        are the values that won, in order of first appearance; null, ``''`` and
+        ``unassigned`` are "no value" (`OBS_EMPTY_LABELS`). Numbers merge to
+        float, or int64 when every source is integer and no cell is left
+        empty. Boolean columns are refused: they have no empty cells to fill,
+        so the first one would always win outright. Labels and numbers cannot
+        be mixed. No palette is written for the new column.
+
+        Returns ``new_name, columns, kind, n_conflicts`` (cells with a value
+        in two or more sources), ``n_missing``, ``dropped``.
+
+        Raises:
+            KeyError: a named column is missing
+            ValueError: fewer than two distinct columns, a bad new name, a
+                saved subset's column, a boolean, or mixed kinds
+        """
+        obs = self.adata.obs
+        cols = list(dict.fromkeys(str(c) for c in columns or []))
+        if len(cols) < 2:
+            raise ValueError('Name at least two distinct columns to merge.')
+        missing = [c for c in cols if c not in obs.columns]
+        if missing:
+            raise KeyError(f"Columns not found in .obs: {missing}")
+        for c in cols:
+            subset = self._subset_owning_column(c)
+            if subset is not None:
+                raise ValueError(
+                    f"'{c}' is the membership column of saved subset '{subset}'; "
+                    "merge the subset from the Cells panel instead.")
+        name = self._check_new_obs_name(new_name)
+        classes = {'categorical': 'label', 'string': 'label',
+                   'integer': 'number', 'float': 'number'}
+        kinds = {c: self._obs_kind(obs[c]) for c in cols}
+        for c, k in kinds.items():
+            if k == 'boolean':
+                raise ValueError(
+                    f"'{c}' is boolean: a boolean column has no empty cells to fill, "
+                    "so the first column would always win. Convert it to string first.")
+            if k not in classes:
+                raise ValueError(f"'{c}' ({k}) cannot be merged.")
+        if len({classes[k] for k in kinds.values()}) > 1:
+            raise ValueError(
+                "Columns are different kinds ("
+                + ', '.join(f'{c}: {k}' for c, k in kinds.items())
+                + "); only labels with labels or numbers with numbers can be merged.")
+
+        n_valued = pd.Series(0, index=obs.index)
+        if classes[kinds[cols[0]]] == 'label':
+            merged = pd.Series([None] * len(obs), index=obs.index, dtype=object)
+            cats: list[str] = []
+            for c in cols:
+                src = obs[c]
+                text = pd.Series(np.where(src.isna(), None, src.astype(str)),
+                                 index=obs.index, dtype=object)
+                has = src.notna() & ~text.isin(OBS_EMPTY_LABELS)
+                merged = merged.where(merged.notna(), text.where(has))
+                n_valued += has.astype(int)
+                cats.extend(v for v in pd.unique(text[has]) if v not in cats)
+            # Only values that won: a label every cell lost to an earlier
+            # column would be an empty category in every legend.
+            present = set(merged.dropna())
+            new = pd.Categorical(merged, categories=[v for v in cats if v in present])
+        else:
+            merged = obs[cols[0]].astype(float)
+            n_valued += merged.notna().astype(int)
+            for c in cols[1:]:
+                src = obs[c].astype(float)
+                merged = merged.where(merged.notna(), src)
+                n_valued += src.notna().astype(int)
+            new = merged
+            if all(k == 'integer' for k in kinds.values()) and merged.notna().all():
+                new = merged.astype('int64')
+
+        obs[name] = new
+        self.adata.uns.pop(f'{name}_colors', None)
+        dropped: list[str] = []
+        if not keep_sources:
+            for c in cols:
+                self._drop_obs_column(c)
+                dropped.append(c)
+        result = {
+            'new_name': name, 'columns': cols,
+            'kind': self._obs_kind(self.adata.obs[name]),
+            'n_conflicts': int((n_valued >= 2).sum()),
+            'n_missing': int(self.adata.obs[name].isna().sum()),
+            'dropped': dropped,
+        }
+        self._log_action(
+            'merge_obs_columns',
+            {'columns': cols, 'new_name': name, 'keep_sources': bool(keep_sources)},
+            result)
         return result
 
     def convert_obs_column(
