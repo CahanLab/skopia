@@ -7,6 +7,7 @@ analysis functions.
 """
 
 import json
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Callable
@@ -161,16 +162,87 @@ def _column_kind(series: pd.Series) -> str:
     return 'string'
 
 
-def _suggest_obs_policy(datasets, kind, n_unique) -> tuple[str, str]:
+#: A label vocabulary made of these is cluster ids, not names: `0`, `1.0`,
+#: `C3`, `cl12`. Ids overlap across files by construction and mean nothing
+#: there. A letter prefix with a decimal (`E7.5`) is a stage, not an id.
+_LABEL_ID_PATTERN = re.compile(r'^(-?\d+(\.\d+)?|[A-Za-z]{1,2}-?\d+)$')
+
+#: Share of the label union that every holder must carry before two
+#: same-named label columns are pooled by default. Two annotations of one
+#: scheme on different tissues share most names, rarely all; 0.5 is a
+#: judgment call, recorded in docs/superpowers/specs/2026-11-04-obs-column-merge-design.md.
+_SHARED_LABEL_MIN_JACCARD = 0.5
+
+_LABEL_KINDS = ('category', 'string')
+_NUMBER_KINDS = ('integer', 'numeric')
+
+
+def _kind_class(kind: str) -> str:
+    """'label', 'number' or the kind itself: what may be pooled with what."""
+    if kind in _LABEL_KINDS:
+        return 'label'
+    if kind in _NUMBER_KINDS:
+        return 'number'
+    return kind
+
+
+def _label_vocabulary(series: pd.Series) -> set[str]:
+    return {str(v) for v in series.dropna().unique()}
+
+
+def _label_overlap(vocabularies: list[set[str]]) -> dict[str, Any]:
+    """How far label sets agree: intersection over every holder vs. the union.
+
+    One outlier holder sinks the overlap, which is the conservative side.
+    `numeric` says every label is an id (see `_LABEL_ID_PATTERN`).
+    """
+    union: set[str] = set().union(*vocabularies)
+    shared = set.intersection(*vocabularies) if vocabularies else set()
+    numeric = bool(union) and all(_LABEL_ID_PATTERN.match(v) for v in union)
+    return {'shared': len(shared), 'union': len(union), 'numeric': numeric}
+
+
+def _obs_column_facts(frames, name) -> dict[str, Any]:
+    """What the suggestion rule needs about one .obs column across inputs:
+    the first holder's kind, whether holders disagree in class, the label
+    cardinality and the vocabulary overlap (label columns held by >= 2)."""
+    held = [f[name] for f in frames if name in f.columns]
+    kinds = [_column_kind(col) for col in held]
+    kind = kinds[0]
+    n_unique = None
+    if kind in ('integer', 'category', 'string'):
+        n_unique = int(max(col.nunique(dropna=True) for col in held))
+    overlap = None
+    if kind in _LABEL_KINDS and len(held) >= 2 and all(k in _LABEL_KINDS for k in kinds):
+        overlap = _label_overlap([_label_vocabulary(col) for col in held])
+    return {
+        'kind': kind, 'n_unique': n_unique, 'overlap': overlap,
+        'mixed': len({_kind_class(k) for k in kinds}) > 1,
+    }
+
+
+def _suggest_obs_policy(datasets, kind, n_unique, overlap=None, mixed=False) -> tuple[str, str]:
     """Default handling for one .obs column, with the reason to show the user.
 
     Merging is only safe when a value means the same thing in every dataset. A
     per-cell measurement does; a cluster id from an independent clustering does
-    not, and pooling those invents a comparison nobody made.
+    not, and pooling those invents a comparison nobody made. Named labels that
+    the datasets share (`overlap`) are the one kind of label that does mean
+    the same thing: one annotation scheme applied to each file.
     """
     if len(datasets) < 2:
         return 'merge', f"only {datasets[0]} has it — nothing to collide with"
-    if kind in ('category', 'string'):
+    if mixed:
+        return 'separate', 'types differ across datasets'
+    if kind in _LABEL_KINDS:
+        if overlap is not None and overlap['union']:
+            shared, union = overlap['shared'], overlap['union']
+            if overlap['numeric']:
+                return 'separate', 'labels are numbers: cluster ids, not comparable'
+            if shared / union >= _SHARED_LABEL_MIN_JACCARD:
+                if shared == union:
+                    return 'merge', f'same {shared} labels in every dataset'
+                return 'merge', f'{shared} of {union} labels shared across datasets'
         return 'separate', 'labels from independent analyses are not comparable'
     if kind == 'integer' and n_unique is not None and n_unique <= _LABEL_LIKE_MAX_CARDINALITY:
         return 'separate', f'looks like ids, not a measurement ({n_unique} distinct values)'
@@ -253,17 +325,22 @@ def describe_combine_columns(
     obs_out: list[dict[str, Any]] = []
     for name in sorted({c for f in obs_frames for c in f.columns}):
         holders = [lbl for lbl, f in zip(labels, obs_frames) if name in f.columns]
-        first = next(f[name] for f in obs_frames if name in f.columns)
-        kind = _column_kind(first)
-        n_unique = None
-        if kind in ('integer', 'category', 'string'):
-            n_unique = int(max(
-                f[name].nunique(dropna=True) for f in obs_frames if name in f.columns
-            ))
-        suggested, reason = _suggest_obs_policy(holders, kind, n_unique)
+        facts = _obs_column_facts(obs_frames, name)
+        suggested, reason = _suggest_obs_policy(
+            holders, facts['kind'], facts['n_unique'], facts['overlap'], facts['mixed'])
+        overlap = facts['overlap']
+        same_as = _same_as_candidates(obs_frames, labels, name)
+        if same_as and same_as[0]['likely']:
+            best = same_as[0]
+            where = [lbl for lbl, f in zip(labels, obs_frames) if best['name'] in f.columns]
+            reason += (f"; looks like `{best['name']}` in {', '.join(where)}: "
+                       f"{best['shared']} of {best['union']} labels shared")
         obs_out.append({
-            'name': name, 'datasets': holders, 'kind': kind,
-            'n_unique': n_unique, 'suggested': suggested, 'reason': reason,
+            'name': name, 'datasets': holders, 'kind': facts['kind'],
+            'n_unique': facts['n_unique'], 'suggested': suggested, 'reason': reason,
+            'labels': ({'shared': overlap['shared'], 'union': overlap['union']}
+                       if overlap is not None else None),
+            'same_as': same_as,
         })
 
     var_out: list[dict[str, Any]] = []
@@ -282,6 +359,85 @@ def describe_combine_columns(
         })
 
     return {'obs': obs_out, 'var': var_out}
+
+
+def _same_as_candidates(frames, labels, name) -> list[dict[str, Any]]:
+    """Other label columns this one could be pooled with under `obs_merge_into`:
+    every label column held only by datasets that do not hold `name`. The
+    user may know two columns are one scheme when few names overlap, so all
+    are offered; `likely` marks named (not id) vocabularies sharing at least
+    `_SHARED_LABEL_MIN_JACCARD` of the union, and those come first."""
+    held = [f[name] for f in frames if name in f.columns]
+    if name == 'sample' or not held or any(_column_kind(col) not in _LABEL_KINDS for col in held):
+        return []
+    mine = _label_vocabulary(pd.concat([col.astype(object) for col in held]))
+    holders = {lbl for lbl, f in zip(labels, frames) if name in f.columns}
+    out: list[dict[str, Any]] = []
+    for other in sorted({c for f in frames for c in f.columns}):
+        if other == name or other == 'sample':
+            continue
+        other_holders = {lbl for lbl, f in zip(labels, frames) if other in f.columns}
+        if other_holders & holders:
+            continue
+        cols = [f[other] for f in frames if other in f.columns]
+        if any(_column_kind(col) not in _LABEL_KINDS for col in cols):
+            continue
+        theirs = _label_vocabulary(pd.concat([col.astype(object) for col in cols]))
+        overlap = _label_overlap([mine, theirs])
+        likely = (bool(overlap['union']) and not overlap['numeric']
+                  and overlap['shared'] / overlap['union'] >= _SHARED_LABEL_MIN_JACCARD)
+        out.append({'name': other, 'shared': overlap['shared'],
+                    'union': overlap['union'], 'likely': likely})
+    out.sort(key=lambda e: (not e['likely'], -(e['shared'] / e['union'] if e['union'] else 0), e['name']))
+    return out
+
+
+def _resolve_merge_into(frames, labels, merge_into, resolved) -> dict[str, str]:
+    """Validate `obs_merge_into` and force both ends to `merge` in `resolved`.
+
+    A source is pooled into its target's output column, so no dataset may
+    hold both (or two sources of one target): a cell would have two values.
+    Chains are refused rather than followed, so the mapping in the record is
+    the mapping that was applied.
+    """
+    merge_into = {str(k): str(v) for k, v in (merge_into or {}).items()}
+    known = {c for f in frames for c in f.columns}
+    for source, target in merge_into.items():
+        for col in (source, target):
+            if col not in known:
+                raise ValueError(
+                    f"No input dataset has a .obs column named '{col}'; "
+                    f"available: {sorted(known)}")
+            if col == 'sample':
+                raise ValueError("'sample' is written by the combine itself and cannot be merged.")
+        if source == target:
+            raise ValueError(f"'{source}' cannot be merged into itself.")
+        if target in merge_into:
+            raise ValueError(
+                f"'{target}' is itself merged into '{merge_into[target]}'; "
+                f"merge '{source}' into '{merge_into[target]}' instead.")
+        src_class = {_kind_class(_column_kind(f[source])) for f in frames if source in f.columns}
+        tgt_class = {_kind_class(_column_kind(f[target])) for f in frames if target in f.columns}
+        if src_class != tgt_class or len(src_class) != 1:
+            raise ValueError(
+                f"'{source}' ({', '.join(sorted(src_class))}) and '{target}' "
+                f"({', '.join(sorted(tgt_class))}) are different kinds of column; "
+                "only label with label or numeric with numeric can be pooled.")
+    by_target: dict[str, list[str]] = {}
+    for source, target in merge_into.items():
+        by_target.setdefault(target, []).append(source)
+    for target, sources in by_target.items():
+        group = [target] + sources
+        for lbl, f in zip(labels, frames):
+            present = [c for c in group if c in f.columns]
+            if len(present) > 1:
+                raise ValueError(
+                    f"Dataset '{lbl}' holds both '{present[0]}' and '{present[1]}', "
+                    "so its cells would have two values for the merged column.")
+    for source, target in merge_into.items():
+        resolved[source] = 'merge'
+        resolved[target] = 'merge'
+    return merge_into
 
 
 def _resolve_policy(
@@ -310,14 +466,9 @@ def _resolve_policy(
             continue
         holders = [lbl for lbl, f in zip(labels, frames) if name in f.columns]
         if axis == 'obs':
-            first = next(f[name] for f in frames if name in f.columns)
-            kind = _column_kind(first)
-            n_unique = None
-            if kind in ('integer', 'category', 'string'):
-                n_unique = int(max(
-                    f[name].nunique(dropna=True) for f in frames if name in f.columns
-                ))
-            resolved[name] = _suggest_obs_policy(holders, kind, n_unique)[0]
+            facts = _obs_column_facts(frames, name)
+            resolved[name] = _suggest_obs_policy(
+                holders, facts['kind'], facts['n_unique'], facts['overlap'], facts['mixed'])[0]
         else:
             held = [f for f in frames if name in f.columns]
             rendered = [f[name].reindex(shared).astype(str).tolist() for f in held]
@@ -333,6 +484,7 @@ def combine_datasets(
     *,
     obs_policy: dict[str, str] | None = None,
     var_policy: dict[str, str] | None = None,
+    obs_merge_into: dict[str, str] | None = None,
 ) -> anndata.AnnData:
     """Combine multiple datasets into one adata, spatially aware when possible.
 
@@ -374,6 +526,11 @@ def combine_datasets(
         var_policy: Per .var column, one of ``first`` (one copy), ``separate``
             or ``drop``. Genes are shared, so the default is ``first`` when
             every dataset already agrees and ``separate`` when they do not.
+        obs_merge_into: ``{source: target}`` pooling a .obs column into
+            another column's output under the target's name — the same
+            labels under two names (``celltype`` in one file, ``cell_type``
+            in the other). Both ends are forced to ``merge``; see
+            :func:`_resolve_merge_into` for what is refused.
 
     Raises:
         ValueError: if fewer than 2 files, no shared genes, or an input
@@ -420,6 +577,7 @@ def combine_datasets(
     # `sample` is written by the concat itself; a policy for it is meaningless.
     obs_requested = {k: v for k, v in (obs_policy or {}).items() if k != 'sample'}
     obs_resolved = _resolve_policy(obs_frames, unique_labels, obs_requested, 'obs')
+    merge_into = _resolve_merge_into(obs_frames, unique_labels, obs_merge_into, obs_resolved)
     var_resolved = _resolve_policy(
         var_frames, unique_labels, var_policy, 'var', shared=shared
     )
@@ -430,8 +588,10 @@ def combine_datasets(
     obs_alloc = _NameAllocator({'sample'})
     merged_obs: dict[str, str] = {}
     for name in sorted(obs_resolved):
-        if obs_resolved[name] == 'merge':
+        if obs_resolved[name] == 'merge' and name not in merge_into:
             merged_obs[name] = obs_alloc.take(name)
+    for source, target in merge_into.items():
+        merged_obs[source] = merged_obs[target]
     split_obs: dict[tuple[str, str], str] = {}
     for name in sorted(obs_resolved):
         if obs_resolved[name] != 'separate':
@@ -442,9 +602,11 @@ def combine_datasets(
 
     # Categorical columns lose their dtype when reindexed in with NaN, so the
     # categories are carried across the concat and restored afterwards.
+    # Datasets outer, columns inner, so a merge group's categories run in
+    # input order whatever the source columns are called.
     obs_categories: dict[str, list] = {}
-    for name, policy in obs_resolved.items():
-        for lbl, f in zip(unique_labels, obs_frames):
+    for lbl, f in zip(unique_labels, obs_frames):
+        for name, policy in obs_resolved.items():
             if name not in f.columns or policy == 'drop':
                 continue
             col = f[name]
@@ -527,7 +689,21 @@ def combine_datasets(
         )
     for col, cats in obs_categories.items():
         if col in combined.obs.columns:
-            combined.obs[col] = pd.Categorical(combined.obs[col], categories=cats)
+            # A string column pooled with a categorical one contributes values
+            # the recorded categories never saw; restoring without them would
+            # turn those cells into missing.
+            # Categories are compared as strings: an integer categorical
+            # pooled with text would otherwise hold `1` and `'1'` apart, and
+            # mixed-type categories cannot be written to h5ad.
+            values = combined.obs[col]
+            cats = list(cats)
+            if any(not isinstance(c, str) for c in cats) or any(
+                    not isinstance(v, str) for v in pd.unique(values.dropna())):
+                values = values.astype(object).where(values.notna(), None).map(
+                    lambda v: v if v is None else str(v))
+                cats = list(dict.fromkeys(str(c) for c in cats))
+            extra = [v for v in pd.unique(values.dropna()) if v not in cats]
+            combined.obs[col] = pd.Categorical(values, categories=cats + extra)
 
     # Every combined gene is present in every input (join='inner'), so these
     # reindexes are exact and a boolean flag stays boolean.
@@ -553,6 +729,7 @@ def combine_datasets(
         'labels': list(unique_labels),
         'obs_policy': dict(obs_resolved),
         'var_policy': dict(var_resolved),
+        'obs_merge_into': dict(merge_into),
     }
     return combined
 
@@ -727,6 +904,10 @@ _GRAPH_META_KEY = '_xcell_graph'
 # prepare_cluster_cells_by_gene_set already uses — so the dataset's own X_pca /
 # connectivities / X_umap / leiden are never overwritten by a sub-clustering.
 CELL_SUBSETS_UNS = 'xcell_cell_subsets'
+#: Label values a column merge reads as "no value here", besides null:
+#: `unassigned` is what xcell writes outside a mask (CNV clones, subset
+#: Leiden), and an empty string is an empty cell in any export.
+OBS_EMPTY_LABELS = ('', 'unassigned')
 SUBSET_OBS_PREFIX = 'subset_'
 # A subset's graph entry goes to uns[<name>], and its graph-named results
 # (X_umap_<name>, leiden_<name>) are what a dataset run over a graph called
@@ -3329,6 +3510,105 @@ class DataAdaptor:
             self.adata.uns[f'{name}_colors'] = list(colors)
         result = {'column': column, 'new_name': name, 'copied_colors': colors is not None}
         self._log_action('duplicate_obs_column', {'column': column, 'new_name': name}, result)
+        return result
+
+    def merge_obs_columns(
+        self, columns: list[str], new_name: str, keep_sources: bool = True,
+    ) -> dict[str, Any]:
+        """Fold several .obs columns into one: per cell, the first column in
+        the given order with a value wins.
+
+        Labels (categorical / string) merge to a categorical whose categories
+        are the values that won, in order of first appearance; null, ``''`` and
+        ``unassigned`` are "no value" (`OBS_EMPTY_LABELS`). Numbers merge to
+        float, or int64 when every source is integer and no cell is left
+        empty. Boolean columns are refused: they have no empty cells to fill,
+        so the first one would always win outright. Labels and numbers cannot
+        be mixed. No palette is written for the new column.
+
+        Returns ``new_name, columns, kind, n_conflicts`` (cells with a value
+        in two or more sources), ``n_missing``, ``dropped``.
+
+        Raises:
+            KeyError: a named column is missing
+            ValueError: fewer than two distinct columns, a bad new name, a
+                saved subset's column, a boolean, or mixed kinds
+        """
+        obs = self.adata.obs
+        cols = list(dict.fromkeys(str(c) for c in columns or []))
+        if len(cols) < 2:
+            raise ValueError('Name at least two distinct columns to merge.')
+        missing = [c for c in cols if c not in obs.columns]
+        if missing:
+            raise KeyError(f"Columns not found in .obs: {missing}")
+        for c in cols:
+            subset = self._subset_owning_column(c)
+            if subset is not None:
+                raise ValueError(
+                    f"'{c}' is the membership column of saved subset '{subset}'; "
+                    "merge the subset from the Cells panel instead.")
+        name = self._check_new_obs_name(new_name)
+        classes = {'categorical': 'label', 'string': 'label',
+                   'integer': 'number', 'float': 'number'}
+        kinds = {c: self._obs_kind(obs[c]) for c in cols}
+        for c, k in kinds.items():
+            if k == 'boolean':
+                raise ValueError(
+                    f"'{c}' is boolean: a boolean column has no empty cells to fill, "
+                    "so the first column would always win. Convert it to string first.")
+            if k not in classes:
+                raise ValueError(f"'{c}' ({k}) cannot be merged.")
+        if len({classes[k] for k in kinds.values()}) > 1:
+            raise ValueError(
+                "Columns are different kinds ("
+                + ', '.join(f'{c}: {k}' for c, k in kinds.items())
+                + "); only labels with labels or numbers with numbers can be merged.")
+
+        n_valued = pd.Series(0, index=obs.index)
+        if classes[kinds[cols[0]]] == 'label':
+            merged = pd.Series([None] * len(obs), index=obs.index, dtype=object)
+            cats: list[str] = []
+            for c in cols:
+                src = obs[c]
+                text = pd.Series(np.where(src.isna(), None, src.astype(str)),
+                                 index=obs.index, dtype=object)
+                has = src.notna() & ~text.isin(OBS_EMPTY_LABELS)
+                merged = merged.where(merged.notna(), text.where(has))
+                n_valued += has.astype(int)
+                cats.extend(v for v in pd.unique(text[has]) if v not in cats)
+            # Only values that won: a label every cell lost to an earlier
+            # column would be an empty category in every legend.
+            present = set(merged.dropna())
+            new = pd.Categorical(merged, categories=[v for v in cats if v in present])
+        else:
+            merged = obs[cols[0]].astype(float)
+            n_valued += merged.notna().astype(int)
+            for c in cols[1:]:
+                src = obs[c].astype(float)
+                merged = merged.where(merged.notna(), src)
+                n_valued += src.notna().astype(int)
+            new = merged
+            if all(k == 'integer' for k in kinds.values()) and merged.notna().all():
+                new = merged.astype('int64')
+
+        obs[name] = new
+        self.adata.uns.pop(f'{name}_colors', None)
+        dropped: list[str] = []
+        if not keep_sources:
+            for c in cols:
+                self._drop_obs_column(c)
+                dropped.append(c)
+        result = {
+            'new_name': name, 'columns': cols,
+            'kind': self._obs_kind(self.adata.obs[name]),
+            'n_conflicts': int((n_valued >= 2).sum()),
+            'n_missing': int(self.adata.obs[name].isna().sum()),
+            'dropped': dropped,
+        }
+        self._log_action(
+            'merge_obs_columns',
+            {'columns': cols, 'new_name': name, 'keep_sources': bool(keep_sources)},
+            result)
         return result
 
     def convert_obs_column(

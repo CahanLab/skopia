@@ -31,6 +31,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from xcell.analysis_record import Step
+from xcell.adaptor import OBS_EMPTY_LABELS
 
 EXACT = 'exact'
 XCELL = 'xcell'
@@ -435,6 +436,43 @@ def _code_convert_obs_column(step: Step) -> list[str]:
         f"{col} = {expr}",
         f"{ADATA}.uns.pop({_lit(str(p.get('column')) + '_colors')}, None)",
     ]
+
+
+def _code_merge_obs_columns(step: Step) -> list[str]:
+    """The coalesce merge_obs_columns applies: first value wins, in order."""
+    p, r = step.params, step.result
+    cols = _lit(list(p.get('columns') or []))
+    new = _lit(p.get('new_name'))
+    kind = r.get('kind')
+    if kind == 'categorical':
+        lines = [
+            f"_cols = {cols}",
+            f"_merged = pd.Series([None] * {ADATA}.n_obs, index={ADATA}.obs.index, dtype=object)",
+            "_cats = []",
+            "for _c in _cols:",
+            f"    _src = {ADATA}.obs[_c]",
+            f"    _text = pd.Series(np.where(_src.isna(), None, _src.astype(str)), index={ADATA}.obs.index, dtype=object)",
+            f"    _has = _src.notna() & ~_text.isin({_lit(list(OBS_EMPTY_LABELS))})",
+            "    _merged = _merged.where(_merged.notna(), _text.where(_has))",
+            "    _cats += [_v for _v in pd.unique(_text[_has]) if _v not in _cats]",
+            "_cats = [_v for _v in _cats if _v in set(_merged.dropna())]",
+            f"{ADATA}.obs[{new}] = pd.Categorical(_merged, categories=_cats)",
+        ]
+    else:
+        lines = [
+            f"_cols = {cols}",
+            f"_merged = {ADATA}.obs[_cols[0]].astype(float)",
+            "for _c in _cols[1:]:",
+            f"    _merged = _merged.where(_merged.notna(), {ADATA}.obs[_c].astype(float))",
+            f"{ADATA}.obs[{new}] = _merged" + (".astype('int64')" if kind == 'integer' else ''),
+        ]
+    if not p.get('keep_sources', True):
+        lines += [
+            f"{ADATA}.obs = {ADATA}.obs.drop(columns=_cols)",
+            "for _c in _cols:",
+            f"    {ADATA}.uns.pop(_c + '_colors', None)",
+        ]
+    return lines
 
 
 # --- the registry ---------------------------------------------------------
@@ -1082,6 +1120,17 @@ REGISTRY: dict[str, ActionSpec] = {
         ],
         summary=lambda p, r: (
             f"Copied `.obs['{p.get('column')}']` to `.obs['{p.get('new_name')}']`."
+        ),
+    ),
+    'merge_obs_columns': ActionSpec(
+        label='Merge columns', fidelity=EXACT,
+        imports=('import numpy as np', 'import pandas as pd'),
+        code=_code_merge_obs_columns,
+        summary=lambda p, r: (
+            f"Merged {', '.join(f'`{c}`' for c in (p.get('columns') or []))} into "
+            f"`.obs['{p.get('new_name')}']` (first value wins, in that order"
+            + (f"; {_n(r.get('n_conflicts'))} cells had more than one" if r.get('n_conflicts') else '')
+            + (", sources dropped)." if not p.get('keep_sources', True) else ').')
         ),
     ),
     'convert_obs_column': ActionSpec(

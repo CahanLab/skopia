@@ -6,6 +6,7 @@ import {
   duplicateObsColumn,
   exportAnnotations,
   fetchObsColumns,
+  mergeObsColumns,
   refreshCellSubsets,
   refreshSchema,
   renameObsColumn,
@@ -19,6 +20,7 @@ import {
   defaultTrueValue,
   filterColumns,
   formatPreview,
+  mergeDefaultName,
   newNameProblem,
   pruneSelection,
   sortColumns,
@@ -119,6 +121,9 @@ export default function ObsManagerModal({ onClose }: { onClose: () => void }) {
   const [dupDraft, setDupDraft] = useState('')
   const [convertTo, setConvertTo] = useState<ObsConvertTarget | ''>('')
   const [trueValue, setTrueValue] = useState<string | null>(null)
+  const [mergeOpen, setMergeOpen] = useState(false)
+  const [mergeDraft, setMergeDraft] = useState('')
+  const [keepSources, setKeepSources] = useState(true)
 
   const load = useCallback(async () => {
     try {
@@ -172,6 +177,13 @@ export default function ObsManagerModal({ onClose }: { onClose: () => void }) {
     setTrueValue(convertTo === 'boolean' ? defaultTrueValue(boolValues) : null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [convertTo, focus])
+  // The merge row follows the ticked set: a fresh default name each time it
+  // changes, and it closes when fewer than two are ticked.
+  useEffect(() => {
+    if (selectedInOrder.length < 2) setMergeOpen(false)
+    setMergeDraft(mergeDefaultName(selectedInOrder, (columns ?? []).map((c) => c.name)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedInOrder])
 
   /** After any mutation: both refresh channels, then this table. */
   const afterMutation = useCallback(async () => {
@@ -246,6 +258,22 @@ export default function ObsManagerModal({ onClose }: { onClose: () => void }) {
     return `Renamed '${old}' to '${out.new_name}'.`
   })
 
+  const handleMerge = () => selectedInOrder.length >= 2 && run(async () => {
+    const cols = selectedInOrder
+    const out = await mergeObsColumns(cols, mergeDraft.trim(), keepSources)
+    // Dropped sources leave colour-by, the label overlay and display names
+    // the way a delete does.
+    out.dropped.forEach((c) => forgetObsColumn(c))
+    setMergeOpen(false)
+    setSelected(new Set())
+    setAnchor(null)
+    const conflicts = out.n_conflicts
+      ? `; ${plural(out.n_conflicts, 'cell')} had a value in more than one, the first kept`
+      : ''
+    const missing = out.n_missing ? `; ${plural(out.n_missing, 'cell')} left empty` : ''
+    return `Merged ${plural(cols.length, 'column')} into '${out.new_name}'${conflicts}${missing}.`
+  })
+
   const handleDuplicate = () => focused && run(async () => {
     const out = await duplicateObsColumn(focused.name, dupDraft.trim())
     return `Copied '${focused.name}' to '${out.new_name}'.`
@@ -267,6 +295,7 @@ export default function ObsManagerModal({ onClose }: { onClose: () => void }) {
     ? (renameDraft.trim() === focused.name ? 'unchanged' : newNameProblem(renameDraft, names))
     : null
   const dupProblem = focused ? newNameProblem(dupDraft, names) : null
+  const mergeProblem = newNameProblem(mergeDraft, names)
   const subsetLosses = selectedInOrder.map((n) => byName.get(n)).filter((c) => c?.subset) as ObsColumnInfo[]
 
   const sortHeader = (key: ObsSortKey, label: string) => (
@@ -320,6 +349,15 @@ export default function ObsManagerModal({ onClose }: { onClose: () => void }) {
           <button style={{ ...styles.button, ...(selected.size ? {} : { opacity: 0.5 }) }} disabled={!selected.size || busy} onClick={handleExport}
             title="Download the selected columns with cell ids as TSV">
             Export
+          </button>
+          <button
+            style={{ ...styles.button, ...(selected.size >= 2 ? {} : { opacity: 0.5 }) }}
+            disabled={selected.size < 2 || busy}
+            onClick={() => { setActionError(null); setMergeOpen((v) => !v) }}
+            title="Fold the ticked columns into one: the first with a value wins, in .obs order"
+            data-obs-merge
+          >
+            Merge{selected.size >= 2 ? ` ${selected.size}` : ''}
           </button>
           <button
             style={{ ...styles.button, ...(selected.size ? styles.danger : { opacity: 0.5 }) }}
@@ -417,9 +455,36 @@ export default function ObsManagerModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div style={styles.edit}>
-          {!focused && (
+          {mergeOpen && selectedInOrder.length >= 2 && (
+            <>
+              <div style={styles.editRow}>
+                <span style={styles.label}>Merge into</span>
+                <input
+                  style={{ ...styles.input, width: '220px' }}
+                  value={mergeDraft}
+                  onChange={(e) => setMergeDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !mergeProblem && !busy) handleMerge() }}
+                  data-obs-merge-input
+                />
+                <label style={{ color: '#aaa', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <input type="checkbox" checked={keepSources} onChange={(e) => setKeepSources(e.target.checked)} />
+                  keep the source columns
+                </label>
+                <button style={styles.button} disabled={!!mergeProblem || busy} onClick={handleMerge} data-obs-merge-run>
+                  Merge
+                </button>
+                {mergeProblem && mergeDraft.trim() && <span style={{ color: '#e9a23b' }}>{mergeProblem}</span>}
+              </div>
+              <div style={{ fontSize: '12px', color: '#888' }}>
+                First value wins, in this order:{' '}
+                <span style={{ fontFamily: 'monospace', color: '#ccc' }}>{selectedInOrder.join(', ')}</span>.
+                Empty, '' and 'unassigned' count as no value. Labels merge with labels, numbers with numbers.
+              </div>
+            </>
+          )}
+          {!focused && !mergeOpen && (
             <div style={{ fontSize: '12px', color: '#888' }}>
-              Tick columns to delete or export them; shift-click ticks a range. Click a row to rename, duplicate or convert it.
+              Tick columns to delete, export or merge them; shift-click ticks a range. Click a row to rename, duplicate or convert it.
             </div>
           )}
           {focused && (

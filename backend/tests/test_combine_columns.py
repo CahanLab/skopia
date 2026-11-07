@@ -338,3 +338,307 @@ def test_combine_route_rejects_a_bad_policy_value(tmp_path):
     })
     assert r.status_code == 400
     assert 'policy' in r.json()['detail']
+
+
+# ---------------------------------------------------------------------------
+# shared label vocabularies: same name, same labels → one column by default
+# ---------------------------------------------------------------------------
+def _labelled(tmp_path, labels_a, labels_b, kind_b='category'):
+    """Two datasets with a `cell_type` column drawn from the given vocabularies."""
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['cell_type'] = pd.Categorical(np.resize(list(labels_a), 30)) if labels_a else np.nan
+    vals_b = np.resize(list(labels_b), 40)
+    b.obs['cell_type'] = pd.Categorical(vals_b) if kind_b == 'category' else pd.Series(
+        vals_b, index=b.obs_names, dtype=object)
+    return _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+
+
+def test_a_label_shared_by_every_dataset_defaults_to_merge(tmp_path):
+    """Two files annotated with the same cell-type scheme want one column."""
+    pa, pb = _labelled(tmp_path, ['T cell', 'B cell', 'NK'], ['T cell', 'B cell', 'NK'])
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+    assert col['suggested'] == 'merge'
+    assert col['labels'] == {'shared': 3, 'union': 3}
+    assert 'same 3 labels' in col['reason']
+
+
+def test_a_label_mostly_shared_defaults_to_merge(tmp_path):
+    """Same scheme, different tissues: most names overlap, not all."""
+    pa, pb = _labelled(tmp_path, ['T cell', 'B cell', 'NK'], ['T cell', 'B cell', 'Mono'])
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+    assert col['suggested'] == 'merge'
+    assert col['labels'] == {'shared': 2, 'union': 4}
+    assert '2 of 4 labels shared' in col['reason']
+
+
+def test_numeric_looking_labels_stay_separate(tmp_path):
+    """Cluster ids overlap by construction and mean nothing across files."""
+    for vocab in (['0', '1', '2'], ['C0', 'C1', 'C2']):
+        pa, pb = _labelled(tmp_path, vocab, vocab)
+        col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+        assert col['suggested'] == 'separate', vocab
+        assert 'numbers' in col['reason']
+        assert col['labels'] == {'shared': 3, 'union': 3}
+
+
+def test_a_label_with_little_overlap_stays_separate(tmp_path):
+    pa, pb = _labelled(tmp_path, ['T cell', 'B cell'], ['Neuron', 'Glia'])
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+    assert col['suggested'] == 'separate'
+    assert col['labels'] == {'shared': 0, 'union': 4}
+
+
+def test_an_all_missing_label_column_stays_separate(tmp_path):
+    """No vocabulary on one side is no evidence of a shared scheme. An
+    all-missing column comes back from disk as float, so there is nothing to
+    compare and the kinds disagree."""
+    pa, pb = _labelled(tmp_path, [], ['T cell', 'B cell'])
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+    assert col['suggested'] == 'separate'
+    assert col['labels'] is None
+
+
+def test_a_label_whose_kinds_differ_across_datasets_stays_separate(tmp_path):
+    """A categorical in one file and free text in the other still share a
+    vocabulary; the kinds agree in class, so the overlap rule applies."""
+    pa, pb = _labelled(tmp_path, ['T cell', 'B cell'], ['T cell', 'B cell'], kind_b='string')
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+    assert col['suggested'] == 'merge'
+    # But a number column against a label column is a different thing.
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['score'] = np.random.default_rng(1).random(30)
+    b.obs['score'] = pd.Categorical(['hi', 'lo'] * 20)
+    pa, pb = _write(tmp_path, 'a2.h5ad', a), _write(tmp_path, 'b2.h5ad', b)
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['score']
+    assert col['suggested'] == 'separate'
+    assert 'types differ' in col['reason']
+
+
+def test_a_measurement_reports_no_labels(tmp_path):
+    pa, pb = _pair(tmp_path)
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['nCount_RNA']
+    assert col['labels'] is None
+
+
+def test_combine_with_no_policy_pools_a_shared_vocabulary(tmp_path):
+    """The combine and the picker share one rule, so a caller that sends no
+    policy gets the same default the picker shows."""
+    pa, pb = _labelled(tmp_path, ['T cell', 'B cell', 'NK'], ['T cell', 'B cell', 'Mono'])
+    out = combine_datasets([pa, pb], ['A', 'B'])
+    assert 'cell_type' in out.obs.columns
+    assert 'cell_type__A' not in out.obs.columns
+    assert out.obs['cell_type'].notna().all()
+    assert list(out.obs['cell_type'].cat.categories) == ['B cell', 'NK', 'T cell', 'Mono']
+    assert out.uns['xcell_combine']['obs_policy']['cell_type'] == 'merge'
+
+
+def test_a_category_pooled_with_free_text_keeps_every_value(tmp_path):
+    """Restoring the recorded categories after the concat must not turn the
+    string side's values into missing."""
+    pa, pb = _labelled(tmp_path, ['T cell', 'B cell'], ['T cell', 'Mono'], kind_b='string')
+    out = combine_datasets([pa, pb], ['A', 'B'], obs_policy={'cell_type': 'merge'})
+    assert out.obs['cell_type'].notna().all()
+    assert set(out.obs['cell_type'].cat.categories) == {'T cell', 'B cell', 'Mono'}
+
+
+# ---------------------------------------------------------------------------
+# obs_merge_into: the same labels under different names
+# ---------------------------------------------------------------------------
+def _renamed(tmp_path, kind_a='category', kind_b='category'):
+    """`celltype` in A and `cell_type` in B, one scheme under two names."""
+    a, b = _base(30, 1), _base(40, 2)
+    va = np.resize(['T cell', 'B cell', 'NK'], 30)
+    vb = np.resize(['T cell', 'B cell', 'Mono'], 40)
+    a.obs['celltype'] = pd.Categorical(va) if kind_a == 'category' else va
+    b.obs['cell_type'] = pd.Categorical(vb) if kind_b == 'category' else vb
+    a.obs['leiden'] = pd.Categorical(np.resize(['0', '1'], 30))
+    return _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+
+
+def test_merge_into_pools_two_names_into_the_target(tmp_path):
+    pa, pb = _renamed(tmp_path)
+    out = combine_datasets([pa, pb], ['A', 'B'], obs_merge_into={'celltype': 'cell_type'})
+    assert 'cell_type' in out.obs.columns
+    assert 'celltype' not in out.obs.columns
+    assert out.obs['cell_type'].notna().all()
+    assert list(out.obs['cell_type'].cat.categories) == ['B cell', 'NK', 'T cell', 'Mono']
+    assert out.obs.loc[out.obs['sample'] == 'A', 'cell_type'].iloc[0] == 'T cell'
+    rec = out.uns['xcell_combine']
+    assert rec['obs_merge_into'] == {'celltype': 'cell_type'}
+    assert rec['obs_policy']['celltype'] == 'merge'
+    assert rec['obs_policy']['cell_type'] == 'merge'
+
+
+def test_merge_into_overrides_a_drop_on_the_source(tmp_path):
+    """Saying a column is the same as another is the stronger statement."""
+    pa, pb = _renamed(tmp_path)
+    out = combine_datasets(
+        [pa, pb], ['A', 'B'],
+        obs_policy={'celltype': 'drop', 'cell_type': 'separate'},
+        obs_merge_into={'celltype': 'cell_type'},
+    )
+    assert out.obs['cell_type'].notna().all()
+    assert 'cell_type__B' not in out.obs.columns
+
+
+def test_merge_into_refuses_unknown_self_chain_and_shared_holders(tmp_path):
+    pa, pb = _renamed(tmp_path)
+    with pytest.raises(ValueError, match="No input dataset has .* 'nope'"):
+        combine_datasets([pa, pb], ['A', 'B'], obs_merge_into={'nope': 'cell_type'})
+    with pytest.raises(ValueError, match="No input dataset has .* 'nope'"):
+        combine_datasets([pa, pb], ['A', 'B'], obs_merge_into={'celltype': 'nope'})
+    with pytest.raises(ValueError, match='into itself'):
+        combine_datasets([pa, pb], ['A', 'B'], obs_merge_into={'celltype': 'celltype'})
+    with pytest.raises(ValueError, match='itself merged into'):
+        combine_datasets([pa, pb], ['A', 'B'],
+                         obs_merge_into={'leiden': 'celltype', 'celltype': 'cell_type'})
+    # `leiden` and `celltype` are both in A: a cell would have two values.
+    with pytest.raises(ValueError, match="'A' holds both"):
+        combine_datasets([pa, pb], ['A', 'B'], obs_merge_into={'leiden': 'celltype'})
+    with pytest.raises(ValueError, match='sample'):
+        combine_datasets([pa, pb], ['A', 'B'], obs_merge_into={'celltype': 'sample'})
+
+
+def test_merge_into_refuses_a_class_mismatch(tmp_path):
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['score'] = np.random.default_rng(1).random(30)
+    b.obs['cell_type'] = pd.Categorical(np.resize(['T cell', 'B cell'], 40))
+    pa, pb = _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+    with pytest.raises(ValueError, match='numeric.*label|label.*numeric'):
+        combine_datasets([pa, pb], ['A', 'B'], obs_merge_into={'score': 'cell_type'})
+
+
+def test_describe_names_a_same_as_candidate(tmp_path):
+    pa, pb = _renamed(tmp_path)
+    obs = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])
+    col = obs['celltype']
+    # Only A has it, so on its own it keeps its default; the hint is added.
+    assert col['suggested'] == 'merge'
+    assert col['same_as'][0] == {'name': 'cell_type', 'shared': 2, 'union': 4, 'likely': True}
+    assert 'looks like `cell_type`' in col['reason']
+    assert '2 of 4 labels shared' in col['reason']
+    # Symmetric: the other side names this one.
+    assert obs['cell_type']['same_as'][0]['name'] == 'celltype'
+    # `leiden` is held by A too, so it is never a candidate for A's column.
+    assert all(e['name'] != 'leiden' for e in col['same_as'])
+    # B's `cell_type` could be declared the same as `leiden`, but nothing
+    # suggests it: ids and names share no label.
+    assert obs['leiden']['same_as'] == [
+        {'name': 'cell_type', 'shared': 0, 'union': 5, 'likely': False}]
+    assert obs['leiden']['reason'].startswith('only A has it')
+
+
+def test_same_as_never_offers_a_column_from_the_same_dataset(tmp_path):
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['clusters_a'] = pd.Categorical(np.resize(['0', '1'], 30))
+    a.obs['annot'] = pd.Categorical(np.resize(['x', 'y'], 30))
+    b.obs['clusters_b'] = pd.Categorical(np.resize(['0', '1'], 40))
+    pa, pb = _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+    obs = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])
+    assert [e['name'] for e in obs['clusters_a']['same_as']] == ['clusters_b']
+    assert [e['name'] for e in obs['annot']['same_as']] == ['clusters_b']
+    assert 'looks like' not in obs['clusters_a']['reason']
+
+
+def test_combine_route_accepts_obs_merge_into(tmp_path):
+    from xcell.api import routes
+    pa, pb = _renamed(tmp_path)
+    files = [{'file_path': str(pa), 'label': 'A'}, {'file_path': str(pb), 'label': 'B'}]
+    try:
+        r = _client().post('/api/combine', json={
+            'files': files, 'slot': 'merge_into_test',
+            'obs_merge_into': {'celltype': 'cell_type'},
+        })
+        assert r.status_code == 200, r.text
+        ad = routes.get_adaptor('merge_into_test').adata
+        assert ad.obs['cell_type'].notna().all()
+        r = _client().post('/api/combine', json={
+            'files': files, 'slot': 'merge_into_test',
+            'obs_merge_into': {'leiden': 'celltype', 'celltype': 'cell_type'},
+        })
+        assert r.status_code == 400
+        assert 'itself merged into' in r.json()['detail']
+    finally:
+        # A slot left registered makes later "nothing loaded" tests see data.
+        routes._adaptors.pop('merge_into_test', None)
+
+
+# ---------------------------------------------------------------------------
+# after review: the Same as list, stage labels, mixed category types
+# ---------------------------------------------------------------------------
+def test_same_as_lists_every_disjoint_label_column_and_marks_the_likely_ones(tmp_path):
+    """The user may know two columns are one scheme even when few names
+    overlap, so every candidate is offered; the overlap says which is likely."""
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['ct'] = pd.Categorical(np.resize(['T cell', 'B cell', 'NK'], 30))
+    a.obs['other_a'] = pd.Categorical(np.resize(['p', 'q'], 30))
+    b.obs['celltype'] = pd.Categorical(np.resize(['T cell', 'B cell', 'Mono'], 40))
+    b.obs['region'] = pd.Categorical(np.resize(['x', 'y'], 40))
+    b.obs['depth'] = np.random.default_rng(3).random(40)
+    pa, pb = _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+    obs = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])
+    assert obs['ct']['same_as'] == [
+        {'name': 'celltype', 'shared': 2, 'union': 4, 'likely': True},
+        {'name': 'region', 'shared': 0, 'union': 5, 'likely': False},
+    ]
+    assert 'looks like `celltype`' in obs['ct']['reason']
+    assert obs['other_a']['same_as'] == [
+        {'name': 'celltype', 'shared': 0, 'union': 5, 'likely': False},
+        {'name': 'region', 'shared': 0, 'union': 4, 'likely': False},
+    ]
+    assert 'looks like' not in obs['other_a']['reason']
+    assert obs['depth']['same_as'] == []
+
+
+def test_the_hint_names_a_likely_candidate_whatever_the_holder_count(tmp_path):
+    a, b, c = _base(30, 1), _base(40, 2), _base(20, 3)
+    for ad, n in ((a, 30), (b, 40)):
+        ad.obs['ct'] = pd.Categorical(np.resize(['T cell', 'B cell'], n))
+    c.obs['celltype'] = pd.Categorical(np.resize(['T cell', 'B cell'], 20))
+    paths = [_write(tmp_path, f'{k}.h5ad', ad) for k, ad in (('a', a), ('b', b), ('c', c))]
+    obs = _by_name(describe_combine_columns(paths, ['A', 'B', 'C'])['obs'])
+    assert obs['ct']['suggested'] == 'merge'
+    assert 'looks like `celltype` in C' in obs['ct']['reason']
+
+
+def test_an_existing_sample_column_gets_no_same_as(tmp_path):
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['sample'] = pd.Categorical(['s1'] * 30)
+    b.obs['batch'] = pd.Categorical(['s1'] * 40)
+    pa, pb = _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+    obs = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])
+    assert obs['sample']['same_as'] == []
+    assert obs['batch']['same_as'] == []
+
+
+def test_numeric_vocabularies_are_offered_but_never_likely(tmp_path):
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['clusters_a'] = pd.Categorical(np.resize(['0', '1'], 30))
+    b.obs['clusters_b'] = pd.Categorical(np.resize(['0', '1'], 40))
+    pa, pb = _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+    obs = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])
+    assert obs['clusters_a']['same_as'] == [
+        {'name': 'clusters_b', 'shared': 2, 'union': 2, 'likely': False}]
+    assert 'looks like' not in obs['clusters_a']['reason']
+
+
+def test_embryonic_stages_are_labels_not_cluster_ids(tmp_path):
+    """E7.5 is a stage every gastrulation dataset carries; C3 and 0 are ids."""
+    pa, pb = _labelled(tmp_path, ['E7.5', 'E8.5'], ['E7.5', 'E8.5', 'E9.5'])
+    col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+    assert col['suggested'] == 'merge'
+    for vocab in (['C3', 'C4'], ['0', '1'], ['1.0', '2.0'], ['cl12', 'cl13']):
+        pa, pb = _labelled(tmp_path, vocab, vocab)
+        col = _by_name(describe_combine_columns([pa, pb], ['A', 'B'])['obs'])['cell_type']
+        assert col['suggested'] == 'separate', vocab
+
+
+def test_an_integer_categorical_pooled_with_text_writes_to_h5ad(tmp_path):
+    a, b = _base(30, 1), _base(40, 2)
+    a.obs['ct'] = pd.Categorical(np.resize([1, 2], 30))
+    b.obs['ct'] = pd.Series(np.resize(['1', '2', '3'], 40), index=b.obs_names, dtype=object)
+    pa, pb = _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
+    out = combine_datasets([pa, pb], ['A', 'B'], obs_policy={'ct': 'merge'})
+    assert out.obs['ct'].notna().all()
+    assert list(out.obs['ct'].cat.categories) == ['1', '2', '3']
+    out.write_h5ad(tmp_path / 'out.h5ad')

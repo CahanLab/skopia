@@ -1734,6 +1734,17 @@ export function duplicateObsColumn(
   return postJson('/obs/duplicate_column', { column, new_name: newName }, slot)
 }
 
+/** Fold several .obs columns into one: the first with a value wins, in the
+ * given order. `n_conflicts` counts cells that had a value in more than one. */
+export function mergeObsColumns(
+  columns: string[], newName: string, keepSources: boolean, slot?: DatasetSlot,
+): Promise<{
+  new_name: string; columns: string[]; kind: string
+  n_conflicts: number; n_missing: number; dropped: string[]
+}> {
+  return postJson('/obs/merge_columns', { columns, new_name: newName, keep_sources: keepSources }, slot)
+}
+
 export function convertObsColumn(
   column: string, to: ObsConvertTarget, trueValue?: string | null, slot?: DatasetSlot,
 ): Promise<{ column: string; from_kind: string; kind: string; dtype: string }> {

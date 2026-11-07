@@ -32,6 +32,7 @@ import NeighborhoodModal from './components/NeighborhoodModal'
 import GeneNmfModal from './components/GeneNmfModal'
 import MetaProgramsModal from './components/MetaProgramsModal'
 import CombineColumnsPanel from './components/CombineColumnsPanel'
+import { splitObsPolicy } from './lib/combineColumns'
 import DefineSectionsPanel from './components/DefineSectionsPanel'
 import TerritoryPanel from './components/TerritoryPanel'
 import AssignTerritoriesModal from './components/AssignTerritoriesModal'
@@ -1214,7 +1215,7 @@ export default function App() {
           files: combineFiles.map(f => ({ file_path: f.path, label: f.label || undefined })),
           slot: targetSlot,
           gap_fraction: combineGapPct / 100,
-          obs_policy: combineObsPolicy,
+          ...splitObsPolicy(combineObsPolicy),
           var_policy: combineVarPolicy,
         }),
       })
