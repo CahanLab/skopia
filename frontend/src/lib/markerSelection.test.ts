@@ -83,11 +83,16 @@ describe('figure builders', () => {
   it('a dot plot figure names its kind, column and options', () => {
     const fig = dotplotFigureFromConfig({ ...legacy, plotType: 'dotplot', markerSource: src, dotplot: { ...DEFAULT_DOTPLOT_OPTIONS, colorBy: 'mean_expressing', vmax: 2 } }, 'half', null)
     expect(fig.kind).toBe('expression_dotplot')
-    expect(fig.inputs).toEqual({ gene_sets: [{ name: 'immune', genes: ['Ptprc', 'Cd3e'] }], marker_key: 'markers_leiden', marker_restrict: null, obs_column: 'leiden', transform: null, cell_subset: 'half', cell_indices: null })
+    expect(fig.inputs).toEqual({ gene_sets: [{ name: 'immune', genes: ['Ptprc', 'Cd3e'] }], marker_key: 'markers_leiden', marker_restrict: null, obs_column: 'leiden', transform: null, groups: null, cell_subset: 'half', cell_indices: null })
     expect(fig.params).toEqual({
       ...markerParams(src), color_by: 'mean_expressing', standard_scale: 'none', expression_cutoff: 0, gene_ordering: 'as_provided',
-      swap_axes: false, colormap: 'viridis', vmax: 2, dot_max: null,
+      group_ordering: 'as_given', swap_axes: false, colormap: 'viridis', vmax: 2, dot_max: null,
     })
+  })
+  it('a dot plot figure carries the chosen groups as an input and the group order as a param', () => {
+    const fig = dotplotFigureFromConfig({ ...legacy, plotType: 'dotplot', markerSource: null, dotplot: { ...DEFAULT_DOTPLOT_OPTIONS, groups: ['2', '0'], groupOrdering: 'cluster' } }, null, null)
+    expect(fig.inputs.groups).toEqual(['2', '0'])
+    expect(fig.params.group_ordering).toBe('cluster')
   })
 })
 

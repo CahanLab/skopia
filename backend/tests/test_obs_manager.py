@@ -370,3 +370,65 @@ def test_routes_map_refusals_to_400_and_missing_columns_to_404(monkeypatch):
     assert client.post('/api/obs/delete_columns', json={'columns': []}).status_code == 400
     # The listing route sits before /obs/{column}; ordinary columns still resolve.
     assert client.get('/api/obs/is_doublet').status_code == 200
+
+
+# --- a string column stays a string across save and reload -------------------
+
+def test_string_columns_survive_an_h5ad_round_trip(tmp_path):
+    # anndata's write_h5ad turns every object column into a categorical, so a
+    # column converted to string came back categorical after File → Save.
+    a = _adaptor()
+    a.convert_obs_column('cell_type', 'string')
+    p = tmp_path / 'x.h5ad'
+    a.prepare_export_with_lines().write_h5ad(p)
+    b = DataAdaptor(p)
+    assert b._obs_kind(b.adata.obs['cell_type']) == 'string'
+    assert b._obs_kind(b.adata.obs['batch_str']) == 'string'
+    assert b.adata.obs['cell_type'].tolist() == a.adata.obs['cell_type'].tolist()
+    # a categorical the user never touched is still categorical
+    assert b._obs_kind(b.adata.obs['is_doublet']) == 'boolean'
+    # and the one the user made categorical in the meantime wins over a stale record
+    b.convert_obs_column('cell_type', 'categorical')
+    q = tmp_path / 'y.h5ad'
+    b.prepare_export_with_lines().write_h5ad(q)
+    assert DataAdaptor(q)._obs_kind(DataAdaptor(q).adata.obs['cell_type']) == 'categorical'
+
+
+def test_string_columns_with_missing_values_round_trip():
+    a = _adaptor()
+    a.convert_obs_column('cell_type', 'string')
+    a.adata.obs.loc[a.adata.obs_names[:3], 'cell_type'] = None
+    e = a.prepare_export_with_lines()
+    assert set(e.uns['xcell_string_columns']) >= {'cell_type', 'batch_str', 'numeric_text', 'yes_no'}
+    import tempfile, os
+    p = os.path.join(tempfile.mkdtemp(), 'x.h5ad')
+    e.write_h5ad(p)
+    b = DataAdaptor(p)
+    col = b.adata.obs['cell_type']
+    assert b._obs_kind(col) == 'string' and col.isna().sum() == 3
+
+
+# --- export as CSV as well as TSV --------------------------------------------
+
+def test_export_annotations_as_csv_or_tsv():
+    a = _adaptor()
+    tsv = a.export_annotations(['cell_type', 'n_genes'])
+    assert tsv.splitlines()[0] == '\tcell_type\tn_genes'
+    csv = a.export_annotations(['cell_type', 'n_genes'], fmt='csv')
+    assert csv.splitlines()[0] == ',cell_type,n_genes'
+    assert '\t' not in csv
+    with pytest.raises(ValueError, match='fmt'):
+        a.export_annotations(['cell_type'], fmt='xlsx')
+
+
+def test_export_route_takes_a_format(monkeypatch):
+    a = _adaptor()
+    client = _install(monkeypatch, a)
+    res = client.post('/api/annotations/export', json={'columns': ['cell_type'], 'format': 'csv'})
+    assert res.status_code == 200, res.text
+    assert res.headers['content-type'].startswith('text/csv')
+    assert 'annotations.csv' in res.headers['content-disposition']
+    assert res.text.splitlines()[0] == ',cell_type'
+    res = client.post('/api/annotations/export', json={'columns': ['cell_type']})
+    assert res.headers['content-type'].startswith('text/tab-separated-values')
+    assert client.post('/api/annotations/export', json={'columns': ['cell_type'], 'format': 'xlsx'}).status_code == 400

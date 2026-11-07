@@ -947,6 +947,9 @@ LINES_UNS = 'xcell_lines_json'
 # LINES_UNS; positions are in the embedding's data coordinates so a note stays
 # on its place under pan and zoom.
 TEXT_ANNOTATIONS_UNS = 'xcell_text_annotations_json'
+#: Names of the .obs columns that were strings when the file was written,
+#: since h5ad stores them as categoricals (see _restore_string_columns).
+STRING_COLUMNS_UNS = 'xcell_string_columns'
 _TEXT_DEFAULTS: dict[str, Any] = {
     'dimX': 0, 'dimY': 1, 'fontSize': 14, 'color': '#ffffff', 'fontWeight': 'normal',
     'fontStyle': 'normal', 'background': None, 'backgroundOpacity': 0.6,
@@ -1066,6 +1069,7 @@ class DataAdaptor:
         else:
             self.adata, source_kind = load_dataset_file(self.filepath)
         self._normalized_adata: anndata.AnnData | None = None
+        self._restore_string_columns()
         self._drawn_lines: list[dict[str, Any]] = self._restore_lines()
         self._text_annotations: list[dict[str, Any]] = self._restore_text_annotations()
         self._action_history: list[dict[str, Any]] = []  # Track scanpy operations
@@ -3494,6 +3498,9 @@ class DataAdaptor:
         colors = self.adata.uns.pop(f'{column}_colors', None)
         if colors is not None:
             self.adata.uns[f'{name}_colors'] = colors
+        # A subset's Leiden or pseudotime result is recorded by column name;
+        # without this the renamed column would drop out of the subset tree.
+        self._subset_rename_obs_key(column, name)
         result = {'column': column, 'new_name': name, 'moved_colors': colors is not None}
         self._log_action('rename_obs_column', {'column': column, 'new_name': name}, result)
         return result
@@ -4055,15 +4062,18 @@ class DataAdaptor:
             if pd.api.types.is_categorical_dtype(self.adata.obs[col])
         ]
 
-    def export_annotations(self, columns: list[str] | None = None) -> str:
-        """Export cell annotations as TSV string.
+    def export_annotations(self, columns: list[str] | None = None, fmt: str = 'tsv') -> str:
+        """Export cell annotations as a TSV or CSV string.
 
         Args:
             columns: List of column names to export. If None, exports all.
+            fmt: ``'tsv'`` (default) or ``'csv'``.
 
         Returns:
-            TSV-formatted string with cell indices and annotation values
+            Delimited text with cell ids as the first column
         """
+        if fmt not in ('tsv', 'csv'):
+            raise ValueError(f"fmt must be 'tsv' or 'csv', got {fmt!r}")
         if columns is None:
             df = self.adata.obs.copy()
         else:
@@ -4073,7 +4083,7 @@ class DataAdaptor:
                 raise KeyError(f"Columns not found: {missing}")
             df = self.adata.obs[columns].copy()
 
-        return df.to_csv(sep="\t")
+        return df.to_csv(sep="\t" if fmt == 'tsv' else ",")
 
     # =========================================================================
     # Differential expression analysis
@@ -4230,6 +4240,28 @@ class DataAdaptor:
         if not (np.isfinite(x) and np.isfinite(y)):
             return None
         return {**_TEXT_DEFAULTS, **item, 'x': x, 'y': y}
+
+    def _restore_string_columns(self) -> None:
+        """Turn the columns ``uns['xcell_string_columns']`` names back into
+        string columns.
+
+        anndata's ``write_h5ad`` converts every object column to a categorical
+        (``strings_to_categoricals``; writing without it fails on a column
+        with missing values), so a column the user converted to string came
+        back categorical after save and reload. The export records which
+        columns were strings; this undoes the conversion on load and drops
+        the record, which the next export rewrites from the live types.
+        """
+        names = self.adata.uns.pop(STRING_COLUMNS_UNS, None)
+        if names is None:
+            return
+        for name in self._plain(names) or []:
+            name = str(name)
+            if name not in self.adata.obs.columns:
+                continue
+            series = self.adata.obs[name]
+            if isinstance(series.dtype, pd.CategoricalDtype):
+                self.adata.obs[name] = series.astype(object).where(series.notna(), None)
 
     def _restore_text_annotations(self) -> list[dict[str, Any]]:
         """Read text annotations out of .uns; skip bad entries, never fail the load."""
@@ -4433,6 +4465,10 @@ class DataAdaptor:
 
         adata_export.uns[self.ANALYSIS_RECORD_UNS_KEY] = self._serialize_record()
         adata_export.uns['xcell_provenance'] = self._export_provenance()
+        # write_h5ad will make these categorical; the record lets a reload
+        # make them strings again.
+        adata_export.uns[STRING_COLUMNS_UNS] = [
+            str(c) for c in adata_export.obs.columns if self._obs_kind(adata_export.obs[c]) == 'string']
 
         if not self._drawn_lines:
             return adata_export
@@ -5568,6 +5604,22 @@ class DataAdaptor:
             derived.setdefault('pca_subsets', {})[key] = dict(extra or {})
         registry[name] = entry
         self.adata.uns[CELL_SUBSETS_UNS] = registry
+
+    def _subset_rename_obs_key(self, old: str, new: str) -> None:
+        """Re-key every subset's record of an ``.obs``-column result (``leiden``,
+        ``dpt``) from ``old`` to ``new``, keeping its place in the record."""
+        registry = self._subset_registry()
+        changed = False
+        for entry in registry.values():
+            derived = entry.get('derived') or {}
+            for step in ('leiden', 'dpt'):
+                rec = derived.get(step)
+                if isinstance(rec, dict) and old in rec:
+                    derived[step] = {(new if k == old else k): v for k, v in rec.items()}
+                    entry['derived'] = derived
+                    changed = True
+        if changed:
+            self.adata.uns[CELL_SUBSETS_UNS] = registry
 
     def _subset_forget_key(self, name: str, key: str) -> None:
         """Drop any record of ``key`` from a subset's derived entry."""
@@ -7269,10 +7321,15 @@ class DataAdaptor:
 
     def dotplot_data(self, genes: list[str], gene_set_groups: list[dict[str, Any]] | None, obs_column: str, *,
                      transform: str | None = None, cell_indices: list[int] | None = None,
-                     **params: Any) -> dict[str, Any]:
+                     groups: list[str] | None = None, **params: Any) -> dict[str, Any]:
         """Dot plot table for ``genes`` grouped by ``obs_column``, reading the
         same source the heatmap draws from (the lazily normalised copy under
-        ``log1p``, else ``.X``) and dropping genes the gene mask hides."""
+        ``log1p``, else ``.X``) and dropping genes the gene mask hides.
+
+        ``groups`` keeps only the cells with those labels, in that order;
+        otherwise every label in the column's own order (sorted for a
+        string column). ``group_ordering='cluster'`` (in ``params``) then
+        reorders them by profile similarity."""
         from xcell.dotplot import compute_dotplot  # noqa: PLC0415
         if obs_column not in self.adata.obs.columns:
             raise ValueError(f"Column '{obs_column}' not found in .obs")
@@ -7290,7 +7347,20 @@ class DataAdaptor:
         if cells is None:
             cells = np.arange(self.n_cells)
         labels = col.astype(str).to_numpy()[cells]
-        cats = list(col.cat.categories.astype(str)) if pd.api.types.is_categorical_dtype(col.dtype) else None
+        all_cats = list(col.cat.categories.astype(str)) if pd.api.types.is_categorical_dtype(col.dtype) else None
+        cats = all_cats
+        if groups is not None:
+            wanted = [str(g) for g in groups]
+            if not wanted:
+                raise ValueError('groups must name at least one label, or be null for all of them')
+            present = set(col.astype(str).unique())
+            unknown = [g for g in wanted if g not in present]
+            if unknown:
+                raise ValueError(f"groups: {', '.join(repr(g) for g in unknown)} not in column '{obs_column}'")
+            keep = np.isin(labels, wanted)
+            cells = cells[keep]
+            labels = labels[keep]
+            cats = list(dict.fromkeys(wanted))
         if kept:
             src = self.normalized_adata if transform == 'log1p' else self.adata
             X = src[cells, [var_index.get_loc(g) for g in kept]].X
@@ -7300,8 +7370,8 @@ class DataAdaptor:
         out = compute_dotplot(np.asarray(expr, dtype=np.float64), labels, kept, gene_set_groups,
                               category_order=cats, **params)
         colors = self._get_category_colors(obs_column)
-        if colors is not None and cats is not None:
-            by_cat = dict(zip(cats, colors))
+        if colors is not None and all_cats is not None:
+            by_cat = dict(zip(all_cats, colors))
             out['category_colors'] = [by_cat.get(c) for c in out['categories']]
         else:
             out['category_colors'] = None
@@ -7539,7 +7609,7 @@ class DataAdaptor:
         'expression_heatmap': ('cell_ordering', 'gene_ordering', 'aggregate_gene_sets', 'n_bins') + _MARKER_PARAM_KEYS,
         'cnv_heatmap': ('row_mode', 'max_rows', 'group_order', 'vmax', 'colormap'),
         'expression_dotplot': _MARKER_PARAM_KEYS + ('color_by', 'standard_scale', 'expression_cutoff', 'gene_ordering',
-                                                    'swap_axes', 'colormap', 'vmax', 'dot_max'),
+                                                    'group_ordering', 'swap_axes', 'colormap', 'vmax', 'dot_max'),
     }
 
     def _figure_store(self) -> dict[str, str]:
@@ -7617,9 +7687,19 @@ class DataAdaptor:
                 transform = inputs.get('transform') or None
                 if transform not in (None, 'log1p'):
                     raise ValueError("inputs.transform must be null or 'log1p'")
+                groups = inputs.get('groups')
+                if groups is not None:
+                    if not isinstance(groups, list) or not groups or not all(isinstance(g, str) for g in groups):
+                        raise ValueError('inputs.groups must be a non-empty list of labels, or null for all of them')
+                    present = set(self.adata.obs[obs_column].astype(str).unique())
+                    unknown = [g for g in groups if g not in present]
+                    if unknown:
+                        raise ValueError(f"inputs.groups: {unknown} are not labels of '{obs_column}'")
+                    groups = list(dict.fromkeys(groups))
                 return {'gene_sets': [{'name': str(s.get('name', '')), 'genes': [str(g) for g in s['genes']]} for s in sets],
                         'marker_key': str(marker_key) if marker_key else None, 'marker_restrict': restrict,
-                        'obs_column': obs_column, 'transform': transform, **self._figure_cell_inputs(inputs)}
+                        'obs_column': obs_column, 'transform': transform, 'groups': groups,
+                        **self._figure_cell_inputs(inputs)}
             line_name = inputs.get('line_name') or None
             if line_name and line_name not in {l.get('name') for l in self.get_lines()}:
                 raise ValueError(f"inputs.line_name '{line_name}' is not a drawn line")
@@ -7764,6 +7844,8 @@ class DataAdaptor:
             raise ValueError(f"standard_scale must be one of {dp.STANDARD_SCALE}")
         if params.get('gene_ordering') not in dp.GENE_ORDERINGS:
             raise ValueError(f"gene_ordering must be one of {dp.GENE_ORDERINGS}")
+        if params.get('group_ordering') not in dp.GROUP_ORDERINGS:
+            raise ValueError(f"group_ordering must be one of {dp.GROUP_ORDERINGS}")
         for k in ('vmax', 'dot_max'):
             v = params.get(k)
             if v is not None and not float(v) > 0:
@@ -8117,6 +8199,13 @@ class DataAdaptor:
             inp = record['inputs']
             if inp['obs_column'] not in self.adata.obs.columns:
                 raise FigureInputMissing(f"Column '{inp['obs_column']}' no longer exists; the figure cannot be drawn")
+            groups = inp.get('groups') or None
+            if groups:
+                present = set(self.adata.obs[inp['obs_column']].astype(str).unique())
+                gone = [g for g in groups if g not in present]
+                if gone:
+                    raise FigureInputMissing(
+                        f"Label(s) {gone} no longer exist in '{inp['obs_column']}'; the figure cannot be drawn")
             self._check_marker_params(params)
             self._check_dotplot_params(params)
             row_groups = self._figure_row_groups(record, params)
@@ -8125,8 +8214,10 @@ class DataAdaptor:
             genes = list(dict.fromkeys(g for s_ in row_groups for g in s_['genes']))
             out = self.dotplot_data(
                 genes, row_groups, inp['obs_column'], transform=inp.get('transform'), cell_indices=self._figure_cells(inp),
+                groups=groups,
                 expression_cutoff=float(params.get('expression_cutoff') or 0.0), color_by=str(params.get('color_by', 'mean')),
-                standard_scale=str(params.get('standard_scale', 'none')), gene_ordering=str(params.get('gene_ordering', 'as_provided')))
+                standard_scale=str(params.get('standard_scale', 'none')), gene_ordering=str(params.get('gene_ordering', 'as_provided')),
+                group_ordering=str(params.get('group_ordering', 'as_given')))
             out['params'] = params
             out['figure_id'] = figure_id
             out['kind'] = kind

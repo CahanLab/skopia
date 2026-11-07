@@ -1757,17 +1757,29 @@ export async function deleteAnnotation(name: string, slot?: DatasetSlot): Promis
   })
 }
 
-export async function exportAnnotations(columns?: string[], slot?: DatasetSlot): Promise<string> {
-  const response = await fetch(appendDataset(`${API_BASE}/annotations/export`, slot), {
+export async function exportAnnotations(
+  columns?: string[], opts: { slot?: DatasetSlot; format?: 'tsv' | 'csv' } = {},
+): Promise<string> {
+  const response = await fetch(appendDataset(`${API_BASE}/annotations/export`, opts.slot), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ columns: columns || null }),
+    body: JSON.stringify({ columns: columns || null, format: opts.format ?? 'tsv' }),
   })
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: response.statusText }))
     throw new Error(error.detail || `HTTP ${response.status}`)
   }
   return response.text()
+}
+
+/** Re-read the colour column after its values changed under the same name
+ * (a label rename or merge). The colour effect only refetches when the
+ * name changes, so without this the plot keeps the old labels. */
+export async function refreshColorByColumn(column: string): Promise<void> {
+  const st = useStore.getState()
+  if (st.colorBy?.name !== column) return
+  const data = await fetchJson<ObsColumnData>(appendDataset(`${API_BASE}/obs/${encodeURIComponent(column)}`))
+  useStore.getState().setColorBy(data)
 }
 
 export interface RenameObsLabelResult {

@@ -93,6 +93,7 @@ export const FIGURE_SCHEMAS: Record<FigureKind, ParamField[]> = {
     { name: 'standard_scale', label: 'Scale', type: 'select', options: [{ value: 'none', label: 'none' }, { value: 'gene', label: 'per gene, 0..1 across groups' }] },
     { name: 'expression_cutoff', label: 'Expressing above', type: 'number', min: 0, step: 0.1, help: 'A cell counts as expressing when its value exceeds this.' },
     { name: 'gene_ordering', label: 'Gene order', type: 'select', options: [{ value: 'as_provided', label: 'as provided' }, { value: 'peak_group', label: 'by peak group' }] },
+    { name: 'group_ordering', label: 'Group order', type: 'select', options: [{ value: 'as_given', label: 'as given' }, { value: 'cluster', label: 'cluster groups by expression profile' }], help: 'As given: the column\'s own order, or the chosen groups\' order. Cluster: average-linkage on the per-gene standardised means.' },
     { name: 'swap_axes', label: 'Genes as rows', type: 'bool', help: 'Off: groups as rows and genes as columns, scanpy\'s layout.' },
     { name: 'colormap', label: 'Colours', type: 'select', options: [{ value: 'viridis', label: 'viridis' }, { value: 'reds', label: 'white – red' }, { value: 'rdbu', label: 'blue – white – red' }] },
     { name: 'vmax', label: 'Colour limit', type: 'nullable-number', min: 0, step: 0.5, help: 'Blank = the data maximum.' },

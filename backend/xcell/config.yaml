@@ -264,6 +264,7 @@ figures:
     standard_scale: none            # none | gene (each gene's means rescaled to 0..1 across groups)
     expression_cutoff: 0.0          # a cell counts as expressing above this value
     gene_ordering: as_provided      # as_provided | peak_group
+    group_ordering: as_given        # as_given (the column's order, or the chosen groups' order) | cluster (by mean-expression profile)
     swap_axes: false                # false: groups as rows, genes as columns (scanpy); true: genes as rows
     colormap: viridis               # viridis | reds | rdbu
     vmax: null                      # colour limit; null = data max

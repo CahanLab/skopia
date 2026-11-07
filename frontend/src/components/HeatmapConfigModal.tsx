@@ -13,14 +13,14 @@
  * Rollback: delete this file and remove imports from HeatmapView.tsx.
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { orderSelectedSets, groupLabel, folderSelectionState, restoreSelectedIds } from '../lib/heatmapGroups'
 import { DEFAULT_DOTPLOT_OPTIONS, type DotplotOptions, type MarkerSource } from '../lib/markerSelection'
 import { useStore, HeatmapConfig, GeneSetCategoryType, cfgDefault } from '../store'
 import { getAllGeneSets, CATEGORY_ORDER, type FlatGeneSet } from '../lib/flatGeneSets'
 import RestrictionPicker from './RestrictionPicker'
 import { type MarkerRestriction } from '../lib/markerSelection'
-import { fetchMarkerRuns, appendDataset, type MarkerRunSummary } from '../hooks/useData'
+import { fetchMarkerRuns, appendDataset, useObsSummaries, type MarkerRunSummary } from '../hooks/useData'
 
 const CATEGORY_NAMES: Record<GeneSetCategoryType, string> = {
   manual: 'Manual',
@@ -105,6 +105,30 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
   const [nBins, setNBins] = useState(config?.nBins ?? cfgDefault(['heatmap', 'n_bins'], 300))
   const [keepCellSubset, setKeepCellSubset] = useState(true)
   const [dotplot, setDotplot] = useState<DotplotOptions>({ ...DEFAULT_DOTPLOT_OPTIONS, ...(config?.dotplot ?? {}) })
+  // The labels of the dot plot's grouping column, for the group picker.
+  const { summaries } = useObsSummaries()
+  const groupValues = useMemo(
+    () => (obsColumn ? summaries?.find((s) => s.name === obsColumn)?.categories?.map((c) => c.value) ?? [] : []),
+    [summaries, obsColumn],
+  )
+  // Groups are sent in the column's order; a selection equal to every label is "all" (null).
+  const toggleGroup = (value: string) => {
+    const current = new Set(dotplot.groups ?? groupValues)
+    if (current.has(value)) {
+      if (current.size === 1) return   // at least one group stays
+      current.delete(value)
+    } else {
+      current.add(value)
+    }
+    const next = groupValues.filter((v) => current.has(v))
+    setDotplot({ ...dotplot, groups: next.length === groupValues.length ? null : next })
+  }
+  // A pick made before the column changed must not name labels it lacks.
+  const cleanGroups = (groups: string[] | null): string[] | null => {
+    if (!groups || !groupValues.length) return groups
+    const kept = groups.filter((g) => groupValues.includes(g))
+    return kept.length ? kept : null
+  }
 
   // Marker source: a stored run and the selection on it (numbers kept as
   // strings so a half-typed threshold does not snap).
@@ -212,7 +236,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
       selectedGeneSets: selected.map((gs) => ({ id: gs.id, name: groupLabel(gs, selected), genes: gs.genes })),
       plotType,
       markerSource,
-      dotplot,
+      dotplot: { ...dotplot, groups: cleanGroups(dotplot.groups) },
       cellOrdering,
       obsColumn: plotType === 'dotplot' || needsCategory ? obsColumn : null,
       lineName: plotType === 'heatmap' && needsLine ? lineName : null,
@@ -387,9 +411,45 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
             {/* Group by */}
             <div style={styles.section}>
               <div style={styles.sectionTitle}>Group by</div>
-              <select style={{ ...styles.inlineSelect, marginLeft: 0 }} value={obsColumn || ''} onChange={(e) => setObsColumn(e.target.value || null)}>
+              <select
+                style={{ ...styles.inlineSelect, marginLeft: 0 }}
+                value={obsColumn || ''}
+                onChange={(e) => { setObsColumn(e.target.value || null); setDotplot((d) => ({ ...d, groups: null })) }}
+              >
                 {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
+              {groupValues.length > 0 && (
+                <div style={{ marginTop: '8px' }} data-dotplot-groups>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={styles.subTitle}>Groups to show</span>
+                    <span style={styles.hint}>
+                      {dotplot.groups ? `${dotplot.groups.length} of ${groupValues.length}` : `all ${groupValues.length}`}
+                    </span>
+                    <div style={{ flex: 1 }} />
+                    {dotplot.groups && (
+                      <button type="button" style={styles.smallButton} onClick={() => setDotplot({ ...dotplot, groups: null })}>all</button>
+                    )}
+                  </div>
+                  <div style={styles.geneSetList}>
+                    {groupValues.map((v) => {
+                      const on = dotplot.groups === null || dotplot.groups.includes(v)
+                      return (
+                        <label key={v} style={styles.checkboxRow} data-dotplot-group={v}>
+                          <input type="checkbox" checked={on} onChange={() => toggleGroup(v)} />
+                          <span style={styles.geneSetName}>{v}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+              <label style={{ ...styles.thresholdRow, marginTop: '8px' }} title="As given: the column's order (the chosen groups' order). Cluster: average-linkage on the per-gene standardised mean profiles, so groups that express the same genes sit together">
+                <span style={{ flex: 1 }}>Group order</span>
+                <select style={{ ...styles.inlineSelect, marginLeft: 0 }} value={dotplot.groupOrdering} onChange={(e) => setDotplot({ ...dotplot, groupOrdering: e.target.value as DotplotOptions['groupOrdering'] })} data-dotplot-group-ordering>
+                  <option value="as_given">as given</option>
+                  <option value="cluster">cluster groups</option>
+                </select>
+              </label>
             </div>
 
             {/* Dot options */}

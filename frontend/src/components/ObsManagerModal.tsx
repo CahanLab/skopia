@@ -71,6 +71,10 @@ const styles: Record<string, CSSProperties> = {
     border: '1px solid #0f3460', backgroundColor: '#0f3460', color: '#eee',
   },
   danger: { backgroundColor: '#e94560', borderColor: '#e94560', color: '#fff', fontWeight: 600 },
+  formatSelect: {
+    padding: '4px 6px', fontSize: '12px', borderRadius: '4px', border: '1px solid #0f3460',
+    backgroundColor: '#0f1625', color: '#eee',
+  },
   tableWrap: { flex: 1, overflow: 'auto' },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: '12px' },
   th: {
@@ -123,6 +127,7 @@ export default function ObsManagerModal({ onClose }: { onClose: () => void }) {
   const [trueValue, setTrueValue] = useState<string | null>(null)
   const [mergeOpen, setMergeOpen] = useState(false)
   const [mergeDraft, setMergeDraft] = useState('')
+  const [exportFormat, setExportFormat] = useState<'tsv' | 'csv'>('tsv')
   const [keepSources, setKeepSources] = useState(true)
 
   const load = useCallback(async () => {
@@ -178,12 +183,15 @@ export default function ObsManagerModal({ onClose }: { onClose: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [convertTo, focus])
   // The merge row follows the ticked set: a fresh default name each time it
-  // changes, and it closes when fewer than two are ticked.
+  // changes, and it closes when fewer than two are ticked. Keyed on the names,
+  // not the array: a column-list reload while the user is typing a name must
+  // not throw the draft away.
+  const selectedKey = selectedInOrder.join('\u001f')
   useEffect(() => {
     if (selectedInOrder.length < 2) setMergeOpen(false)
     setMergeDraft(mergeDefaultName(selectedInOrder, (columns ?? []).map((c) => c.name)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedInOrder])
+  }, [selectedKey])
 
   /** After any mutation: both refresh channels, then this table. */
   const afterMutation = useCallback(async () => {
@@ -230,18 +238,19 @@ export default function ObsManagerModal({ onClose }: { onClose: () => void }) {
 
   const handleExport = useCallback(async () => {
     try {
-      const tsv = await exportAnnotations(selectedInOrder)
-      const url = URL.createObjectURL(new Blob([tsv], { type: 'text/tab-separated-values' }))
+      const text = await exportAnnotations(selectedInOrder, { format: exportFormat })
+      const mime = exportFormat === 'csv' ? 'text/csv' : 'text/tab-separated-values'
+      const url = URL.createObjectURL(new Blob([text], { type: mime }))
       const a = document.createElement('a')
       a.href = url
-      a.download = 'obs_columns.tsv'
+      a.download = `obs_columns.${exportFormat}`
       a.click()
       URL.revokeObjectURL(url)
-      setStatus(`Exported ${plural(selectedInOrder.length, 'column')}.`)
+      setStatus(`Exported ${plural(selectedInOrder.length, 'column')} as ${exportFormat.toUpperCase()}.`)
     } catch (err) {
       setActionError((err as Error).message)
     }
-  }, [selectedInOrder])
+  }, [selectedInOrder, exportFormat])
 
   const handleRename = () => focused && run(async () => {
     const old = focused.name
@@ -346,8 +355,18 @@ export default function ObsManagerModal({ onClose }: { onClose: () => void }) {
           })}
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: '12px', color: '#aaa' }}>{selected.size ? `${selected.size} selected` : ''}</span>
+          <select
+            value={exportFormat}
+            onChange={(e) => setExportFormat(e.target.value as 'tsv' | 'csv')}
+            style={styles.formatSelect}
+            title="File format for Export"
+            data-obs-export-format
+          >
+            <option value="tsv">TSV</option>
+            <option value="csv">CSV</option>
+          </select>
           <button style={{ ...styles.button, ...(selected.size ? {} : { opacity: 0.5 }) }} disabled={!selected.size || busy} onClick={handleExport}
-            title="Download the selected columns with cell ids as TSV">
+            title="Download the selected columns with cell ids">
             Export
           </button>
           <button

@@ -12,6 +12,7 @@ import numpy as np
 COLOR_BY = ('mean', 'mean_expressing')
 STANDARD_SCALE = ('none', 'gene')
 GENE_ORDERINGS = ('as_provided', 'peak_group')
+GROUP_ORDERINGS = ('as_given', 'cluster')
 
 _LABELS = {
     ('mean', 'none'): 'Mean expression',
@@ -50,6 +51,7 @@ def compute_dotplot(
     standard_scale: str = 'none',
     gene_ordering: str = 'as_provided',
     category_order: list[str] | None = None,
+    group_ordering: str = 'as_given',
 ) -> dict[str, Any]:
     """Dot plot table for ``expr`` (cells × genes, one column per entry of
     ``genes``, duplicates allowed) grouped by ``categories`` (one label per
@@ -59,6 +61,10 @@ def compute_dotplot(
     cells are dropped); otherwise columns follow first appearance sorted.
     ``gene_ordering='peak_group'`` sorts rows by the column where their mean
     peaks, within gene-set groups when rows are grouped.
+    ``group_ordering='cluster'`` reorders the columns by hierarchical
+    clustering of their mean-expression profiles (average linkage on the
+    per-gene standardised means, leaves in dendrogram order); ``'as_given'``
+    keeps ``category_order``. Fewer than three groups are left as given.
     """
     if color_by not in COLOR_BY:
         raise ValueError(f"color_by must be one of {COLOR_BY}, got {color_by!r}")
@@ -66,6 +72,8 @@ def compute_dotplot(
         raise ValueError(f"standard_scale must be one of {STANDARD_SCALE}, got {standard_scale!r}")
     if gene_ordering not in GENE_ORDERINGS:
         raise ValueError(f"gene_ordering must be one of {GENE_ORDERINGS}, got {gene_ordering!r}")
+    if group_ordering not in GROUP_ORDERINGS:
+        raise ValueError(f"group_ordering must be one of {GROUP_ORDERINGS}, got {group_ordering!r}")
     expr = np.asarray(expr, dtype=np.float64)
     if expr.ndim != 2 or expr.shape[1] != len(genes):
         raise ValueError('expr must be cells × genes with one column per gene')
@@ -93,6 +101,12 @@ def compute_dotplot(
             n_on = on.sum(axis=0)
             tot = (expr[rows] * on).sum(axis=0)
             mean[:, j] = np.divide(tot, n_on, out=np.zeros(len(genes)), where=n_on > 0)
+    if group_ordering == 'cluster' and len(cats) >= 3 and len(genes):
+        col_order = _cluster_columns(mean)
+        cats = [cats[j] for j in col_order]
+        n_per = [n_per[j] for j in col_order]
+        pct = pct[:, col_order]
+        mean = mean[:, col_order]
     if standard_scale == 'gene' and len(cats):
         lo = mean.min(axis=1, keepdims=True)
         span = mean.max(axis=1, keepdims=True) - lo
@@ -120,4 +134,23 @@ def compute_dotplot(
         'pct': pct[order].tolist(),
         'mean': mean[order].tolist(),
         'color_label': _LABELS[(color_by, standard_scale)],
+        'group_ordering': group_ordering,
     }
+
+
+def _cluster_columns(mean: np.ndarray) -> np.ndarray:
+    """Column order from average-linkage clustering of the groups' profiles.
+
+    Each gene is standardised across groups first so one highly expressed
+    gene does not decide the whole tree; a gene flat across groups
+    contributes nothing. With optimal leaf ordering, so adjacent columns are
+    the most alike the tree allows.
+    """
+    from scipy.cluster.hierarchy import leaves_list, linkage  # noqa: PLC0415
+    profiles = mean.T.astype(np.float64)  # groups × genes
+    sd = profiles.std(axis=0, keepdims=True)
+    z = np.divide(profiles - profiles.mean(axis=0, keepdims=True), sd,
+                  out=np.zeros_like(profiles), where=sd > 0)
+    if not np.any(z):
+        return np.arange(profiles.shape[0])
+    return np.asarray(leaves_list(linkage(z, method='average', metric='euclidean', optimal_ordering=True)))

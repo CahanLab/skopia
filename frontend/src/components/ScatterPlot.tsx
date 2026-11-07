@@ -13,6 +13,7 @@ import { cellsInPolygon, packPositions } from '../lib/embeddingCoverage'
 import { appendDataset } from '../hooks/useData'
 import { faceColor, polygonPath } from '../lib/territoryGeometry'
 import TextAnnotationOverlay from './TextAnnotationOverlay'
+import { annotationsInView, styleOf } from '../lib/textAnnotations'
 
 interface ScatterPlotProps {
   slot?: DatasetSlot
@@ -313,10 +314,13 @@ export default function ScatterPlot({
   // `affectedIds === null` means "all shapes on this embedding" (whole-embedding
   // adjust); a Set means the subset overlapping the moved cells (quilt). Cleared
   // on release, at which point the committed geometry in the store takes over.
-  const shapePreviewBase = useRef<{ centroid: Pt; affectedIds: Set<string> | null } | null>(null)
+  // `hull` is the moved subset's outline, which decides which text notes
+  // travel; null with affectedIds null means the whole embedding moves.
+  const shapePreviewBase = useRef<{ centroid: Pt; affectedIds: Set<string> | null; hull: Pt[] | null } | null>(null)
   const [shapePreview, setShapePreview] = useState<{
     centroid: Pt
     affectedIds: Set<string> | null
+    hull: Pt[] | null
     rotationDegrees?: number
     translateX?: number
     translateY?: number
@@ -467,17 +471,17 @@ export default function ScatterPlot({
 
   // Which shapes overlay a to-be-moved cell subset (so they should travel with
   // it). Uses the convex hull of the subset's current (pre-transform) positions.
-  const computeAffectedShapeIds = useCallback((indices: number[]): Set<string> => {
+  const computeAffectedShapeIds = useCallback((indices: number[]): { affectedIds: Set<string>; hull: Pt[] | null } => {
     const affected = new Set<string>()
-    if (indices.length === 0) return affected
+    if (indices.length === 0) return { affectedIds: affected, hull: null }
     const subset = indices.map((i) => embedding.coordinates[i]).filter(Boolean) as [number, number][]
-    if (subset.length < 3) return affected
+    if (subset.length < 3) return { affectedIds: affected, hull: null }
     const hull = convexHull(subset)
     for (const l of drawnLines) {
       if (l.embeddingName !== embedding.name) continue
       if (shapeOverlapsHull(l.smoothedPoints || l.points, hull)) affected.add(l.id)
     }
-    return affected
+    return { affectedIds: affected, hull }
   }, [embedding, drawnLines])
 
   // Handle lasso, line drawing, adjust rotation, and quilt mode
@@ -531,7 +535,7 @@ export default function ScatterPlot({
       rotatePivotScreen.current = { x: screenCx, y: screenCy }
       preRotationCoords.current = coords.map(c => [c[0], c[1]] as [number, number])
       // Whole-embedding rotate: every shape on this embedding follows (affectedIds=null).
-      shapePreviewBase.current = { centroid: [cx, cy], affectedIds: null }
+      shapePreviewBase.current = { centroid: [cx, cy], affectedIds: null, hull: null }
       setActiveRotationDeg(0)
     } else if (interactionMode === 'quilt') {
       if (quiltPhase === 'lasso') {
@@ -562,7 +566,7 @@ export default function ScatterPlot({
           quiltRotateStartAngle.current = angle
           quiltAccumulatedRotation.current = 0
           quiltPreTransformCoords.current = coords.map(c => [c[0], c[1]] as [number, number])
-          shapePreviewBase.current = { centroid: [cx, cy], affectedIds: computeAffectedShapeIds(indices) }
+          shapePreviewBase.current = { centroid: [cx, cy], ...computeAffectedShapeIds(indices) }
         } else {
           // Plain drag: translate selected cells
           isDraggingQuilt.current = true
@@ -570,7 +574,7 @@ export default function ScatterPlot({
           quiltPreTransformCoords.current = embedding.coordinates.map(c => [c[0], c[1]] as [number, number])
           const selIdx = quiltSelectedIndices.current
           const subset = selIdx.map(i => embedding.coordinates[i]).filter(Boolean) as [number, number][]
-          shapePreviewBase.current = { centroid: subset.length ? meanOf(subset) : [0, 0], affectedIds: computeAffectedShapeIds(selIdx) }
+          shapePreviewBase.current = { centroid: subset.length ? meanOf(subset) : [0, 0], ...computeAffectedShapeIds(selIdx) }
         }
       }
     }
@@ -1100,18 +1104,24 @@ export default function ScatterPlot({
     }
 
     const labels = categoryLabelData.map((c) => ({ text: c.label, x: c.data[0], y: c.data[1], n: c.n }))
+    // The text notes on this view, frozen with the points.
+    const st = useStore.getState()
+    const notes = (slot ? st.datasets[slot]?.textAnnotations : st.textAnnotations) ?? []
+    const texts = annotationsInView(notes, embedding.name, embedding.dim_x ?? 0, embedding.dim_y ?? 1)
+      .map((t) => ({ text: t.text, x: t.x, y: t.y, ...styleOf(t) }))
 
     return {
       title,
       points,
       colors,
       labels,
+      texts,
       bounds: { minX: bounds.minX, minY: bounds.minY, maxX: bounds.maxX, maxY: bounds.maxY },
       bg: displayPreferences.backgroundColor,
       pointSize: displayPreferences.pointSize,
       labelFontSize: displayPreferences.labelFontSize,
     }
-  }, [data, getColor, categoryLabelData, bounds, displayPreferences, colorMode, expressionData, colorBy, embedding.name])
+  }, [data, getColor, categoryLabelData, bounds, displayPreferences, colorMode, expressionData, colorBy, embedding.name, embedding.dim_x, embedding.dim_y, slot])
 
   const captureSnapshot = useCallback(() => {
     // Default geometry: compact panel pinned near the top-right of the plot,
@@ -1469,6 +1479,15 @@ export default function ScatterPlot({
         target={[(viewState.target as number[])[0], (viewState.target as number[])[1]]}
         zoom={typeof viewState.zoom === 'number' ? viewState.zoom : (viewState.zoom?.[0] ?? 0)}
         active={interactionMode === 'text'}
+        preview={shapePreview ? {
+          affine: {
+            centroid: shapePreview.centroid,
+            rotationDegrees: shapePreview.rotationDegrees,
+            translateX: shapePreview.translateX,
+            translateY: shapePreview.translateY,
+          },
+          hull: shapePreview.affectedIds === null ? null : shapePreview.hull,
+        } : null}
       />
 
       {/* Live rotation badge — anchored just above-right of the pivot ring. */}

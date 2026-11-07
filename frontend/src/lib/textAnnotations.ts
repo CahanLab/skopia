@@ -3,6 +3,8 @@
 // in screen pixels, like the axis labels of every plotting tool. Stored with
 // the dataset in uns['xcell_text_annotations_json'] (see the adaptor).
 
+import { pointInPolygon, transformPoint, type Pt, type ShapeAffine } from '../utils/shapeTransform'
+
 export type TextAnchor = 'start' | 'middle' | 'end'
 
 export interface TextStyle {
@@ -66,6 +68,23 @@ export function annotationsInView(
 ): TextAnnotation[] {
   return notes.filter((t) => t.visible && t.embeddingName === embeddingName
     && (t.dimX ?? 0) === dimX && (t.dimY ?? 1) === dimY)
+}
+
+/** An in-progress rigid transform of the cells: the notes inside ``hull``
+ * (every note when it is null, as for a whole-embedding rotate) are drawn
+ * at their transformed anchor until the drag commits. */
+export interface AnnotationPreview {
+  affine: ShapeAffine
+  hull: Pt[] | null
+}
+
+export function previewAnnotations(notes: TextAnnotation[], preview: AnnotationPreview | null): TextAnnotation[] {
+  if (!preview) return notes
+  return notes.map((t) => {
+    if (preview.hull && !pointInPolygon(t.x, t.y, preview.hull)) return t
+    const [x, y] = transformPoint([t.x, t.y], preview.affine)
+    return { ...t, x, y }
+  })
 }
 
 /** The same orthographic mapping ScatterPlot's screenToData/dataToScreen use. */

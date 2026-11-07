@@ -406,8 +406,8 @@ def test_dotplot_figure_create_data_update():
     assert f['params'] == {
         'marker_top_n': 10, 'marker_min_pct_in': None, 'marker_max_pct_out': None, 'marker_min_log2fc': None,
         'marker_max_padj': None, 'marker_rank_by': 'score', 'color_by': 'mean', 'standard_scale': 'none',
-        'expression_cutoff': 0.0, 'gene_ordering': 'as_provided', 'swap_axes': False, 'colormap': 'viridis',
-        'vmax': None, 'dot_max': None,
+        'expression_cutoff': 0.0, 'gene_ordering': 'as_provided', 'group_ordering': 'as_given', 'swap_axes': False,
+        'colormap': 'viridis', 'vmax': None, 'dot_max': None,
     }
     d = a.figure_data(f['id'])
     assert d['kind'] == 'expression_dotplot' and d['genes'] == ['Ptprc', 'Cd3e', 'Cd19'] and d['categories'] == ['a', 'b', 'c']
@@ -500,3 +500,26 @@ def test_a_figure_restricted_to_an_annotation():
     with pytest.raises(ValueError):
         a.create_figure('expression_heatmap', inputs={'gene_sets': [], 'marker_key': key,
                                                       'marker_restrict': {'label': 'x', 'var_column': 'ghost'}})
+
+
+def test_dotplot_figure_takes_groups_as_an_input_and_group_ordering_as_a_param():
+    a = DataAdaptor('x.h5ad', adata=_adata_c())
+    sets = [{'name': 'immune', 'genes': ['Ptprc', 'Cd3e']}]
+    f = a.create_figure('expression_dotplot', inputs={'gene_sets': sets, 'obs_column': 'grp', 'groups': ['c', 'a']})
+    assert f['inputs']['groups'] == ['c', 'a'] and f['params']['group_ordering'] == 'as_given'
+    d = a.figure_data(f['id'])
+    assert d['categories'] == ['c', 'a']
+    d = a.figure_data(f['id'], params_override={'group_ordering': 'cluster'})
+    assert sorted(d['categories']) == ['a', 'c']
+    g = a.create_figure('expression_dotplot', inputs={'gene_sets': sets, 'obs_column': 'grp'})
+    assert g['inputs']['groups'] is None and a.figure_data(g['id'])['categories'] == ['a', 'b', 'c']
+    with pytest.raises(ValueError, match='groups'):
+        a.create_figure('expression_dotplot', inputs={'gene_sets': sets, 'obs_column': 'grp', 'groups': ['zzz']})
+    with pytest.raises(ValueError, match='groups'):
+        a.create_figure('expression_dotplot', inputs={'gene_sets': sets, 'obs_column': 'grp', 'groups': []})
+    with pytest.raises(ValueError, match='group_ordering'):
+        a.create_figure('expression_dotplot', inputs={'gene_sets': sets, 'obs_column': 'grp'}, params={'group_ordering': 'x'})
+    # a group that was renamed away is a missing input, not an empty plot
+    a.rename_obs_label('grp', 'c', 'chondro')
+    with pytest.raises(FigureInputMissing):
+        a.figure_data(f['id'])

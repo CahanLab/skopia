@@ -195,13 +195,13 @@ export function dotplotFigureFromConfig(cfg: HeatmapConfigLike, cellSubset: stri
       gene_sets: (cfg.selectedGeneSets ?? []).map((g) => ({ name: g.name, genes: g.genes })),
       marker_key: src ? src.key : null,
       marker_restrict: src?.restrictTo ? restrictionWire(src.restrictTo) : null,
-      obs_column: cfg.obsColumn, transform,
+      obs_column: cfg.obsColumn, transform, groups: d.groups && d.groups.length ? d.groups : null,
       ...cellInputs(cellSubset, cfg.cellIndices ?? null),
     },
     params: {
       ...(src ? markerParams(src) : {}),
       color_by: d.colorBy, standard_scale: d.standardScale, expression_cutoff: d.expressionCutoff, gene_ordering: d.geneOrdering,
-      swap_axes: d.swapAxes, colormap: d.colormap, vmax: d.vmax, dot_max: d.dotMax,
+      group_ordering: d.groupOrdering, swap_axes: d.swapAxes, colormap: d.colormap, vmax: d.vmax, dot_max: d.dotMax,
     } as Record<string, unknown>,
   }
 }
@@ -297,6 +297,8 @@ export function inputsSummary(inputs: Record<string, unknown>): string {
       if (v.length) parts.push(`gene_sets: ${v.map((s) => `${(s as { name: string }).name} (${((s as { genes: string[] }).genes ?? []).length} genes)`).join(', ')}`)
     } else if (k === 'marker_restrict' && typeof v === 'object') {
       parts.push(`in ${(v as { label: string }).label}`)
+    } else if (k === 'groups' && Array.isArray(v)) {
+      parts.push(`groups: ${v.join(', ')}`)
     } else if (Array.isArray(v)) {
       parts.push(`${k}: ${v.length} items`)
     } else {
