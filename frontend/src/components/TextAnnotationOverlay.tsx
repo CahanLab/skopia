@@ -7,9 +7,11 @@ import {
   clampEditorPosition,
   makeTextAnnotation,
   newTextAnnotationId,
+  previewAnnotations,
   styleOf,
   textBlockLayout,
   viewTransform,
+  type AnnotationPreview,
   type TextAnchor,
   type TextAnnotation,
   type TextStyle,
@@ -41,6 +43,9 @@ interface Props {
   target: [number, number]
   zoom: number
   active: boolean
+  /** A rigid transform in progress on the cells (quilt drag, rotate): the
+   *  notes it covers are drawn where they will land. */
+  preview?: AnnotationPreview | null
 }
 
 interface Pending {
@@ -50,7 +55,7 @@ interface Pending {
   style: TextStyle
 }
 
-export default function TextAnnotationOverlay({ slot, embeddingName, dimX, dimY, target, zoom, active }: Props) {
+export default function TextAnnotationOverlay({ slot, embeddingName, dimX, dimY, target, zoom, active, preview = null }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
   useEffect(() => {
@@ -76,7 +81,9 @@ export default function TextAnnotationOverlay({ slot, embeddingName, dimX, dimY,
   const editSnapshot = useRef<TextAnnotation | null>(null)
 
   const view = useMemo(() => viewTransform(target, zoom, size.w, size.h), [target, zoom, size.w, size.h])
-  const shown = useMemo(() => annotationsInView(notes, embeddingName, dimX, dimY), [notes, embeddingName, dimX, dimY])
+  const shown = useMemo(
+    () => previewAnnotations(annotationsInView(notes, embeddingName, dimX, dimY), preview),
+    [notes, embeddingName, dimX, dimY, preview])
   const editing = active ? shown.find((t) => t.id === activeTextId) ?? null : null
 
   const closeEditor = useCallback(() => {

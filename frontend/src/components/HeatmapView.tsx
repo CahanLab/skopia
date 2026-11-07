@@ -132,6 +132,8 @@ export default function HeatmapView() {
           color_by: d.colorBy,
           standard_scale: d.standardScale,
           gene_ordering: d.geneOrdering,
+          groups: d.groups && d.groups.length ? d.groups : null,
+          group_ordering: d.groupOrdering,
         }, activeSlot)
         if (seq !== requestSeq.current) return
         setData(null)

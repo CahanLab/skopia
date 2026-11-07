@@ -5,6 +5,7 @@ import {
   backgroundRgba,
   clampEditorPosition,
   makeTextAnnotation,
+  previewAnnotations,
   styleOf,
   textBlockLayout,
   viewTransform,
@@ -97,5 +98,27 @@ describe('clampEditorPosition', () => {
   it('flips left and up near the far edges, never off the box', () => {
     expect(clampEditorPosition(780, 590, 260, 200, 800, 600)).toEqual({ left: 508, top: 378 })
     expect(clampEditorPosition(10, 10, 900, 900, 800, 600)).toEqual({ left: 0, top: 0 })
+  })
+})
+
+describe('previewAnnotations', () => {
+  // While a quilt drag is in progress the cells and the shapes move live; the
+  // notes must follow the same way, or they sit still and jump on release.
+  const hull: [number, number][] = [[0, 0], [10, 0], [10, 10], [0, 10]]
+  const inside = base({ id: 'in', x: 2, y: 3 })
+  const outside = base({ id: 'out', x: 20, y: 20 })
+  it('moves only the notes inside the hull by the affine', () => {
+    const out = previewAnnotations([inside, outside], { affine: { centroid: [5, 5], translateX: 1, translateY: -1 }, hull })
+    expect(out.find((t) => t.id === 'in')).toMatchObject({ x: 3, y: 2 })
+    expect(out.find((t) => t.id === 'out')).toBe(outside)
+  })
+  it('a null hull means the whole embedding moves', () => {
+    const out = previewAnnotations([inside, outside], { affine: { centroid: [0, 0], rotationDegrees: 180 }, hull: null })
+    expect(out[1].x).toBeCloseTo(-20)
+    expect(out[1].y).toBeCloseTo(-20)
+  })
+  it('no preview returns the same array', () => {
+    const notes = [inside]
+    expect(previewAnnotations(notes, null)).toBe(notes)
   })
 })

@@ -6,6 +6,7 @@ import { Figure, FigurePanel as PanelType, HighlightLayer, HighlightSource, useS
 import { appendDataset } from '../hooks/useData'
 import { boundsOf, fitView, zoomLimits } from '../lib/viewFit'
 import { getColorFromScale, getBivariateColor, resolveCategoryPalette, hexToRgb } from '../lib/cellColors'
+import TextAnnotationOverlay from './TextAnnotationOverlay'
 
 // Build a per-cell weight function for a HighlightLayer. Mirrors the
 // `layerWeightFn` in ScatterPlot.tsx (kept inline here to avoid leaking
@@ -415,6 +416,15 @@ export default function FigurePanel({ figure, panel, staticView = false }: Props
           lineWidth={figure.gridLineWidth}
         />
       )}
+      {/* The embedding's text annotations, read-only, in this panel's view. */}
+      <TextAnnotationOverlay
+        embeddingName={figure.embeddingName}
+        dimX={figure.dimX ?? 0}
+        dimY={figure.dimY ?? 1}
+        target={[(viewState.target as number[])[0], (viewState.target as number[])[1]]}
+        zoom={typeof viewState.zoom === 'number' ? viewState.zoom : (viewState.zoom as number[])[0]}
+        active={false}
+      />
       {panel.title && (
         <div
           style={{

@@ -572,3 +572,28 @@ def test_the_notebook_emits_the_subset_for_a_pc_subset():
     a.create_pca_subset([1], cell_subset='chondro')
     t = translate(a.analysis_record.steps[-1])
     assert t.code == ["xa.create_pca_subset(drop_pc_indices=[1], suffix='noPC1', cell_subset='chondro')"]
+
+
+# --- renaming a recorded result column keeps it in the tree ------------------
+
+def test_renaming_a_subsets_leiden_column_follows_it_in_the_registry():
+    # The record keys Leiden output by column name; a rename in the .obs
+    # manager used to leave the record pointing at a column that no longer
+    # existed, so the clustering vanished from the subset tree.
+    a = _adaptor(); _global_pipeline(a)
+    a.create_cell_subset('chondro', ACTIVE); _chain(a, 'chondro')
+    a.rename_obs_column('leiden_chondro', 'chondro_clusters')
+    s = _subset(a, 'chondro')
+    assert s['derived']['leiden'] == ['chondro_clusters']
+    assert s['steps']['leiden']['chondro_clusters']['resolution'] == 0.8
+    assert 'leiden_chondro' not in a.adata.uns['xcell_cell_subsets']['chondro']['derived']['leiden']
+
+
+def test_renaming_a_recorded_pseudotime_column_follows_it_too():
+    a = _adaptor(); _global_pipeline(a)
+    a.create_cell_subset('chondro', ACTIVE); _chain(a, 'chondro')
+    a.adata.obs['dpt_chondro'] = np.where(a.adata.obs['subset_chondro'].values, 0.5, np.nan)
+    a._subset_record_step('chondro', 'dpt', 'dpt_chondro', {'n_dcs': 5})
+    a.rename_obs_column('dpt_chondro', 'chondro_time')
+    d = a.adata.uns['xcell_cell_subsets']['chondro']['derived']['dpt']
+    assert list(d) == ['chondro_time'] and d['chondro_time'] == {'n_dcs': 5}

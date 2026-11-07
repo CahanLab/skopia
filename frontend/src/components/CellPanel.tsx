@@ -11,6 +11,7 @@ import {
   appendDataset,
   renameObsLabel,
   mergeObsLabels,
+  refreshColorByColumn,
   transferObsLabels,
   refreshSchema,
   useCellSubsets,
@@ -1366,6 +1367,10 @@ export default function CellPanel() {
     async (columnName: string, oldLabel: string, newLabel: string) => {
       try {
         await renameObsLabel(columnName, oldLabel, newLabel)
+        // The embedding colours and its category labels come from the loaded
+        // column values, which a rename leaves in place under the same name;
+        // re-read them or the plot keeps showing the old label.
+        await refreshColorByColumn(columnName)
         // Keep the highlight glued to the renamed label so the user doesn't
         // lose visual context.
         setSelectedCategorySource((prev) =>
@@ -1386,6 +1391,7 @@ export default function CellPanel() {
     async (columnName: string, labels: string[], newLabel: string) => {
       try {
         await mergeObsLabels(columnName, labels, newLabel)
+        await refreshColorByColumn(columnName)
         setSelectedCategorySource((prev) =>
           prev && prev.column === columnName && labels.includes(prev.value)
             ? { column: columnName, value: newLabel }
@@ -1485,7 +1491,7 @@ export default function CellPanel() {
       const c = embedding.coordinates[i]
       return [c[0], c[1]]
     })
-    createFigure(indices, coords, selectedEmbeddingName ?? embedding.name, 2, 2)
+    createFigure(indices, coords, selectedEmbeddingName ?? embedding.name, 2, 2, { x: embedding.dim_x ?? 0, y: embedding.dim_y ?? 1 })
     setCenterPanelView('figure')
   }, [embedding, selectedCellIndices, selectedEmbeddingName, createFigure, setCenterPanelView])
 

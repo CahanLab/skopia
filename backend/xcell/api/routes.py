@@ -1589,6 +1589,7 @@ class LabelCellsRequest(BaseModel):
 
 class ExportAnnotationsRequest(BaseModel):
     columns: list[str] | None = None
+    format: str = 'tsv'   # tsv | csv
 
 
 @router.post("/annotations")
@@ -1676,13 +1677,14 @@ def export_annotations(request: ExportAnnotationsRequest, dataset: str | None = 
     """
     adaptor = get_adaptor(dataset)
     try:
-        tsv = adaptor.export_annotations(request.columns)
+        text = adaptor.export_annotations(request.columns, fmt=request.format)
+        media = "text/csv" if request.format == 'csv' else "text/tab-separated-values"
         return PlainTextResponse(
-            content=tsv,
-            media_type="text/tab-separated-values",
-            headers={"Content-Disposition": "attachment; filename=annotations.tsv"}
+            content=text,
+            media_type=media,
+            headers={"Content-Disposition": f"attachment; filename=annotations.{request.format}"}
         )
-    except KeyError as e:
+    except (KeyError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -2418,6 +2420,8 @@ class DotplotRequest(BaseModel):
     color_by: str = "mean"
     standard_scale: str = "none"
     gene_ordering: str = "as_provided"
+    groups: list[str] | None = None       # labels to show, in this order; null = all
+    group_ordering: str = "as_given"      # as_given | cluster
 
 
 @router.post("/dotplot/data")
@@ -2428,9 +2432,10 @@ def get_dotplot_data(request: DotplotRequest, dataset: str | None = Query(None))
         genes, gene_set_groups = _plot_rows(adaptor, request.genes, request.gene_set_groups, request.markers)
         return adaptor.dotplot_data(
             genes, gene_set_groups, request.obs_column,
-            transform=request.transform, cell_indices=request.cell_indices,
+            transform=request.transform, cell_indices=request.cell_indices, groups=request.groups,
             expression_cutoff=request.expression_cutoff, color_by=request.color_by,
             standard_scale=request.standard_scale, gene_ordering=request.gene_ordering,
+            group_ordering=request.group_ordering,
         )
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))

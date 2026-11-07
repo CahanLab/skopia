@@ -20,8 +20,8 @@ const BACKEND_DEFAULTS: Record<string, Record<string, unknown>> = {
   cnv_heatmap: { row_mode: 'cells', max_rows: 400, group_order: 'cnv_score', vmax: null, colormap: 'rdbu' },
   expression_dotplot: {
     marker_top_n: 10, marker_min_pct_in: null, marker_max_pct_out: null, marker_min_log2fc: null, marker_max_padj: null, marker_rank_by: 'score',
-    color_by: 'mean', standard_scale: 'none', expression_cutoff: 0.0, gene_ordering: 'as_provided', swap_axes: false,
-    colormap: 'viridis', vmax: null, dot_max: null,
+    color_by: 'mean', standard_scale: 'none', expression_cutoff: 0.0, gene_ordering: 'as_provided', group_ordering: 'as_given',
+    swap_axes: false, colormap: 'viridis', vmax: null, dot_max: null,
   },
 }
 

@@ -441,6 +441,8 @@ export interface Figure {
   cellIndices: number[]
   coordinates: [number, number][]        // length == cellIndices.length
   embeddingName: string                  // for display only
+  dimX?: number                          // the embedding columns the coordinates came from
+  dimY?: number                          // (text annotations are drawn only for that pair)
   panels: FigurePanel[]
   rows: number
   cols: number
@@ -818,6 +820,9 @@ export interface LegendPanelState {
   minimized: boolean
 }
 
+// A text annotation as a snapshot keeps it: anchor, text and style, no id.
+export type SnapshotText = Pick<TextAnnotation, 'x' | 'y' | 'text'> & TextStyle
+
 // A pinned, movable/resizable snapshot of the embedding view, frozen at the
 // moment the user clicked the snapshot button. Stores the *displayed* geometry
 // (draw-ordered positions + resolved RGB per point) plus cluster-label
@@ -832,6 +837,7 @@ export interface EmbeddingSnapshot {
   colors: Uint8Array     // per-point RGB, parallel to points
   bounds: { minX: number; minY: number; maxX: number; maxY: number }
   labels: { text: string; x: number; y: number; n?: number }[] // data-space centroids; n = cluster size (label priority)
+  texts?: SnapshotText[]  // the embedding's text annotations at capture time, data-space anchors
   labelFontSize?: number // cap for the pane's auto-fitted label size (display preference at capture)
   bg: string             // background hex at capture time
   pointSize: number      // base point size at capture time
@@ -1312,7 +1318,7 @@ interface AppState {
   setBarplotConfig: (config: BarplotConfig | null) => void
 
   // Figure builder actions
-  createFigure: (cellIndices: number[], coordinates: [number, number][], embeddingName: string, rows?: number, cols?: number) => void
+  createFigure: (cellIndices: number[], coordinates: [number, number][], embeddingName: string, rows?: number, cols?: number, dims?: { x: number; y: number }) => void
   updateFigure: (patch: Partial<Omit<Figure, 'panels'>>) => void
   updateFigurePanel: (panelId: string, patch: Partial<Omit<FigurePanel, 'id'>>) => void
   setFigureLayout: (rows: number, cols: number) => void
@@ -2964,7 +2970,7 @@ export const useStore = create<AppState>((set, get) => {
     setHeatmapConfig: (config) => set({ heatmapConfig: config }),
     setBarplotConfig: (config) => set(dsUpdate({ barplotConfig: config })),
 
-    createFigure: (cellIndices, coordinates, embeddingName, rows = 2, cols = 2) => {
+    createFigure: (cellIndices, coordinates, embeddingName, rows = 2, cols = 2, dims = { x: 0, y: 1 }) => {
       const total = rows * cols
       const defaults = defaultDisplayPreferences()
       const panels: FigurePanel[] = []
@@ -2991,6 +2997,8 @@ export const useStore = create<AppState>((set, get) => {
           cellIndices: [...cellIndices],
           coordinates: coordinates.map((c) => [c[0], c[1]] as [number, number]),
           embeddingName,
+          dimX: dims.x,
+          dimY: dims.y,
           panels,
           rows,
           cols,

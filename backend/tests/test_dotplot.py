@@ -170,3 +170,76 @@ def test_route_with_gene_sets_and_with_markers(monkeypatch):
     assert res.json()['genes'] == ['g01'] and len(res.json()['row_groups']) == 1
     assert client.post('/api/dotplot/data', json={'genes': ['g00'], 'obs_column': 'depth'}).status_code == 400
     assert client.post('/api/dotplot/data', json={'markers': {'key': 'nope'}, 'obs_column': 'grp'}).status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Group choice and group ordering
+# ---------------------------------------------------------------------------
+
+# a and c share a profile (g0 on, g1 off); b is the odd one out
+EXPR3 = np.array([
+    [3.0, 0.0], [3.0, 0.0],   # a
+    [0.0, 3.0], [0.0, 3.0],   # b
+    [2.5, 0.2], [3.1, 0.0],   # c
+])
+CATS3 = np.array(['a', 'a', 'b', 'b', 'c', 'c'])
+
+
+def test_group_ordering_as_given_is_the_default_and_keeps_category_order():
+    out = dp.compute_dotplot(EXPR3, CATS3, ['g0', 'g1'])
+    assert out['categories'] == ['a', 'b', 'c'] and out['group_ordering'] == 'as_given'
+    out = dp.compute_dotplot(EXPR3, CATS3, ['g0', 'g1'], category_order=['c', 'a', 'b'], group_ordering='as_given')
+    assert out['categories'] == ['c', 'a', 'b']
+
+
+def test_cluster_group_ordering_puts_similar_groups_side_by_side():
+    out = dp.compute_dotplot(EXPR3, CATS3, ['g0', 'g1'], group_ordering='cluster')
+    cats = out['categories']
+    assert sorted(cats) == ['a', 'b', 'c'] and cats.index('b') in (0, 2)
+    assert out['group_ordering'] == 'cluster'
+    # the matrices follow the new column order
+    j = cats.index('b')
+    assert out['mean'][1][j] == pytest.approx(3.0) and out['pct'][0][j] == 0.0
+
+
+def test_cluster_ordering_with_fewer_than_three_groups_is_the_given_order():
+    out = dp.compute_dotplot(EXPR, CATS, GENES, group_ordering='cluster', category_order=['b', 'a'])
+    assert out['categories'] == ['b', 'a']
+    with pytest.raises(ValueError):
+        dp.compute_dotplot(EXPR, CATS, GENES, group_ordering='alphabetical')
+
+
+def test_adaptor_groups_restrict_the_cells_and_fix_the_order():
+    a = _adaptor()
+    out = a.dotplot_data(['g00', 'g01'], None, 'grp', groups=['c', 'a'])
+    assert out['categories'] == ['c', 'a'] and out['n_cells'] == 60
+    assert out['n_cells_per_category'] == [30, 30]
+    assert out['category_colors'] == ['#333333', '#111111']
+    with pytest.raises(ValueError, match="'zzz'"):
+        a.dotplot_data(['g00'], None, 'grp', groups=['a', 'zzz'])
+    with pytest.raises(ValueError):
+        a.dotplot_data(['g00'], None, 'grp', groups=[])
+
+
+def test_adaptor_cluster_ordering_reaches_the_pure_module():
+    a = _adaptor()
+    out = a.dotplot_data(['g00', 'g01'], None, 'grp', group_ordering='cluster')
+    assert sorted(out['categories']) == ['a', 'b', 'c'] and out['group_ordering'] == 'cluster'
+    # a carries g00, b carries g01, c neither: c is equidistant from both and
+    # the leaf ordering puts it between them.
+    assert out['categories'].index('c') == 1
+
+
+def test_route_takes_groups_and_group_ordering(monkeypatch):
+    a = _adaptor()
+    monkeypatch.setattr(routes, 'get_adaptor', lambda dataset=None: a)
+    client = TestClient(app)
+    res = client.post('/api/dotplot/data', json={'genes': ['g00', 'g01'], 'obs_column': 'grp',
+                                                 'groups': ['b', 'a'], 'group_ordering': 'as_given'})
+    assert res.status_code == 200, res.text
+    assert res.json()['categories'] == ['b', 'a'] and res.json()['n_cells'] == 60
+    res = client.post('/api/dotplot/data', json={'genes': ['g00', 'g01'], 'obs_column': 'grp', 'group_ordering': 'cluster'})
+    assert res.status_code == 200, res.text
+    assert sorted(res.json()['categories']) == ['a', 'b', 'c']
+    assert client.post('/api/dotplot/data', json={'genes': ['g00'], 'obs_column': 'grp', 'groups': ['nope']}).status_code == 400
+    assert client.post('/api/dotplot/data', json={'genes': ['g00'], 'obs_column': 'grp', 'group_ordering': 'x'}).status_code == 400

@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useCallback } from 'react'
 import { useStore, EmbeddingSnapshot } from '../store'
 import { fitFontSize, layoutLabels } from '../lib/labelLayout'
+import { TEXT_FONT_FAMILY, backgroundRgba, textBlockLayout } from '../lib/textAnnotations'
 
 const HEADER_H = 26
 const MIN_W = 120
@@ -122,6 +123,31 @@ export function renderSnapshotToCanvas(
       ctx.fillText(p.text, p.x * dpr, p.y * dpr)
     }
   }
+
+  // Text annotations, as the live overlay draws them: anchored at their data
+  // point, rotated, with their background box. The font shrinks with the
+  // pane (a 400 px pane keeps the chosen size) so a thumbnail stays legible.
+  if (snap.texts && snap.texts.length > 0 && Math.min(cssW, cssH) > 60) {
+    const k = Math.max(0.5, Math.min(1, Math.min(cssW, cssH) / 400))
+    for (const t of snap.texts) {
+      const fontCss = Math.max(7, t.fontSize * k)
+      const fontPx = fontCss * dpr
+      ctx.font = `${t.fontStyle} ${t.fontWeight} ${fontPx}px ${TEXT_FONT_FAMILY}`
+      const layout = textBlockLayout(t.text || ' ', fontPx, t.anchor, (l) => ctx.measureText(l).width)
+      ctx.save()
+      ctx.translate(toX(t.x), toY(t.y))
+      ctx.rotate((t.angle * Math.PI) / 180)
+      if (t.background) {
+        ctx.fillStyle = backgroundRgba(t.background, t.backgroundOpacity)
+        ctx.fillRect(layout.boxX, layout.boxY, layout.boxW, layout.boxH)
+      }
+      ctx.fillStyle = t.color
+      ctx.textAlign = t.anchor === 'start' ? 'left' : t.anchor === 'end' ? 'right' : 'center'
+      ctx.textBaseline = 'middle'
+      layout.lines.forEach((line, i) => ctx.fillText(line, 0, layout.firstLineY + i * layout.lineHeight))
+      ctx.restore()
+    }
+  }
 }
 
 // One pinned snapshot: a floating, draggable, resizable panel that redraws the
@@ -141,7 +167,7 @@ function SnapshotPanel({ snap }: { snap: EmbeddingSnapshot }) {
     const canvas = canvasRef.current
     if (canvas) renderSnapshotToCanvas(canvas, snap, snap.w, snap.h)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snap.w, snap.h, snap.minimized, snap.points, snap.colors, snap.labels, snap.bg, snap.pointSize])
+  }, [snap.w, snap.h, snap.minimized, snap.points, snap.colors, snap.labels, snap.texts, snap.bg, snap.pointSize])
 
   const parentBounds = () => {
     const parent = rootRef.current?.offsetParent as HTMLElement | null

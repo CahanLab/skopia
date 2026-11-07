@@ -33,6 +33,9 @@ export interface DotplotOptions {
   standardScale: 'none' | 'gene'
   expressionCutoff: number
   geneOrdering: 'as_provided' | 'peak_group'
+  /** Labels to show, in this order; null = every label of the column. */
+  groups: string[] | null
+  groupOrdering: 'as_given' | 'cluster'
   swapAxes: boolean
   colormap: 'viridis' | 'reds' | 'rdbu'
   vmax: number | null
@@ -41,7 +44,7 @@ export interface DotplotOptions {
 
 export const DEFAULT_DOTPLOT_OPTIONS: DotplotOptions = {
   colorBy: 'mean', standardScale: 'none', expressionCutoff: 0, geneOrdering: 'as_provided',
-  swapAxes: false, colormap: 'viridis', vmax: null, dotMax: null,
+  groups: null, groupOrdering: 'as_given', swapAxes: false, colormap: 'viridis', vmax: null, dotMax: null,
 }
 
 export function defaultMarkerSource(key: string, label: string, topN = 10): MarkerSource {
