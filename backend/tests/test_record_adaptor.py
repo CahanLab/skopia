@@ -15,7 +15,7 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 def _adata(n_cells=60, n_genes=30):
@@ -193,7 +193,7 @@ def test_the_record_is_written_into_uns_on_export():
     a = _adaptor()
     a.run_normalize_total(target_sum=1e4)
     exported = a.prepare_export_with_lines()
-    raw = exported.uns['xcell_analysis_record']
+    raw = exported.uns['skopia_analysis_record']
     assert isinstance(raw, str)  # a JSON string; nested dicts fight with h5ad
     assert [s['action'] for s in json.loads(raw)['steps']][-1] == 'normalize_total'
 
@@ -225,7 +225,7 @@ def test_a_restored_record_continues_rather_than_restarting():
 
 def test_only_the_original_source_opens_a_replayed_notebook():
     """A mid-history reload is a session artifact, not an analysis step."""
-    from xcell.notebook_export import to_notebook
+    from skopia.notebook_export import to_notebook
 
     a = _adaptor()
     a.run_normalize_total(target_sum=1e4)
@@ -250,7 +250,7 @@ def test_the_record_survives_a_real_h5ad_round_trip():
 def test_a_corrupt_record_in_uns_does_not_break_loading():
     """An h5ad from elsewhere may have anything under that key."""
     ad = _adata()
-    ad.uns['xcell_analysis_record'] = 'not json {{{'
+    ad.uns['skopia_analysis_record'] = 'not json {{{'
     a = DataAdaptor('x.h5ad', adata=ad)
     assert _actions(a) == ['load_dataset']  # a fresh record, no exception
 
@@ -259,7 +259,7 @@ def test_figures_are_not_written_into_the_h5ad():
     """Base64 PNGs would bloat every exported dataset."""
     a = _adaptor()
     a.analysis_record.add_figure('iVBORw0KGgo=', caption='UMAP')
-    stored = json.loads(a.prepare_export_with_lines().uns['xcell_analysis_record'])
+    stored = json.loads(a.prepare_export_with_lines().uns['skopia_analysis_record'])
     assert stored['figures'] == {}
 
 
@@ -285,7 +285,7 @@ def test_numpy_scalars_do_not_reach_the_record():
 
 def test_a_recorded_pipeline_translates_into_runnable_code():
     """The end-to-end promise: what the adaptor logged becomes valid Python."""
-    from xcell.notebook_export import to_notebook
+    from skopia.notebook_export import to_notebook
 
     a = _adaptor()
     a.run_normalize_total(target_sum=1e4)

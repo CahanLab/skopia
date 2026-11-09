@@ -1,6 +1,6 @@
 /** Pure color/format helpers for the Neighborhood enrichment heatmap.
  *
- * The diverging z ramp is built for xcell's dark surface: the midpoint sits
+ * The diverging z ramp is built for skopia's dark surface: the midpoint sits
  * near the panel background so z ≈ 0 reads as "nothing", and salience grows
  * with |z| toward a light cool pole (avoidance) and a light warm pole
  * (attraction) — histoCAT's red/blue convention with dark-mode-correct

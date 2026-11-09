@@ -3,7 +3,7 @@
  *
  * Less differentiated cells vary more in their expression of cell cycle genes
  * than their neighbours do; stemFinder scores that heterogeneity in each
- * cell's kNN neighbourhood. The backend (xcell/stemfinder.py) prepares the
+ * cell's kNN neighbourhood. The backend (skopia/stemfinder.py) prepares the
  * expression and the graph, so this modal only chooses metrics, markers and
  * the neighbourhood. PyStemFinder is optional: without it the modal shows how
  * to install it.

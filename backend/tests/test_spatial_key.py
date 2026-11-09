@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 def _adata(n=60, seed=0):
@@ -123,7 +123,7 @@ def test_a_stale_choice_does_not_strand_the_dataset():
     that a later session no longer has. That must degrade to auto-detection
     rather than making every spatial tool unusable."""
     ad = _measured()
-    ad.uns['xcell_spatial_key'] = 'X_spatial_pred_from_a_previous_life'
+    ad.uns['skopia_spatial_key'] = 'X_spatial_pred_from_a_previous_life'
     a = DataAdaptor('ref.h5ad', adata=ad)
     assert a._get_spatial_key() == 'spatial'
 
@@ -194,8 +194,8 @@ def test_the_options_are_json_safe():
 
 from fastapi.testclient import TestClient          # noqa: E402
 
-from xcell.api import routes                        # noqa: E402
-from xcell.main import app                          # noqa: E402
+from skopia.api import routes                        # noqa: E402
+from skopia.main import app                          # noqa: E402
 
 client = TestClient(app)
 

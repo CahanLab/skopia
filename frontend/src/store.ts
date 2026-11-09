@@ -625,7 +625,7 @@ export interface DatasetState {
   varIdentifierColumns: string[]
   currentVarIndex: string
   geneMaskConfig: GeneMaskConfig | null
-  // Saved figures (uns['xcell_figures']) — a list refetched when figuresVersion bumps
+  // Saved figures (uns['skopia_figures']) — a list refetched when figuresVersion bumps
   figures: FigureSummary[]
   activeFigureId: string | null
   figuresVersion: number
@@ -3231,7 +3231,7 @@ export function useActiveDataset(): DatasetState {
 }
 
 // Dev-only debug hook: exposes the store on window so the running app's state
-// can be inspected from the browser console (`xcellStore.getState()`).
+// can be inspected from the browser console (`skopiaStore.getState()`).
 if (typeof window !== 'undefined' && import.meta.env?.DEV) {
-  ;(window as { xcellStore?: typeof useStore }).xcellStore = useStore
+  ;(window as { skopiaStore?: typeof useStore }).skopiaStore = useStore
 }

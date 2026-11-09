@@ -117,7 +117,7 @@ export function NewSessionDialog({
           Gene sets are kept — they are not tied to a dataset.
         </div>
       )}
-      <div style={{ fontSize: '11px', color: '#888', marginTop: '10px' }}>xcell reloads when this is done.</div>
+      <div style={{ fontSize: '11px', color: '#888', marginTop: '10px' }}>skopia reloads when this is done.</div>
     </ConfirmDialog>
   )
 }
@@ -145,7 +145,7 @@ export function ClearGeneSetsDialog() {
     const d = new Date()
     const two = (n: number) => String(n).padStart(2, '0')
     const stamp = `${d.getFullYear()}${two(d.getMonth() + 1)}${two(d.getDate())}-${two(d.getHours())}${two(d.getMinutes())}`
-    downloadGeneSetsJson(`xcell_gene_sets_${stamp}.json`, flattenGeneSetsForExport(geneSetCategories))
+    downloadGeneSetsJson(`skopia_gene_sets_${stamp}.json`, flattenGeneSetsForExport(geneSetCategories))
     setBackedUp(true)
   }
 

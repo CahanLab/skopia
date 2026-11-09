@@ -271,16 +271,16 @@ Manual browser testing (no automated test infrastructure exists yet):
 7. Try to label with a name that collides with an existing column. Confirm the error blocks Apply.
 8. Open on a gene with zero variance (e.g. a constant or absent gene). Confirm the zero-variance notice and disabled Apply.
 9. Switch datasets while the modal is open. Confirm it closes.
-10. `npm run build` from `xcell/frontend/` passes cleanly.
+10. `npm run build` from `skopia/frontend/` passes cleanly.
 
 ## Documentation updates (required per CLAUDE.md)
 
-- **`xcell/CLAUDE.md`**
+- **`skopia/CLAUDE.md`**
   - Add `SelectByExpressionModal.tsx` to the Components table.
   - Add a Key Behaviors entry: "Select cells by expression" — summary of modal workflow, entry points, and diff-exp handoff.
-- **`xcell/CHANGELOG.md`**
+- **`skopia/CHANGELOG.md`**
   - Under `[Unreleased] → Added`: "Select cells by expression threshold from gene and gene set overflow menus, with interactive histogram cutoff and optional labeling with direct handoff to differential expression."
-- **`xcell/README.md`**
+- **`skopia/README.md`**
   - Add a short walkthrough subsection (under the analysis workflows section) showing the gene → threshold → label → diff exp flow.
 
 ## Out of scope

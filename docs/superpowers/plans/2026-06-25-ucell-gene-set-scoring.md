@@ -21,7 +21,7 @@
 ### Task 1: Per-cell capped rank cache (`_ucell_ranks`)
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (add method; init cache attrs in `__init__` near line 272–282; clear cache wherever `self._normalized_adata = None` is reset)
+- Modify: `backend/skopia/adaptor.py` (add method; init cache attrs in `__init__` near line 272–282; clear cache wherever `self._normalized_adata = None` is reset)
 - Test: `backend/tests/test_ucell_scoring.py` (create)
 
 - [ ] **Step 1: Write the failing test**
@@ -35,9 +35,9 @@ import pytest
 import scipy.sparse as sp
 from fastapi.testclient import TestClient
 
-from xcell.adaptor import DataAdaptor
-from xcell.main import app
-from xcell.api import routes
+from skopia.adaptor import DataAdaptor
+from skopia.main import app
+from skopia.api import routes
 
 
 def _adata():
@@ -71,7 +71,7 @@ Expected: FAIL — `AttributeError: 'DataAdaptor' object has no attribute '_ucel
 
 - [ ] **Step 3: Initialize cache attributes in `__init__`**
 
-In `backend/xcell/adaptor.py`, in `__init__` right after the line `self._multicontour_cache: dict[str, dict[str, Any]] = {}` (around line 282), add:
+In `backend/skopia/adaptor.py`, in `__init__` right after the line `self._multicontour_cache: dict[str, dict[str, Any]] = {}` (around line 282), add:
 ```python
         # UCell rank matrices, keyed by (resolved_layer, max_rank). Transient:
         # validated against id(self.adata); never written into adata.
@@ -145,7 +145,7 @@ Expected: PASS
 
 - [ ] **Step 6: Commit**
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_ucell_scoring.py
+git add backend/skopia/adaptor.py backend/tests/test_ucell_scoring.py
 git commit -m "backend: UCell per-cell rank cache (_ucell_ranks)"
 ```
 
@@ -154,7 +154,7 @@ git commit -m "backend: UCell per-cell rank cache (_ucell_ranks)"
 ### Task 2: u_stat scoring + up/down combination (`_ucell_score_one`, `ucell_score_values`)
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (add two methods after `_ucell_ranks`)
+- Modify: `backend/skopia/adaptor.py` (add two methods after `_ucell_ranks`)
 - Test: `backend/tests/test_ucell_scoring.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -267,7 +267,7 @@ Expected: PASS (5 tests)
 
 - [ ] **Step 5: Commit**
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_ucell_scoring.py
+git add backend/skopia/adaptor.py backend/tests/test_ucell_scoring.py
 git commit -m "backend: UCell u_stat + up/down combination (ucell_score_values)"
 ```
 
@@ -276,7 +276,7 @@ git commit -m "backend: UCell u_stat + up/down combination (ucell_score_values)"
 ### Task 3: Batch scoring that writes `.obs` columns (`score_gene_sets_ucell`)
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (add method + a small obs-name helper)
+- Modify: `backend/skopia/adaptor.py` (add method + a small obs-name helper)
 - Test: `backend/tests/test_ucell_scoring.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -386,7 +386,7 @@ Expected: PASS (8 tests)
 
 - [ ] **Step 5: Commit**
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_ucell_scoring.py
+git add backend/skopia/adaptor.py backend/tests/test_ucell_scoring.py
 git commit -m "backend: score_gene_sets_ucell writes UCell_<name> obs columns"
 ```
 
@@ -397,7 +397,7 @@ git commit -m "backend: score_gene_sets_ucell writes UCell_<name> obs columns"
 ### Task 4: Routes `/scanpy/score_genes_ucell` and `/expression/ucell`
 
 **Files:**
-- Modify: `backend/xcell/api/routes.py` (add two routes near the other `/scanpy/*` and `/expression/*` routes; reuse the `get_adaptor(dataset)` + `dataset: str | None = Query(None)` pattern)
+- Modify: `backend/skopia/api/routes.py` (add two routes near the other `/scanpy/*` and `/expression/*` routes; reuse the `get_adaptor(dataset)` + `dataset: str | None = Query(None)` pattern)
 - Test: `backend/tests/test_ucell_scoring.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -439,7 +439,7 @@ Expected: FAIL — 404 Not Found for both routes
 
 - [ ] **Step 3: Implement the routes**
 
-In `backend/xcell/api/routes.py`, add a request model + route next to `/scanpy/calculate_qc_metrics` (~line 1850):
+In `backend/skopia/api/routes.py`, add a request model + route next to `/scanpy/calculate_qc_metrics` (~line 1850):
 ```python
 class ScoreGenesUcellRequest(BaseModel):
     sets: list[dict[str, Any]]
@@ -463,7 +463,7 @@ def scanpy_score_genes_ucell(request: ScoreGenesUcellRequest, dataset: str | Non
         raise HTTPException(status_code=500, detail=str(e))
 ```
 
-Then add the interactive route next to `/expression/multi` (find it via `grep -n '"/expression/multi"' backend/xcell/api/routes.py`):
+Then add the interactive route next to `/expression/multi` (find it via `grep -n '"/expression/multi"' backend/skopia/api/routes.py`):
 ```python
 class UcellExpressionRequest(BaseModel):
     up: list[str]
@@ -488,7 +488,7 @@ def expression_ucell(request: UcellExpressionRequest, dataset: str | None = Quer
         raise HTTPException(status_code=500, detail=str(e))
 ```
 
-If `Any` is not already imported in routes.py, confirm with `grep -n "from typing import" backend/xcell/api/routes.py` and add `Any` to that import.
+If `Any` is not already imported in routes.py, confirm with `grep -n "from typing import" backend/skopia/api/routes.py` and add `Any` to that import.
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -502,7 +502,7 @@ Expected: PASS (all prior tests + 10 new)
 
 - [ ] **Step 6: Commit**
 ```bash
-git add backend/xcell/api/routes.py backend/tests/test_ucell_scoring.py
+git add backend/skopia/api/routes.py backend/tests/test_ucell_scoring.py
 git commit -m "backend: routes for UCell batch scoring + interactive coloring"
 ```
 
@@ -1077,10 +1077,10 @@ Expected: PASS
 - [ ] **Step 1: Launch isolated backend + frontend**
 
 ```bash
-cd backend && XCELL_PORT=8001 pixi run -e dev python -m xcell.main &   # confirm the actual launch cmd in main.py
-cd frontend && XCELL_BACKEND=http://127.0.0.1:8001 npx vite --port 5180 --strictPort &
+cd backend && SKOPIA_PORT=8001 pixi run -e dev python -m skopia.main &   # confirm the actual launch cmd in main.py
+cd frontend && SKOPIA_BACKEND=http://127.0.0.1:8001 npx vite --port 5180 --strictPort &
 ```
-(Confirm the backend launch invocation by reading `backend/xcell/main.py`; match how prior smoke runs started it.)
+(Confirm the backend launch invocation by reading `backend/skopia/main.py`; match how prior smoke runs started it.)
 
 - [ ] **Step 2: Drive via Playwright (DOM eval)**
 

@@ -5,9 +5,9 @@ from pathlib import Path
 import anndata
 import pytest
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
-TOY = Path(__file__).resolve().parents[1] / "xcell" / "data" / "toy_spatial_ligrec.h5ad"
+TOY = Path(__file__).resolve().parents[1] / "skopia" / "data" / "toy_spatial_ligrec.h5ad"
 
 
 @pytest.mark.skipif(not TOY.exists(), reason="toy_spatial_ligrec.h5ad not generated")

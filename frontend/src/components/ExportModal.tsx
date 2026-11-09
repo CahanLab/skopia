@@ -7,7 +7,7 @@ import type { BrowseKind } from './FileBrowser'
  * File → Export.
  *
  * Exports used to stream a browser download under a fixed name, so every export
- * of every dataset landed in Downloads as `xcell_export.h5ad` and three
+ * of every dataset landed in Downloads as `skopia_export.h5ad` and three
  * variants were indistinguishable. Here you pick the folder and the name, and
  * the backend writes it — which for a multi-gigabyte h5ad also skips a pointless
  * round trip through the browser.
@@ -41,7 +41,7 @@ const FORMATS: Record<FormatKey, FormatSpec> = {
   h5ad: {
     label: 'AnnData (.h5ad)',
     blurb: 'Full dataset with any new annotation columns',
-    kind: 'data', ext: '.h5ad', suffix: '_xcell.h5ad',
+    kind: 'data', ext: '.h5ad', suffix: '_skopia.h5ad',
   },
   metadata: {
     label: 'Cell metadata (.tsv)',
@@ -65,10 +65,10 @@ const humanBytes = (n: number) =>
 
 /** `E11.5_best_102424.h5ad` → `E11.5_best_102424`. */
 function stemOf(filename: string | undefined): string {
-  if (!filename) return 'xcell_export'
+  if (!filename) return 'skopia_export'
   const base = filename.slice(filename.lastIndexOf('/') + 1)
   const dot = base.lastIndexOf('.')
-  return (dot > 0 ? base.slice(0, dot) : base) || 'xcell_export'
+  return (dot > 0 ? base.slice(0, dot) : base) || 'skopia_export'
 }
 
 interface ExportModalProps {
@@ -159,7 +159,7 @@ export default function ExportModal({
           Export data
         </div>
         <div style={{ fontSize: 11, color: dark.faint, marginTop: 2, marginBottom: 14 }}>
-          Choose a folder and a name — xcell writes the file there
+          Choose a folder and a name — skopia writes the file there
         </div>
 
         <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80" role="img" aria-label="Skopia"><title>Skopia</title>
+<circle cx="46" cy="18" r="3" fill="#FDE725" opacity="0.95"></circle>
+<circle cx="61" cy="27" r="2.6" fill="#FDE725" opacity="0.82"></circle>
+<circle cx="76" cy="36" r="2.2" fill="#FDE725" opacity="0.69"></circle>
+<circle cx="91" cy="44.5" r="1.8" fill="#FDE725" opacity="0.56"></circle>
+<g fill="none" stroke-linecap="round">
+<path d="M44 47h0M52 47h0M60 47h0M68 47h0M76 47h0M116 47h0" stroke="#4A5478" stroke-width="4.6" opacity="0.75"></path>
+<path d="M84 47h0M108 47h0" stroke="#35B779" stroke-width="4.6"></path>
+<path d="M92 47h0M100 47h0" stroke="#FDE725" stroke-width="4.6"></path>
+<path d="M42.8 56.5h0M54.2 56.5h0M65.8 56.5h0" stroke="#4A5478" stroke-width="7" opacity="0.75"></path>
+<path d="M77.2 56.5h0" stroke="#1F9E89" stroke-width="7"></path>
+<path d="M88.8 56.5h0M100.2 56.5h0" stroke="#6DCD59" stroke-width="7"></path>
+<path d="M111.8 56.5h0" stroke="#35B779" stroke-width="7"></path>
+<path d="M4 70h0M19.5 70h0M35 70h0M50.5 70h0M66 70h0" stroke="#4A5478" stroke-width="9.8" opacity="0.75"></path>
+<path d="M81.5 70h0M112.5 70h0" stroke="#26828E" stroke-width="9.8"></path>
+<path d="M97 70h0" stroke="#1F9E89" stroke-width="9.8"></path>
+</g>
+<path d="M27.2 22 L23.8 61 M32.8 22 L36.2 61" stroke="#F2F4F8" stroke-width="4.4" stroke-linecap="round" fill="none"></path>
+<path d="M25.6 42 L34.4 42" stroke="#F2F4F8" stroke-width="2.8" stroke-linecap="round" fill="none"></path>
+<path d="M19.5 11.5 L30 4 L40.5 11.5 Z" fill="#F2F4F8" stroke="#F2F4F8" stroke-width="1.4" stroke-linejoin="round"></path>
+<rect x="22" y="11" width="16" height="12.5" rx="1.6" fill="#F2F4F8"></rect>
+<rect x="24.6" y="14" width="10.8" height="5.4" rx="1" fill="#FDE725"></rect>
+</svg>

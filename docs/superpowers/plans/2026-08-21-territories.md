@@ -4,7 +4,7 @@
 
 **Goal:** Let a user hand-draw named regions on spatial data, save them in the AnnData, annotate cells by which region they occupy, and carry those regions onto dissociated cells through Localize.
 
-**Architecture:** Store the *dividing cuts*, derive the regions between them. A cut is one object referenced by both neighbours, so dragging it moves both — shared-edge editing falls out of the representation and overlaps/gaps become unrepresentable rather than merely detectable. Geometry lives in a pure backend module (`shapely`); the adaptor owns persistence to `uns['xcell_territories_json']`; the frontend draws cuts with the existing draw tools and renders derived faces as SVG overlay paths.
+**Architecture:** Store the *dividing cuts*, derive the regions between them. A cut is one object referenced by both neighbours, so dragging it moves both — shared-edge editing falls out of the representation and overlaps/gaps become unrepresentable rather than merely detectable. Geometry lives in a pure backend module (`shapely`); the adaptor owns persistence to `uns['skopia_territories_json']`; the frontend draws cuts with the existing draw tools and renders derived faces as SVG overlay paths.
 
 **Tech Stack:** Python 3.11, shapely 2.1, numpy, pandas, AnnData, FastAPI; React 18 + Zustand + inline styles, vitest.
 
@@ -30,7 +30,7 @@
 ## File Structure
 
 **Created:**
-- `backend/xcell/territories.py` — pure geometry: extend, derive, name, assign.
+- `backend/skopia/territories.py` — pure geometry: extend, derive, name, assign.
 - `backend/tests/test_territories.py` — pure geometry tests.
 - `backend/tests/test_territories_adaptor.py` — persistence + assignment tests.
 - `backend/tests/test_territories_routes.py` — route tests.
@@ -40,8 +40,8 @@
 - `frontend/src/components/AssignTerritoriesModal.tsx` — the assignment modal.
 
 **Modified:**
-- `backend/xcell/adaptor.py` — territory persistence, assignment, bundle export, import.
-- `backend/xcell/api/routes.py` — territory routes; `LocalizeRequest` fields.
+- `backend/skopia/adaptor.py` — territory persistence, assignment, bundle export, import.
+- `backend/skopia/api/routes.py` — territory routes; `LocalizeRequest` fields.
 - `pixi.toml` — declare `shapely`.
 - `frontend/src/store.ts` — territory state + cut-routing flag.
 - `frontend/src/App.tsx` — route drawn cuts to territories; mount the panel/modal.
@@ -54,7 +54,7 @@
 ## Task 1: Pure geometry — extending cuts to the ring
 
 **Files:**
-- Create: `backend/xcell/territories.py`
+- Create: `backend/skopia/territories.py`
 - Create: `backend/tests/test_territories.py`
 - Modify: `pixi.toml` (declare shapely)
 
@@ -67,7 +67,7 @@
 It arrives today only as a squidpy transitive dependency. In `pixi.toml`, under `[dependencies]`, after the `squidpy` line:
 
 ```toml
-# Territory geometry (xcell/territories.py): noding + polygonize. Present
+# Territory geometry (skopia/territories.py): noding + polygonize. Present
 # transitively via squidpy, declared here because we depend on it directly.
 shapely = ">=2.0"
 ```
@@ -86,7 +86,7 @@ be detected, they are states the representation cannot reach.
 import numpy as np
 import pytest
 
-from xcell import territories as terr
+from skopia import territories as terr
 
 
 SQUARE = [[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]]
@@ -132,11 +132,11 @@ def test_a_degenerate_cut_of_one_point_is_dropped():
 - [ ] **Step 3: Run to verify it fails**
 
 Run: `cd backend && pixi run -e dev pytest tests/test_territories.py -q`
-Expected: FAIL — `ModuleNotFoundError: No module named 'xcell.territories'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'skopia.territories'`
 
 - [ ] **Step 4: Write the implementation**
 
-Create `backend/xcell/territories.py`:
+Create `backend/skopia/territories.py`:
 
 ```python
 """Hand-drawn spatial territories: dividing cuts in, regions out.
@@ -211,7 +211,7 @@ Note: `intersection` of a LineString with a Polygon can return a `MultiLineStrin
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/territories.py backend/tests/test_territories.py pixi.toml
+git add backend/skopia/territories.py backend/tests/test_territories.py pixi.toml
 git commit -m "feat: territory cut extension and clipping"
 ```
 
@@ -220,7 +220,7 @@ git commit -m "feat: territory cut extension and clipping"
 ## Task 2: Pure geometry — deriving faces
 
 **Files:**
-- Modify: `backend/xcell/territories.py`
+- Modify: `backend/skopia/territories.py`
 - Modify: `backend/tests/test_territories.py`
 
 **Interfaces:**
@@ -283,11 +283,11 @@ def test_a_self_intersecting_freehand_cut_still_yields_valid_faces():
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `cd backend && pixi run -e dev pytest tests/test_territories.py -q`
-Expected: FAIL — `AttributeError: module 'xcell.territories' has no attribute 'derive_faces'`
+Expected: FAIL — `AttributeError: module 'skopia.territories' has no attribute 'derive_faces'`
 
 - [ ] **Step 3: Write the implementation**
 
-Append to `backend/xcell/territories.py`:
+Append to `backend/skopia/territories.py`:
 
 ```python
 def derive_faces(ring: list[list[float]], cuts: list[dict[str, Any]]) -> list[Polygon]:
@@ -317,7 +317,7 @@ Expected: 11 passed.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/territories.py backend/tests/test_territories.py
+git add backend/skopia/territories.py backend/tests/test_territories.py
 git commit -m "feat: derive territory faces from ring and cuts"
 ```
 
@@ -326,7 +326,7 @@ git commit -m "feat: derive territory faces from ring and cuts"
 ## Task 3: Pure geometry — naming faces and assigning cells
 
 **Files:**
-- Modify: `backend/xcell/territories.py`
+- Modify: `backend/skopia/territories.py`
 - Modify: `backend/tests/test_territories.py`
 
 **Interfaces:**
@@ -393,7 +393,7 @@ Expected: FAIL — `AttributeError: ... has no attribute 'name_faces'`
 
 - [ ] **Step 3: Write the implementation**
 
-Append to `backend/xcell/territories.py`:
+Append to `backend/skopia/territories.py`:
 
 ```python
 def name_faces(faces: list[Polygon],
@@ -457,7 +457,7 @@ If `test_every_cell_inside_the_ring_gets_exactly_one_label` fails on the expecte
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/territories.py backend/tests/test_territories.py
+git add backend/skopia/territories.py backend/tests/test_territories.py
 git commit -m "feat: name territory faces by anchor and assign coordinates"
 ```
 
@@ -466,7 +466,7 @@ git commit -m "feat: name territory faces by anchor and assign coordinates"
 ## Task 4: Adaptor — persistence
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py`
+- Modify: `backend/skopia/adaptor.py`
 - Create: `backend/tests/test_territories_adaptor.py`
 
 **Interfaces:**
@@ -475,7 +475,7 @@ git commit -m "feat: name territory faces by anchor and assign coordinates"
   - `save_territories(type_name: str, payload: dict) -> dict`
   - `get_territories() -> dict[str, dict]`
   - `delete_territories(type_name: str) -> dict`
-  - Constant `TERRITORY_UNS_KEY = 'xcell_territories_json'`.
+  - Constant `TERRITORY_UNS_KEY = 'skopia_territories_json'`.
 
 A stored type is:
 ```python
@@ -504,7 +504,7 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 def _adata(n=60, n_genes=8, seed=0, sections=True):
@@ -624,18 +624,18 @@ Expected: FAIL — `AttributeError: type object 'DataAdaptor' has no attribute '
 
 - [ ] **Step 3: Write the implementation**
 
-In `backend/xcell/adaptor.py`, add a new section immediately **before** the `# Localize` section marker (search for `# Localize — predicting spatial coordinates from a spatial reference`):
+In `backend/skopia/adaptor.py`, add a new section immediately **before** the `# Localize` section marker (search for `# Localize — predicting spatial coordinates from a spatial reference`):
 
 ```python
     # =========================================================================
     # Territories — hand-drawn regions that annotate cells by occupancy
-    # See xcell/territories.py for the geometry.
+    # See skopia/territories.py for the geometry.
     # =========================================================================
 
     # Ragged vertex lists do not survive an h5ad round trip as nested uns
     # structures, so the whole payload is one JSON string — the same choice
-    # xcell_lines_json and xcell_analysis_record already make.
-    TERRITORY_UNS_KEY = 'xcell_territories_json'
+    # skopia_lines_json and skopia_analysis_record already make.
+    TERRITORY_UNS_KEY = 'skopia_territories_json'
 
     def get_territories(self) -> dict[str, Any]:
         """Every saved territory type, or {} when none were ever drawn."""
@@ -709,7 +709,7 @@ Expected: 10 passed.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_territories_adaptor.py
+git add backend/skopia/adaptor.py backend/tests/test_territories_adaptor.py
 git commit -m "feat: persist territories in the live AnnData"
 ```
 
@@ -718,7 +718,7 @@ git commit -m "feat: persist territories in the live AnnData"
 ## Task 5: Adaptor — assigning cells to territories
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py`
+- Modify: `backend/skopia/adaptor.py`
 - Modify: `backend/tests/test_territories_adaptor.py`
 
 **Interfaces:**
@@ -838,7 +838,7 @@ Expected: FAIL — `AttributeError: 'DataAdaptor' object has no attribute 'assig
 
 - [ ] **Step 3: Write the implementation**
 
-Append to the territories section of `backend/xcell/adaptor.py`:
+Append to the territories section of `backend/skopia/adaptor.py`:
 
 ```python
     TERRITORY_PREFIX = 'territory_'
@@ -856,7 +856,7 @@ Append to the territories section of `backend/xcell/adaptor.py`:
         imported from a spatial reference reads the *predicted* coordinates on
         this dataset while a locally drawn type reads the real ones.
         """
-        from xcell import territories as terr
+        from skopia import territories as terr
 
         stored = self.get_territories()
         missing = [t for t in types if t not in stored]
@@ -943,7 +943,7 @@ Expected: all pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_territories_adaptor.py
+git add backend/skopia/adaptor.py backend/tests/test_territories_adaptor.py
 git commit -m "feat: assign cells to territories by occupancy"
 ```
 
@@ -952,7 +952,7 @@ git commit -m "feat: assign cells to territories by occupancy"
 ## Task 6: Routes
 
 **Files:**
-- Modify: `backend/xcell/api/routes.py`
+- Modify: `backend/skopia/api/routes.py`
 - Create: `backend/tests/test_territories_routes.py`
 
 **Interfaces:**
@@ -976,9 +976,9 @@ import pandas as pd
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.main import app
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.main import app
 
 client = TestClient(app)
 SQUARE = [[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]]
@@ -1076,7 +1076,7 @@ Expected: FAIL — 404s, because the routes do not exist.
 
 - [ ] **Step 3: Write the implementation**
 
-In `backend/xcell/api/routes.py`, add before the Localize section:
+In `backend/skopia/api/routes.py`, add before the Localize section:
 
 ```python
 # =========================================================================
@@ -1110,7 +1110,7 @@ def territory_faces(request: TerritoryFacesRequest):
     this on every edit, and a preview that could observe (or block on) live
     dataset state would couple a drag gesture to whatever else is running.
     """
-    from xcell import territories as terr
+    from skopia import territories as terr
 
     if len(request.ring) < 3:
         raise HTTPException(status_code=400, detail='A ring needs at least 3 points')
@@ -1213,7 +1213,7 @@ Run: `cd backend && pixi run -e dev pytest -q`
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/api/routes.py backend/tests/test_territories_routes.py
+git add backend/skopia/api/routes.py backend/tests/test_territories_routes.py
 git commit -m "feat: territory routes, with a stateless faces preview"
 ```
 
@@ -1649,7 +1649,7 @@ In `ScanpyModal.tsx`, add a `territories` entry to the Spatial tab's function li
 
 ```
 Draw named regions on the spatial plot and save them with the dataset. You draw
-the dividing cuts; xcell derives the regions between them, so neighbouring
+the dividing cuts; skopia derives the regions between them, so neighbouring
 territories share a boundary exactly and cannot overlap or leave gaps. Opens the
 Territory tool.
 ```
@@ -1660,8 +1660,8 @@ Run: `cd frontend && npx tsc --noEmit && npx vitest run`
 
 - [ ] **Step 5: Verify in the browser**
 
-Start an isolated stack (worktree, backend on :8100, Vite on :5273 with `XCELL_BACKEND`), load
-`chef-gene/real_st_data/E11.5_hindlimbs_102424_xcell_qced-08132026.h5ad` (three real sections in one coordinate space), and confirm:
+Start an isolated stack (worktree, backend on :8100, Vite on :5273 with `SKOPIA_BACKEND`), load
+`chef-gene/real_st_data/E11.5_hindlimbs_102424_skopia_qced-08132026.h5ad` (three real sections in one coordinate space), and confirm:
 - drawing a cut across section A shows two faces immediately;
 - switching to section B shows *its* cuts, not A's;
 - naming a face updates the list and survives adding another cut;
@@ -1670,7 +1670,7 @@ Start an isolated stack (worktree, backend on :8100, Vite on :5273 with `XCELL_B
 - [ ] **Step 6: Commit**
 
 ```bash
-git add frontend/src/components/TerritoryPanel.tsx frontend/src/App.tsx frontend/src/components/ScanpyModal.tsx backend/xcell/api/routes.py backend/tests/test_territories_routes.py
+git add frontend/src/components/TerritoryPanel.tsx frontend/src/App.tsx frontend/src/components/ScanpyModal.tsx backend/skopia/api/routes.py backend/tests/test_territories_routes.py
 git commit -m "feat: Territory panel — draw cuts, name regions, save"
 ```
 
@@ -1780,8 +1780,8 @@ git commit -m "feat: assign cells to territories from the UI"
 ## Task 13: Localize transfer
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (`spatial_reference_bundle`, new `import_territories`, `prepare_localize`)
-- Modify: `backend/xcell/api/routes.py` (`LocalizeRequest`)
+- Modify: `backend/skopia/adaptor.py` (`spatial_reference_bundle`, new `import_territories`, `prepare_localize`)
+- Modify: `backend/skopia/api/routes.py` (`LocalizeRequest`)
 - Modify: `backend/tests/test_localize_adaptor.py`
 - Modify: `frontend/src/components/LocalizeModal.tsx`
 
@@ -1987,7 +1987,7 @@ In the browser: draw territories on the E11.5 hindlimb reference, load a second 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/xcell/api/routes.py backend/tests/test_localize_adaptor.py frontend/src/components/LocalizeModal.tsx
+git add backend/skopia/adaptor.py backend/skopia/api/routes.py backend/tests/test_localize_adaptor.py frontend/src/components/LocalizeModal.tsx
 git commit -m "feat: carry territories onto localized cells"
 ```
 
@@ -2026,7 +2026,7 @@ git merge --no-ff feat/territories -m "Merge: territories"
 - Frozen ring → Task 7 (`ringFromCells` computed once at Start, stored in the draft) + Task 4 (persisted).
 - Combined column → Task 5, Task 12.
 - Assign everything placed, NaN for unplaced → Task 5, Task 13.
-- `uns['xcell_territories_json']` + h5ad round trip → Task 4.
+- `uns['skopia_territories_json']` + h5ad round trip → Task 4.
 - `embedding` recorded and rewritten on import → Task 13.
 - Stateless faces route → Task 6.
 - shapely declared → Task 1.

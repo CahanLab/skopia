@@ -125,7 +125,7 @@ Neighbors (use_rep = chosen slot)  ──►  .obsp['connectivities']
 UMAP / Leiden  ──►  .obsm['X_umap'], .obs['leiden']
 ```
 
-### Backend (`backend/xcell/adaptor.py`, `backend/xcell/api/routes.py`)
+### Backend (`backend/skopia/adaptor.py`, `backend/skopia/api/routes.py`)
 
 No new modules — changes live alongside existing PCA code in `DataAdaptor` and its API routes.
 

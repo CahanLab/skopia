@@ -25,8 +25,8 @@
 
 | File | Responsibility |
 |------|----------------|
-| `backend/xcell/adaptor.py` | `get_embedding` gains `dim_z`; add `_clamp_one_dim` |
-| `backend/xcell/api/routes.py` | `get_embedding` route gains `dim_z` query param |
+| `backend/skopia/adaptor.py` | `get_embedding` gains `dim_z`; add `_clamp_one_dim` |
+| `backend/skopia/api/routes.py` | `get_embedding` route gains `dim_z` query param |
 | `backend/tests/test_embedding_dims.py` | new `dim_z` tests |
 | `frontend/src/lib/cellColors.ts` | **NEW** — all color helpers + `useCellColor` hook (extracted) |
 | `frontend/src/lib/lasso3d.ts` | **NEW** — `pointsInLassoScreen` pure function |
@@ -44,8 +44,8 @@
 ## Task 1: Backend — `get_embedding` gains `dim_z`
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (`get_embedding` ~line 540; add `_clamp_one_dim` near `_clamp_dims` ~line 514)
-- Modify: `backend/xcell/api/routes.py` (`get_embedding` route ~line 374)
+- Modify: `backend/skopia/adaptor.py` (`get_embedding` ~line 540; add `_clamp_one_dim` near `_clamp_dims` ~line 514)
+- Modify: `backend/skopia/api/routes.py` (`get_embedding` route ~line 374)
 - Test: `backend/tests/test_embedding_dims.py`
 
 **Interfaces:**
@@ -83,7 +83,7 @@ def test_get_embedding_dim_z_out_of_range_clamps():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cd "/Users/pcahan/Dropbox (Personal)/Code/xcell" && pixi run -e dev pytest backend/tests/test_embedding_dims.py -v`
+Run: `cd "/Users/pcahan/Dropbox (Personal)/Code/skopia" && pixi run -e dev pytest backend/tests/test_embedding_dims.py -v`
 Expected: the three new tests FAIL (`get_embedding() got an unexpected keyword argument 'dim_z'`).
 
 - [ ] **Step 3: Add `_clamp_one_dim` to `adaptor.py`**
@@ -147,13 +147,13 @@ def get_embedding(
 
 - [ ] **Step 6: Run tests to verify they pass**
 
-Run: `cd "/Users/pcahan/Dropbox (Personal)/Code/xcell" && pixi run -e dev pytest backend/tests/test_embedding_dims.py -v`
+Run: `cd "/Users/pcahan/Dropbox (Personal)/Code/skopia" && pixi run -e dev pytest backend/tests/test_embedding_dims.py -v`
 Expected: all tests PASS (new + pre-existing).
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/xcell/api/routes.py backend/tests/test_embedding_dims.py
+git add backend/skopia/adaptor.py backend/skopia/api/routes.py backend/tests/test_embedding_dims.py
 git commit -m "feat(backend): get_embedding gains optional dim_z (third .obsm column)"
 ```
 
@@ -819,7 +819,7 @@ git commit -m "feat(frontend): projected category labels in 3D embedding view"
 
 - [ ] **Step 1: Backend suite**
 
-Run: `cd "/Users/pcahan/Dropbox (Personal)/Code/xcell" && pixi run -e dev pytest backend/tests/ -q`
+Run: `cd "/Users/pcahan/Dropbox (Personal)/Code/skopia" && pixi run -e dev pytest backend/tests/ -q`
 Expected: all pass.
 
 - [ ] **Step 2: Frontend unit + build**

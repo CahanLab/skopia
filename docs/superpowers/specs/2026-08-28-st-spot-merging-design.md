@@ -38,7 +38,7 @@ no aggregation that is right for an embedding.
 
 Editing in place would silently invalidate all of it with no undo short of
 reloading the file. A sibling dataset keeps the original open and comparable,
-and xcell already holds N datasets as tabs. The cost is a second copy in memory
+and skopia already holds N datasets as tabs. The cost is a second copy in memory
 and re-running clustering on the merged one, which is the correct thing to do
 anyway.
 
@@ -115,7 +115,7 @@ lasso selection ─► POST /api/spots/merge ─► DataAdaptor.merge_spots()
 
 Three units, each testable alone:
 
-**`backend/xcell/spot_merge.py`** — pure. Coordinates, a counts matrix, a
+**`backend/skopia/spot_merge.py`** — pure. Coordinates, a counts matrix, a
 normalized matrix for the veto, and parameters in; a group-label array and
 statistics out. Knows nothing of AnnData or the adaptor. This is where the
 algorithm lives and where tuning happens, and it holds the bulk of the tests.
@@ -143,7 +143,7 @@ speculatively.
    the non-default modes.
 
 2. **Pitch estimation.** Median nearest-neighbour distance among region spots,
-   converted to µm via `uns['xcell_spatial_scale']['um_per_unit']`. It sets
+   converted to µm via `uns['skopia_spatial_scale']['um_per_unit']`. It sets
    `max_spots` automatically — `ceil(π·(d/2)² / pitch²)`, the number of lattice
    points a disc of that diameter covers — and is reported, so a wrong scale
    shows up as an absurd pitch rather than silently mis-capping every merge.
@@ -199,7 +199,7 @@ a gene-set score.
 | `.var` | Unchanged |
 | categorical `.obs` | Majority vote; ties break on the dataset's category order |
 | numeric and QC `.obs` | Dropped |
-| `.uns['xcell_spot_merge']` | Parameters, source filename, spots before/after, resolved gene subset |
+| `.uns['skopia_spot_merge']` | Parameters, source filename, spots before/after, resolved gene subset |
 
 Two new `.obs` columns always: `merged_n_spots` (1 for untouched spots) and
 `merge_group` (categorical id, blank outside the region).

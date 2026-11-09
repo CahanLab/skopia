@@ -4,7 +4,7 @@ scanpy's ``read_10x_mtx`` infers the layout from file names and accepts
 exactly two: uncompressed ``matrix.mtx`` + ``genes.tsv`` (Cell Ranger v2)
 or gzipped ``matrix.mtx.gz`` + ``features.tsv.gz`` (v3+). GEO submissions
 of v2 output gzip everything — ``GSM…_genes.tsv.gz`` — which fits neither,
-so xcell reads the three files itself and lets the feature file's column
+so skopia reads the three files itself and lets the feature file's column
 count say which vintage it is.
 """
 import gzip
@@ -14,7 +14,7 @@ import pytest
 from scipy import io as spio
 from scipy.sparse import csr_matrix, issparse
 
-from xcell.adaptor import load_dataset_file
+from skopia.adaptor import load_dataset_file
 
 
 IDS = ['ENSMUSG01', 'ENSMUSG02', 'ENSMUSG03', 'ENSMUSG04', 'ENSMUSG05']

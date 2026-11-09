@@ -3,7 +3,7 @@
 import numpy as np
 from scipy import sparse
 
-from xcell import ligrec
+from skopia import ligrec
 
 
 def _grid(n=8):

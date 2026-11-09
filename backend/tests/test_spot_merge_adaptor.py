@@ -12,8 +12,8 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.spot_merge import MergeParams
+from skopia.adaptor import DataAdaptor
+from skopia.spot_merge import MergeParams
 
 
 def _adata(n_side: int = 6, pitch: float = 15.0) -> anndata.AnnData:
@@ -31,7 +31,7 @@ def _adata(n_side: int = 6, pitch: float = 15.0) -> anndata.AnnData:
     ad.obs["ucell_score"] = rng.random(n)                # numeric — dropped
     ad.obsm["spatial"] = coords
     ad.obsm["X_umap"] = rng.normal(size=(n, 2))          # must be dropped
-    ad.uns["xcell_spatial_scale"] = {"um_per_unit": 1.0}
+    ad.uns["skopia_spatial_scale"] = {"um_per_unit": 1.0}
     return ad
 
 
@@ -126,7 +126,7 @@ def test_provenance_records_how_it_was_made():
     _, merged = a.merge_spots(
         _region(a), MergeParams(max_diameter_um=40.0), dry_run=False
     )
-    prov = merged.uns["xcell_spot_merge"]
+    prov = merged.uns["skopia_spot_merge"]
     assert prov["params"]["max_diameter_um"] == 40.0
     assert prov["n_spots_before"] == 36
     assert prov["n_spots_after"] == merged.n_obs
@@ -147,7 +147,7 @@ def test_a_region_of_one_spot_is_refused():
 
 def test_missing_spatial_scale_is_refused():
     ad = _adata()
-    del ad.uns["xcell_spatial_scale"]
+    del ad.uns["skopia_spatial_scale"]
     a = DataAdaptor("x.h5ad", adata=ad)
     with pytest.raises(ValueError, match="coordinate unit"):
         a.merge_spots(list(range(9)), MergeParams(), dry_run=True)

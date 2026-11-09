@@ -4,7 +4,7 @@
 
 **Goal:** Add an Analyze → Spatial → Multi-contour workflow that contourizes several gene sets, binarizes each to "high/not-high", and fuses them into one `tissue` `.obs` annotation, resolving multi-high spots via spatial-then-`X_pca`-profile kNN.
 
-**Architecture:** New pure module `backend/xcell/multicontour.py` (scoring reuse + binarize + assign + conflict resolution), thin two-phase adaptor methods (`prepare_multicontour` cancellable / `finalize_multicontour` synchronous) with a server-side score cache, two API routes, and a dedicated `MultiContourModal` frontend. The contourize scoring core is extracted into a shared function so single- and multi-contour share one code path.
+**Architecture:** New pure module `backend/skopia/multicontour.py` (scoring reuse + binarize + assign + conflict resolution), thin two-phase adaptor methods (`prepare_multicontour` cancellable / `finalize_multicontour` synchronous) with a server-side score cache, two API routes, and a dedicated `MultiContourModal` frontend. The contourize scoring core is extracted into a shared function so single- and multi-contour share one code path.
 
 **Tech Stack:** Python (numpy, scipy, anndata, pandas, FastAPI, pytest), React/TypeScript (Zustand store, fetch + pollTask).
 
@@ -14,10 +14,10 @@ Spec: `docs/superpowers/specs/2026-06-16-multi-contour-tissue-annotation-design.
 
 ## File Structure
 
-- Create `backend/xcell/multicontour.py` — pure functions: `score_module`, `suggest_grid_res`, `suggest_smooth_sigma`, `auto_cutoff`, `binarize_modules`, `assign_tissue`, `resolve_conflicts_knn`.
+- Create `backend/skopia/multicontour.py` — pure functions: `score_module`, `suggest_grid_res`, `suggest_smooth_sigma`, `auto_cutoff`, `binarize_modules`, `assign_tissue`, `resolve_conflicts_knn`.
 - Create `backend/tests/test_multicontour.py` — unit tests.
-- Modify `backend/xcell/adaptor.py` — extract `_contour_score_field()` shared core from `run_contourize`/`prepare_contourize`; add `prepare_multicontour()` + `finalize_multicontour()` + `self._multicontour_cache`.
-- Modify `backend/xcell/api/routes.py` — `POST /scanpy/multicontour/prepare` (202, cancellable) and `POST /scanpy/multicontour/finalize`; Pydantic models; register `multicontour` in the prerequisites map.
+- Modify `backend/skopia/adaptor.py` — extract `_contour_score_field()` shared core from `run_contourize`/`prepare_contourize`; add `prepare_multicontour()` + `finalize_multicontour()` + `self._multicontour_cache`.
+- Modify `backend/skopia/api/routes.py` — `POST /scanpy/multicontour/prepare` (202, cancellable) and `POST /scanpy/multicontour/finalize`; Pydantic models; register `multicontour` in the prerequisites map.
 - Create `frontend/src/components/MultiContourModal.tsx` — the modal.
 - Modify `frontend/src/store.ts` — modal open/close state + gene-set access.
 - Modify the Analyze/Spatial entry point (wherever `ScanpyModal` "Contourize" is surfaced) to add a "Multi-contour" launcher.
@@ -29,7 +29,7 @@ Spec: `docs/superpowers/specs/2026-06-16-multi-contour-tissue-annotation-design.
 ## Task 1: Extract shared contour scoring core (refactor, behavior-preserving)
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (the `compute_fn` in `prepare_contourize` ~5846-5903 and the body of `run_contourize` ~5963-6047)
+- Modify: `backend/skopia/adaptor.py` (the `compute_fn` in `prepare_contourize` ~5846-5903 and the body of `run_contourize` ~5963-6047)
 - Test: `backend/tests/test_contour_score.py`
 
 The core computation (per-gene log/clip/normalize → average → grid interpolate → smooth → sample at spots, returning the continuous per-spot score and `vmax`) is duplicated. Extract it into one module-level function so multi-contour reuses it.
@@ -41,7 +41,7 @@ The core computation (per-gene log/clip/normalize → average → grid interpola
 import numpy as np
 import anndata
 from scipy.sparse import csr_matrix
-from xcell.adaptor import _contour_score_field
+from skopia.adaptor import _contour_score_field
 
 
 def _toy_adata():
@@ -131,7 +131,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_contour_score.py
+git add backend/skopia/adaptor.py backend/tests/test_contour_score.py
 git commit -m "Refactor: extract shared _contour_score_field for contourize reuse"
 ```
 
@@ -140,7 +140,7 @@ git commit -m "Refactor: extract shared _contour_score_field for contourize reus
 ## Task 2: `multicontour.py` — scoring + binarize + auto cutoff
 
 **Files:**
-- Create: `backend/xcell/multicontour.py`
+- Create: `backend/skopia/multicontour.py`
 - Test: `backend/tests/test_multicontour.py`
 
 - [ ] **Step 1: Write failing tests**
@@ -150,7 +150,7 @@ git commit -m "Refactor: extract shared _contour_score_field for contourize reus
 import numpy as np
 import anndata
 from scipy.sparse import csr_matrix
-import xcell.multicontour as mc
+import skopia.multicontour as mc
 
 
 def make_adata():
@@ -196,19 +196,19 @@ def test_binarize_uses_cutoff():
 - [ ] **Step 2: Run, verify fail**
 
 Run: `cd backend && pixi run -e dev pytest tests/test_multicontour.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'xcell.multicontour'`.
+Expected: FAIL — `ModuleNotFoundError: No module named 'skopia.multicontour'`.
 
 - [ ] **Step 3: Implement `score_module`, `binarize`, `auto_cutoff`**
 
 ```python
-# backend/xcell/multicontour.py
+# backend/skopia/multicontour.py
 """Multi-contour tissue annotation: score gene-set modules, binarize, and
 fuse into one tissue label, resolving multi-high spots via spatial+PCA kNN."""
 from __future__ import annotations
 
 import numpy as np
 
-from xcell.adaptor import _contour_score_field
+from skopia.adaptor import _contour_score_field
 
 
 def _expr_dict(adata, genes):
@@ -264,7 +264,7 @@ Expected: PASS (2 tests).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/multicontour.py backend/tests/test_multicontour.py
+git add backend/skopia/multicontour.py backend/tests/test_multicontour.py
 git commit -m "multicontour: score_module + binarize + auto_cutoff"
 ```
 
@@ -273,7 +273,7 @@ git commit -m "multicontour: score_module + binarize + auto_cutoff"
 ## Task 3: `assign_tissue` + `resolve_conflicts_knn`
 
 **Files:**
-- Modify: `backend/xcell/multicontour.py`
+- Modify: `backend/skopia/multicontour.py`
 - Test: `backend/tests/test_multicontour.py`
 
 - [ ] **Step 1: Write failing tests**
@@ -317,7 +317,7 @@ def test_conflict_unresolved_when_no_unambiguous_neighbors():
 - [ ] **Step 2: Run, verify fail**
 
 Run: `cd backend && pixi run -e dev pytest tests/test_multicontour.py -v`
-Expected: FAIL — `AttributeError: module 'xcell.multicontour' has no attribute 'assign_tissue'`.
+Expected: FAIL — `AttributeError: module 'skopia.multicontour' has no attribute 'assign_tissue'`.
 
 - [ ] **Step 3: Implement assignment + resolution**
 
@@ -391,7 +391,7 @@ Expected: PASS (5 tests total).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/multicontour.py backend/tests/test_multicontour.py
+git add backend/skopia/multicontour.py backend/tests/test_multicontour.py
 git commit -m "multicontour: assign_tissue + spatial/PCA conflict resolution"
 ```
 
@@ -400,7 +400,7 @@ git commit -m "multicontour: assign_tissue + spatial/PCA conflict resolution"
 ## Task 4: Data-aware default helpers
 
 **Files:**
-- Modify: `backend/xcell/multicontour.py`
+- Modify: `backend/skopia/multicontour.py`
 - Test: `backend/tests/test_multicontour.py`
 
 - [ ] **Step 1: Write failing tests**
@@ -449,7 +449,7 @@ def suggest_smooth_sigma(coords, grid_res):
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/multicontour.py backend/tests/test_multicontour.py
+git add backend/skopia/multicontour.py backend/tests/test_multicontour.py
 git commit -m "multicontour: data-aware grid_res/smooth_sigma suggestions"
 ```
 
@@ -458,7 +458,7 @@ git commit -m "multicontour: data-aware grid_res/smooth_sigma suggestions"
 ## Task 5: Adaptor two-phase methods + score cache
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (add methods; init `self._multicontour_cache = {}` in `__init__` near other state ~line 162)
+- Modify: `backend/skopia/adaptor.py` (add methods; init `self._multicontour_cache = {}` in `__init__` near other state ~line 162)
 - Test: `backend/tests/test_multicontour_adaptor.py`
 
 - [ ] **Step 1: Write failing test**
@@ -467,7 +467,7 @@ git commit -m "multicontour: data-aware grid_res/smooth_sigma suggestions"
 # backend/tests/test_multicontour_adaptor.py
 import numpy as np, anndata
 from scipy.sparse import csr_matrix
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 def _adata():
@@ -522,7 +522,7 @@ def prepare_multicontour(self, gene_sets, contour_levels=3, log_transform=True,
                          clip_percentiles=(1, 99), grid_res=None, smooth_sigma=None):
     """Phase 1: score each module; cache scores; return review payload (no write)."""
     import uuid
-    from xcell import multicontour as mc
+    from skopia import multicontour as mc
 
     if "X_pca" not in self.adata.obsm:
         raise ValueError("Multi-contour requires X_pca — run PCA first.")
@@ -564,7 +564,7 @@ def prepare_multicontour(self, gene_sets, contour_levels=3, log_transform=True,
 def finalize_multicontour(self, token, cutoffs, profile_k=15, out_name="tissue",
                           save_qc=False, params=None):
     """Phase 2: binarize per module, assign, resolve conflicts, write column(s)."""
-    from xcell import multicontour as mc
+    from skopia import multicontour as mc
 
     cached = self._multicontour_cache.get(token)
     if cached is None:
@@ -618,7 +618,7 @@ Also add `self._multicontour_cache: dict = {}` in `__init__`.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_multicontour_adaptor.py
+git add backend/skopia/adaptor.py backend/tests/test_multicontour_adaptor.py
 git commit -m "adaptor: prepare/finalize multicontour with score cache"
 ```
 
@@ -627,7 +627,7 @@ git commit -m "adaptor: prepare/finalize multicontour with score cache"
 ## Task 6: API routes
 
 **Files:**
-- Modify: `backend/xcell/api/routes.py` (add models + 2 routes near contourize ~2398; add `'multicontour'` to the prerequisites map)
+- Modify: `backend/skopia/api/routes.py` (add models + 2 routes near contourize ~2398; add `'multicontour'` to the prerequisites map)
 - Test: `backend/tests/test_multicontour_routes.py` (FastAPI TestClient)
 
 - [ ] **Step 1: Write failing test**
@@ -637,8 +637,8 @@ git commit -m "adaptor: prepare/finalize multicontour with score cache"
 from fastapi.testclient import TestClient
 import numpy as np, anndata
 from scipy.sparse import csr_matrix
-from xcell.main import app
-from xcell.api import routes
+from skopia.main import app
+from skopia.api import routes
 
 
 def _install_adaptor():
@@ -651,7 +651,7 @@ def _install_adaptor():
     ad = anndata.AnnData(X=csr_matrix(X))
     ad.var_names = ["a0", "a1", "b0", "b1"]; ad.obsm["spatial"] = coords
     ad.obsm["X_pca"] = coords.copy()
-    from xcell.adaptor import DataAdaptor
+    from skopia.adaptor import DataAdaptor
     routes._adaptors = {"default": DataAdaptor("x.h5ad", adata=ad)}  # adjust to real registry
 
 
@@ -731,7 +731,7 @@ def multicontour_finalize(request: MultiContourFinalizeRequest, dataset: str | N
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/api/routes.py backend/tests/test_multicontour_routes.py
+git add backend/skopia/api/routes.py backend/tests/test_multicontour_routes.py
 git commit -m "routes: /scanpy/multicontour prepare + finalize"
 ```
 

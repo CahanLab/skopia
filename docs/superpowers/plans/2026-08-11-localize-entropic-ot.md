@@ -4,7 +4,7 @@
 
 **Goal:** Add a `transport` aggregation to Localize that places query cells by entropic optimal transport, so the predicted population occupies the tissue without losing the gradients that averaging preserves.
 
-**Architecture:** A new pure module `backend/xcell/transport.py` holds the solver (cost normalization, log-domain Sinkhorn, barycentric projection, stratified subsampling) and is imported by `localize.py`, which owns the wiring into `project_knn`. The solver never sees AnnData — it takes arrays and returns arrays, exactly like the other analysis modules.
+**Architecture:** A new pure module `backend/skopia/transport.py` holds the solver (cost normalization, log-domain Sinkhorn, barycentric projection, stratified subsampling) and is imported by `localize.py`, which owns the wiring into `project_knn`. The solver never sees AnnData — it takes arrays and returns arrays, exactly like the other analysis modules.
 
 **Tech Stack:** numpy, scipy (`scipy.special.logsumexp`, function-local import), pytest, React + TypeScript with inline styles.
 
@@ -25,7 +25,7 @@
 ### Task 1: Cost normalization
 
 **Files:**
-- Create: `backend/xcell/transport.py`
+- Create: `backend/skopia/transport.py`
 - Test: `backend/tests/test_transport.py`
 
 **Interfaces:**
@@ -38,7 +38,7 @@
 import numpy as np
 import pytest
 
-from xcell.transport import normalize_cost
+from skopia.transport import normalize_cost
 
 
 def test_normalize_cost_is_zero_based_and_unit_spread():
@@ -71,7 +71,7 @@ def test_normalize_cost_survives_a_constant_matrix():
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `cd backend && pixi run -e dev pytest tests/test_transport.py -q`
-Expected: FAIL — `ModuleNotFoundError: No module named 'xcell.transport'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'skopia.transport'`
 
 - [ ] **Step 3: Write the minimal implementation**
 
@@ -120,7 +120,7 @@ Expected: PASS (3 passed)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/transport.py backend/tests/test_transport.py
+git add backend/skopia/transport.py backend/tests/test_transport.py
 git commit -m "feat(transport): make the cost matrix dimensionless"
 ```
 
@@ -129,7 +129,7 @@ git commit -m "feat(transport): make the cost matrix dimensionless"
 ### Task 2: Log-domain Sinkhorn
 
 **Files:**
-- Modify: `backend/xcell/transport.py`
+- Modify: `backend/skopia/transport.py`
 - Test: `backend/tests/test_transport.py`
 
 **Interfaces:**
@@ -139,7 +139,7 @@ git commit -m "feat(transport): make the cost matrix dimensionless"
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from xcell.transport import SinkhornResult, normalize_cost, sinkhorn_log
+from skopia.transport import SinkhornResult, normalize_cost, sinkhorn_log
 
 
 def _toy_cost(n=40, m=60, seed=0):
@@ -213,7 +213,7 @@ Expected: FAIL — `ImportError: cannot import name 'SinkhornResult'`
 
 - [ ] **Step 3: Write the minimal implementation**
 
-Append to `backend/xcell/transport.py`:
+Append to `backend/skopia/transport.py`:
 
 ```python
 @dataclass
@@ -291,7 +291,7 @@ Expected: PASS (9 passed)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/transport.py backend/tests/test_transport.py
+git add backend/skopia/transport.py backend/tests/test_transport.py
 git commit -m "feat(transport): log-domain Sinkhorn with an honest convergence report"
 ```
 
@@ -300,7 +300,7 @@ git commit -m "feat(transport): log-domain Sinkhorn with an honest convergence r
 ### Task 3: Barycentric projection, with sections
 
 **Files:**
-- Modify: `backend/xcell/transport.py`
+- Modify: `backend/skopia/transport.py`
 - Test: `backend/tests/test_transport.py`
 
 **Interfaces:**
@@ -310,7 +310,7 @@ git commit -m "feat(transport): log-domain Sinkhorn with an honest convergence r
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from xcell.transport import barycentric_projection, posterior_spread
+from skopia.transport import barycentric_projection, posterior_spread
 
 
 def test_barycentric_is_the_row_weighted_mean_of_coordinates():
@@ -358,7 +358,7 @@ Expected: FAIL — `ImportError: cannot import name 'barycentric_projection'`
 
 - [ ] **Step 3: Write the minimal implementation**
 
-Append to `backend/xcell/transport.py`:
+Append to `backend/skopia/transport.py`:
 
 ```python
 def _row_normalize(coupling: np.ndarray) -> np.ndarray:
@@ -431,7 +431,7 @@ Expected: PASS (13 passed)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/transport.py backend/tests/test_transport.py
+git add backend/skopia/transport.py backend/tests/test_transport.py
 git commit -m "feat(transport): barycentric projection that respects sections"
 ```
 
@@ -440,7 +440,7 @@ git commit -m "feat(transport): barycentric projection that respects sections"
 ### Task 4: Spatially-stratified reference subsample
 
 **Files:**
-- Modify: `backend/xcell/transport.py`
+- Modify: `backend/skopia/transport.py`
 - Test: `backend/tests/test_transport.py`
 
 **Interfaces:**
@@ -450,7 +450,7 @@ git commit -m "feat(transport): barycentric projection that respects sections"
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from xcell.transport import stratified_subsample
+from skopia.transport import stratified_subsample
 
 
 def test_subsample_returns_the_requested_size():
@@ -495,7 +495,7 @@ Expected: FAIL — `ImportError: cannot import name 'stratified_subsample'`
 
 - [ ] **Step 3: Write the minimal implementation**
 
-Append to `backend/xcell/transport.py`:
+Append to `backend/skopia/transport.py`:
 
 ```python
 def stratified_subsample(
@@ -554,7 +554,7 @@ Expected: PASS (17 passed)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/transport.py backend/tests/test_transport.py
+git add backend/skopia/transport.py backend/tests/test_transport.py
 git commit -m "feat(transport): stratified subsampling that keeps the tissue's shape"
 ```
 
@@ -563,7 +563,7 @@ git commit -m "feat(transport): stratified subsampling that keeps the tissue's s
 ### Task 5: Wire `transport` into `project_knn`
 
 **Files:**
-- Modify: `backend/xcell/localize.py:41` (`AGGREGATIONS`), `:77-91` (`Projection`), `:419-594` (`project_knn`)
+- Modify: `backend/skopia/localize.py:41` (`AGGREGATIONS`), `:77-91` (`Projection`), `:419-594` (`project_knn`)
 - Test: `backend/tests/test_localize_transport.py`
 
 **Interfaces:**
@@ -576,7 +576,7 @@ git commit -m "feat(transport): stratified subsampling that keeps the tissue's s
 import numpy as np
 import pytest
 
-from xcell.localize import project_knn
+from skopia.localize import project_knn
 
 
 def _pair(n_query=60, n_ref=120, n_genes=40, seed=0):
@@ -641,7 +641,7 @@ Expected: FAIL — `ValueError: aggregation must be one of [...], got 'transport
 
 - [ ] **Step 3: Write the minimal implementation**
 
-In `backend/xcell/localize.py`:
+In `backend/skopia/localize.py`:
 
 1. Extend the tuple at line 41:
 
@@ -692,7 +692,7 @@ _TRANSPORT_MAX_ENTRIES = 40_000_000
 
 ```python
     elif aggregation == 'transport':
-        from xcell import transport as tr
+        from skopia import transport as tr
 
         ref_idx = np.arange(n_ref)
         transport_kind = 'full'
@@ -752,7 +752,7 @@ Expected: PASS — the new file's 6 tests plus the existing localize suite unbro
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/localize.py backend/tests/test_localize_transport.py
+git add backend/skopia/localize.py backend/tests/test_localize_transport.py
 git commit -m "feat(localize): place cells by entropic optimal transport"
 ```
 
@@ -761,8 +761,8 @@ git commit -m "feat(localize): place cells by entropic optimal transport"
 ### Task 6: Adaptor and route plumbing
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py:8081-8090` (`prepare_localize` signature), `:8147` (the `project_knn` call), `:8181-8182` (the result dict)
-- Modify: `backend/xcell/api/routes.py:3573-3585` (`LocalizeRequest`), and the `prepare_localize(...)` call in `localize_prepare`
+- Modify: `backend/skopia/adaptor.py:8081-8090` (`prepare_localize` signature), `:8147` (the `project_knn` call), `:8181-8182` (the result dict)
+- Modify: `backend/skopia/api/routes.py:3573-3585` (`LocalizeRequest`), and the `prepare_localize(...)` call in `localize_prepare`
 - Test: `backend/tests/test_localize_transport.py`
 
 **Interfaces:**
@@ -777,7 +777,7 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 def _adata(n=40, n_genes=30, spatial=True, seed=0):
@@ -881,7 +881,7 @@ Expected: PASS — full backend suite, no regressions.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/xcell/api/routes.py backend/tests/test_localize_transport.py
+git add backend/skopia/adaptor.py backend/skopia/api/routes.py backend/tests/test_localize_transport.py
 git commit -m "feat(localize): carry the transport settings through to the route"
 ```
 
@@ -974,7 +974,7 @@ git commit -m "feat(ui): expose the transport epsilon, with the guidance it need
 
 **Files:**
 - Create: `docs/superpowers/measurements/2026-08-11-transport-epsilon-sweep.md`
-- Modify: `backend/xcell/localize.py` (the ε default, if the sweep says so)
+- Modify: `backend/skopia/localize.py` (the ε default, if the sweep says so)
 - Modify: `CHANGELOG.md` (under `## [Unreleased]` → `### Added`)
 
 **Interfaces:**
@@ -983,7 +983,7 @@ git commit -m "feat(ui): expose the transport epsilon, with the guidance it need
 
 - [ ] **Step 1: Run the sweep**
 
-Load the real pair — reference `~/CahanLab Dropbox/Patrick Cahan/PC/PC/projects/SJD/data/spatial/xcell/h5ad_empty_removed/best_per_stage/E11.5_best_102424.h5ad`, query `~/CahanLab Dropbox/Patrick Cahan/PC/PC/projects/SJD/data/scRNAseq/Kelly_Guilak_2020/GSM4227224_E11_112125.h5ad` — with `transform='none'`, `metric='cosine'` (the settings actually in use). For ε in `[0.2, 0.3, 0.5, 0.8, 1.2]`, run `project_knn` and score each result with `xcell.localize_metrics`, recording hull area, spatial pattern fidelity per gene set, axis fidelity against the reference ceiling, and occupancy.
+Load the real pair — reference `~/CahanLab Dropbox/Patrick Cahan/PC/PC/projects/SJD/data/spatial/skopia/h5ad_empty_removed/best_per_stage/E11.5_best_102424.h5ad`, query `~/CahanLab Dropbox/Patrick Cahan/PC/PC/projects/SJD/data/scRNAseq/Kelly_Guilak_2020/GSM4227224_E11_112125.h5ad` — with `transform='none'`, `metric='cosine'` (the settings actually in use). For ε in `[0.2, 0.3, 0.5, 0.8, 1.2]`, run `project_knn` and score each result with `skopia.localize_metrics`, recording hull area, spatial pattern fidelity per gene set, axis fidelity against the reference ceiling, and occupancy.
 
 - [ ] **Step 2: Record the table**
 
@@ -1002,7 +1002,7 @@ Start both servers (`pixi run backend`, `pixi run dev`), load the query and the 
 Follow the house voice: lead with what the user sees, give the measured numbers, and name what was rejected and why.
 
 ```bash
-git add CHANGELOG.md docs/superpowers/measurements/ backend/xcell/localize.py
+git add CHANGELOG.md docs/superpowers/measurements/ backend/skopia/localize.py
 git commit -m "docs: what epsilon does on the limb pair, measured"
 ```
 

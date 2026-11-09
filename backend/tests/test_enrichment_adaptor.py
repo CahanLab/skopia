@@ -7,8 +7,8 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell import gene_set_sources as gss
-from xcell.adaptor import DataAdaptor
+from skopia import gene_set_sources as gss
+from skopia.adaptor import DataAdaptor
 
 GENES = ['Col1a1', 'Col1a2', 'Col3a1', 'Sox9', 'Acan', 'Actb', 'Gapdh', 'Ptprc', 'Cd3e', 'Cd19',
          'Hoxd13', 'Meis1'] + [f'G{i}' for i in range(20)]
@@ -57,7 +57,7 @@ def test_overlap_run_resolves_case_and_stores_json():
     top = res['results'][0]
     assert top['name'] == 'COLLAGEN' and top['library'] == 'Toy library'
     assert top['genes'] == ['Col1a1', 'Col1a2', 'Col3a1'] and top['n_overlap'] == 3
-    stored = json.loads(a.adata.uns['xcell_enrichment']['ora_my_set'])
+    stored = json.loads(a.adata.uns['skopia_enrichment']['ora_my_set'])
     assert stored['results'][0]['name'] == 'COLLAGEN'
     assert a.get_enrichment_result('ora_my_set')['key'] == 'ora_my_set'
     assert [s['key'] for s in a.get_enrichment_results()] == ['ora_my_set']
@@ -121,7 +121,7 @@ def _adata_de():
     ad.var_names = GENES
     ad.obs['grp'] = pd.Categorical(grp)
     ad.obs['subset_half'] = [True] * 40 + [False] * 20
-    ad.uns['xcell_cell_subsets'] = {'half': {'n_cells': 40, 'created_at': 't', 'origin': 'test'}}
+    ad.uns['skopia_cell_subsets'] = {'half': {'n_cells': 40, 'created_at': 't', 'origin': 'test'}}
     pcs = rng.uniform(-0.1, 0.1, size=(len(GENES), 2))
     pcs[GENES.index('Hoxd13'), 0] = 0.9
     pcs[GENES.index('Meis1'), 0] = -0.9
@@ -145,7 +145,7 @@ def test_gsea_diffexp_ranking_vs_rest_and_vs_group():
     by = {r['name']: r for r in res['results']}
     assert by['COLLAGEN']['nes'] > 0 and by['IMMUNE']['nes'] < 0
     assert set(by['COLLAGEN']['leading_edge']) >= {'Col1a1', 'Col1a2', 'Col3a1'}
-    assert json.loads(a.adata.uns['xcell_enrichment']['gsea_grp_a_vs_rest'])['kind'] == 'gsea'
+    assert json.loads(a.adata.uns['skopia_enrichment']['gsea_grp_a_vs_rest'])['kind'] == 'gsea'
     assert a._action_history[-1]['action'] == 'enrichment_gsea'
     res2 = _run(a, {'kind': 'diffexp', 'obs_column': 'grp', 'group': 'b', 'reference': 'a', 'metric': 'log2fc'})
     assert res2['key'] == 'gsea_grp_b_vs_a'

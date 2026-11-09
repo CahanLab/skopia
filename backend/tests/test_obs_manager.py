@@ -13,10 +13,10 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.codegen import EXACT, translate
-from xcell.main import app
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.codegen import EXACT, translate
+from skopia.main import app
 
 N = 30
 
@@ -132,7 +132,7 @@ def test_deleting_several_columns_is_one_step_that_drops_colours_and_subsets():
     for c in ('cell_type', 'subset_chondro', 'score'):
         assert c not in a.adata.obs.columns
     assert 'cell_type_colors' not in a.adata.uns
-    assert 'chondro' not in a.adata.uns['xcell_cell_subsets']
+    assert 'chondro' not in a.adata.uns['skopia_cell_subsets']
     assert a.list_cell_subsets() == []
     assert len(a.analysis_record.steps) == n_steps + 1
     step = a.analysis_record.steps[-1]
@@ -399,7 +399,7 @@ def test_string_columns_with_missing_values_round_trip():
     a.convert_obs_column('cell_type', 'string')
     a.adata.obs.loc[a.adata.obs_names[:3], 'cell_type'] = None
     e = a.prepare_export_with_lines()
-    assert set(e.uns['xcell_string_columns']) >= {'cell_type', 'batch_str', 'numeric_text', 'yes_no'}
+    assert set(e.uns['skopia_string_columns']) >= {'cell_type', 'batch_str', 'numeric_text', 'yes_no'}
     import tempfile, os
     p = os.path.join(tempfile.mkdtemp(), 'x.h5ad')
     e.write_h5ad(p)

@@ -5,7 +5,7 @@
  * eleven segments and 140 characters:
  *
  *   /Users/pcahan/CahanLab Dropbox/Patrick Cahan/PC/PC/projects/SJD/data/
- *   spatial/xcell/h5ad_empty_removed/best_per_stage
+ *   spatial/skopia/h5ad_empty_removed/best_per_stage
  *
  * Rendered in full it overflows the dialog and scrolls horizontally, anchored
  * left — so what you see is `/Users/pcahan/CahanLab Dro…` and the one segment

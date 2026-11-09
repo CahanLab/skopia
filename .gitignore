@@ -6,7 +6,7 @@ CHANGELOG.md
 .DS_Store
 
 # Visium HD feature_slice conversion cache (written next to source data)
-*.xcell.square_*.h5ad
+*.skopia.square_*.h5ad
 
 # Trained PySingleCellNet classifiers. The Cell Typing → Train tab writes these,
 # and a relative output path lands them in backend/. They are model artifacts,
@@ -54,7 +54,7 @@ pca-*.png
 spatial-*.png
 repro-*.png
 step1-*.png
-xcell_*.png
+skopia_*.png
 
 # infercnvpy baseline for the CNV benchmark, installed with pip --target
 backend/benchmarks/cnv/pylib/

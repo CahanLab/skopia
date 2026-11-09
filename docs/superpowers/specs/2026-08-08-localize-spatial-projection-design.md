@@ -11,7 +11,7 @@ question — *where in the tissue was this cell?* — is answerable because
 expression carries positional information, and the spatial dataset supplies the
 map from one to the other.
 
-xcell can load both at once (`primary` / `secondary`) but has no way to relate
+skopia can load both at once (`primary` / `secondary`) but has no way to relate
 them. This adds **Analyze → Spatial → Localize**: predict a coordinate for every
 cell in the scRNA-seq dataset from a spatial reference, and write it as a new
 embedding so the whole existing visualization stack — colouring, contours,
@@ -104,12 +104,12 @@ data and cosine coincide; both are offered because users think in both.
 the PySingleCellNet coverage check: proceeding silently with twelve shared genes
 produces confident nonsense. The subset is resolved on the *reference* — the
 spatial side owns which genes carry positional signal — and `spatially_variable`
-(from `spatial_autocorr`, already in xcell) is the scientifically right choice
+(from `spatial_autocorr`, already in skopia) is the scientifically right choice
 when available.
 
 ## Multi-section references
 
-xcell supports spatial datasets holding several sections laid out side by side
+skopia supports spatial datasets holding several sections laid out side by side
 with a gap. Averaging coordinates across sections produces a point in empty
 space between them. With `section_col` set, each query cell is assigned the
 weighted-majority section among its neighbours, and only that section's
@@ -194,7 +194,7 @@ query adaptor ──prepare_localize(bundle, …)──────────�
                           .obsm['X_spatial_pred'] ◄──┘ + .obs confidences
 ```
 
-`backend/xcell/localize.py` is pure — arrays in, dicts out, no AnnData, no
+`backend/skopia/localize.py` is pure — arrays in, dicts out, no AnnData, no
 adaptor import — which is what lets the projection and every metric be tested
 directly.
 

@@ -3,13 +3,13 @@
 ## The problem
 
 Some AnnData files carry nothing but Ensembl gene IDs in `.var` —
-`ENSMUSG00000002603`, not `Tgfb1`. Every part of xcell that names a gene then
+`ENSMUSG00000002603`, not `Tgfb1`. Every part of skopia that names a gene then
 becomes unusable at once: gene search returns nothing for `Shh`, imported gene
 sets match zero genes, marker panels are unreadable, and the Localize gene basis
 cannot be curated. The data is fine; the labels are unusable by a human.
 
-The fix a user reaches for today is to leave xcell, map the IDs in a script, and
-re-save the file. That is a round trip through another tool for a lookup xcell
+The fix a user reaches for today is to leave skopia, map the IDs in a script, and
+re-save the file. That is a round trip through another tool for a lookup skopia
 could do instantly.
 
 ## What already exists, and is therefore not being rebuilt
@@ -33,13 +33,13 @@ wrong.
 
 ### 1. Shipped lookup tables, not a network call
 
-Two gzipped TSVs in `xcell/data/`, `ensembl_symbols_human.tsv.gz` and
+Two gzipped TSVs in `skopia/data/`, `ensembl_symbols_human.tsv.gz` and
 `ensembl_symbols_mouse.tsv.gz`, each `ensembl_id<TAB>symbol` sorted by ID.
 
 Shipped rather than fetched, for three reasons: it works on a laptop with no
 network, it is instant rather than a multi-second API round trip per session,
 and it is *deterministic* — the same dataset maps the same way today and in a
-year, which a live API cannot promise. `xcell/data/build_gene_symbol_maps.py`
+year, which a live API cannot promise. `skopia/data/build_gene_symbol_maps.py`
 regenerates them and is committed beside the data, matching the existing
 `build_lr_db.py` / `lr_pairs.csv` pair.
 

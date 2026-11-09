@@ -8,7 +8,7 @@ here builds geometry whose right answer is known by construction.
 import numpy as np
 import pytest
 
-from xcell.localize_metrics import dispersion, occupancy
+from skopia.localize_metrics import dispersion, occupancy
 
 
 def _disc(n=2000, r=1.0, seed=0):
@@ -96,7 +96,7 @@ def test_metrics_are_json_safe_on_degenerate_input():
 
 # --- spatial pattern fidelity ---------------------------------------------
 
-from xcell.localize_metrics import spatial_pattern_fidelity  # noqa: E402
+from skopia.localize_metrics import spatial_pattern_fidelity  # noqa: E402
 
 
 def _annulus_scores(coords, inner=0.75):
@@ -150,7 +150,7 @@ def test_pattern_fidelity_handles_an_empty_overlap():
 
 # --- axis fidelity ---------------------------------------------------------
 
-from xcell.localize_metrics import axis_direction, axis_fidelity  # noqa: E402
+from skopia.localize_metrics import axis_direction, axis_fidelity  # noqa: E402
 
 
 def test_axis_direction_finds_the_gradient():
@@ -207,7 +207,7 @@ def test_axis_fidelity_survives_a_constant_score():
 
 # --- the whole panel -------------------------------------------------------
 
-from xcell.localize_metrics import evaluate_map  # noqa: E402
+from skopia.localize_metrics import evaluate_map  # noqa: E402
 
 
 def test_evaluate_map_bundles_every_metric_per_marker_set():
@@ -232,7 +232,7 @@ def test_evaluate_map_is_json_safe_with_no_marker_sets():
 
 # --- would a mean estimator lose this population? -------------------------
 
-from xcell.localize_metrics import mean_collapse_risk  # noqa: E402
+from skopia.localize_metrics import mean_collapse_risk  # noqa: E402
 
 
 def test_collapse_risk_flags_an_annular_population():

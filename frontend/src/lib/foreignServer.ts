@@ -1,5 +1,5 @@
 /**
- * Recognise a reply that did not come from xcell's backend.
+ * Recognise a reply that did not come from skopia's backend.
  *
  * The proxy in `vite.config.ts` handles the backend being *absent*
  * (ECONNREFUSED/ETIMEDOUT). It cannot handle the backend port being taken by
@@ -12,7 +12,7 @@
  * user happens to be running. Naming the intruder is the whole diagnostic.
  */
 
-/** xcell's backend port, per the `XCELL_BACKEND` default in `vite.config.ts`. */
+/** skopia's backend port, per the `SKOPIA_BACKEND` default in `vite.config.ts`. */
 const BACKEND_PORT = 8000
 
 /**
@@ -30,15 +30,15 @@ export function describeNonJsonResponse(
   const who = title ? `A server calling itself "${title}"` : 'Another server'
 
   return (
-    `${who} answered xcell's API with HTML instead of JSON — something other ` +
-    `than xcell's backend is listening on port ${BACKEND_PORT}. Find it with ` +
+    `${who} answered skopia's API with HTML instead of JSON — something other ` +
+    `than skopia's backend is listening on port ${BACKEND_PORT}. Find it with ` +
     `\`lsof -nP -iTCP:${BACKEND_PORT} -sTCP:LISTEN\`, stop it, then start the ` +
     'backend with `pixi run backend`.'
   )
 }
 
 /**
- * Throw the explanation above if `response` did not come from xcell's backend.
+ * Throw the explanation above if `response` did not come from skopia's backend.
  *
  * Checks the header before touching the body, so a JSON response is left
  * unread and the caller can still call `.json()` on it.

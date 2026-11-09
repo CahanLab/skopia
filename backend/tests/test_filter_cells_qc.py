@@ -12,8 +12,8 @@ import anndata
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
 
 
 def _adata() -> anndata.AnnData:

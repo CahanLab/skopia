@@ -47,7 +47,7 @@
     const statusEl = document.getElementById('status');
 
     function genData(n, dist) {
-      // Match xcell PC1/PC2 distribution where 65% of cells crowd narrow X band.
+      // Match skopia PC1/PC2 distribution where 65% of cells crowd narrow X band.
       const coords = new Array(n);
       const rng = mulberry32(42);
       const heavy = () => {
@@ -142,7 +142,7 @@
         ],
       });
 
-      // Overlay coordinate grid (so we can see misalignment without xcell).
+      // Overlay coordinate grid (so we can see misalignment without skopia).
       const old = plotEl.querySelector('svg.grid');
       if (old) old.remove();
       if (showGrid) drawGrid(cx, cy, zoom, w, h);

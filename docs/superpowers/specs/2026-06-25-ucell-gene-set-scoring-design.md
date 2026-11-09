@@ -5,7 +5,7 @@ Status: Approved (brainstorm) → ready for plan
 
 ## Goal
 
-Add UCell-style gene-set scoring to xcell. UCell signatures are *directional*:
+Add UCell-style gene-set scoring to skopia. UCell signatures are *directional*:
 they carry genes expected **up** (high) in a cell population and genes expected
 **down** (low / undetected). Scoring is a per-cell rank-based AUC statistic that
 is robust to dataset size and normalization.
@@ -70,7 +70,7 @@ export interface GeneSet {
   features (set-ops / Combine modal, `.var`-columns-as-sets, mean coloring) keep
   operating on `genes` only — the down-list is **UCell-specific** and ignored by
   those features (YAGNI: no down-aware set algebra).
-- **Backend store needs no change**: `backend/xcell/gene_set_store.py` is opaque
+- **Backend store needs no change**: `backend/skopia/gene_set_store.py` is opaque
   JSON that round-trips the frontend shape verbatim, so `genesDown` rides along.
 
 ## Input file format (locked — users generate lists against this)
@@ -105,7 +105,7 @@ Also accepted (identical semantics):
 
 ## Backend (adaptor + routes)
 
-New adaptor methods (`backend/xcell/adaptor.py`):
+New adaptor methods (`backend/skopia/adaptor.py`):
 
 - `_ucell_ranks(layer, maxRank)` — returns the capped sparse rank matrix
   (cells × genes), lazily computed and cached on the adaptor in
@@ -125,7 +125,7 @@ New adaptor methods (`backend/xcell/adaptor.py`):
   `.obs['UCell_<sanitized name>']` with a collision-safe suffix. Returns
   `{results: [{name, obs_column, min, max, n_up_used, n_down_used, skipped?}], maxRank, layer}`.
 
-Routes (`backend/xcell/api/routes.py`):
+Routes (`backend/skopia/api/routes.py`):
 - `POST /scanpy/score_genes_ucell` — persisted batch. Body: `{sets, layer, maxRank, w_neg}`.
   Frontend calls `refreshSchema()` afterwards so new columns become colorable.
 - `POST /expression/ucell` — interactive, single set → `{values, min, max}`,

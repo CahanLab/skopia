@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 def _spatial(n=180, n_genes=24, seed=0):
@@ -335,7 +335,7 @@ def test_a_non_assigning_aggregation_claims_nothing():
 
 
 def test_the_candidate_path_is_reported_as_such(monkeypatch):
-    import xcell.localize as lz
+    import skopia.localize as lz
     monkeypatch.setattr(lz, '_DENSE_MAX_ENTRIES', 10)
     ref, query, _ = _pair()
     out = _run(query, ref.spatial_reference_bundle(), k=10, aggregation='injective')

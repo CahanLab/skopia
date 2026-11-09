@@ -14,9 +14,9 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell import heatmap
-from xcell.adaptor import DataAdaptor
-from xcell.heatmap import compute_heatmap_data
+from skopia import heatmap
+from skopia.adaptor import DataAdaptor
+from skopia.heatmap import compute_heatmap_data
 
 N = 60
 GENES = ['g1', 'g2', 'g3', 'g4']

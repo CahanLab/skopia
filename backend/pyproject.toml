@@ -3,14 +3,14 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "xcell"
+name = "skopia"
 version = "0.5.0"
 description = "Modern web app for scRNA-seq and spatial transcriptomics exploration"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "XCell Team"}
+    {name = "Skopia Team"}
 ]
 dependencies = [
     "fastapi>=0.104.0",
@@ -31,13 +31,13 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["xcell*"]
+include = ["skopia*"]
 
 [tool.setuptools.package-data]
 # *.tsv.gz is the Ensembl symbol tables; *.csv is lr_pairs.csv, which was
 # already needed at runtime and already missing here — the editable install
 # used everywhere in development hides both.
-xcell = [
+skopia = [
     "data/*.h5ad", "data/*.tsv.gz", "data/*.csv",
     "data/gene_sets/*.json", "config.yaml",
 ]

@@ -28,7 +28,7 @@
 ### Task 1: Pitch estimation and max_spots
 
 **Files:**
-- Create: `backend/xcell/spot_merge.py`
+- Create: `backend/skopia/spot_merge.py`
 - Test: `backend/tests/test_spot_merge.py`
 
 **Interfaces:**
@@ -43,7 +43,7 @@
 import numpy as np
 import pytest
 
-from xcell.spot_merge import estimate_pitch_um, max_spots_for
+from skopia.spot_merge import estimate_pitch_um, max_spots_for
 
 
 def _grid(nx: int, ny: int, pitch: float = 15.0) -> np.ndarray:
@@ -83,7 +83,7 @@ def test_pitch_needs_two_spots():
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pixi run -e dev pytest tests/test_spot_merge.py -q`
-Expected: FAIL — `ModuleNotFoundError: No module named 'xcell.spot_merge'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'skopia.spot_merge'`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -137,7 +137,7 @@ Expected: PASS (5 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/spot_merge.py backend/tests/test_spot_merge.py
+git add backend/skopia/spot_merge.py backend/tests/test_spot_merge.py
 git commit -m "feat: estimate ST spot pitch and derive the merge size cap"
 ```
 
@@ -146,7 +146,7 @@ git commit -m "feat: estimate ST spot pitch and derive the merge size cap"
 ### Task 2: Greedy agglomeration with diameter cap and correlation veto
 
 **Files:**
-- Modify: `backend/xcell/spot_merge.py`
+- Modify: `backend/skopia/spot_merge.py`
 - Test: `backend/tests/test_spot_merge.py`
 
 **Interfaces:**
@@ -158,7 +158,7 @@ git commit -m "feat: estimate ST spot pitch and derive the merge size cap"
 Append to `backend/tests/test_spot_merge.py`:
 
 ```python
-from xcell.spot_merge import MergeParams, merge_spots
+from skopia.spot_merge import MergeParams, merge_spots
 
 
 def _profiles(n: int, g: int = 8, kind: int = 0, rng=None) -> np.ndarray:
@@ -281,7 +281,7 @@ Expected: FAIL — `ImportError: cannot import name 'MergeParams'`
 
 - [ ] **Step 3: Write minimal implementation**
 
-Append to `backend/xcell/spot_merge.py`:
+Append to `backend/skopia/spot_merge.py`:
 
 ```python
 import heapq
@@ -468,7 +468,7 @@ Expected: PASS (16 tests). Remove the two dead `for ... break` blocks flagged du
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/spot_merge.py backend/tests/test_spot_merge.py
+git add backend/skopia/spot_merge.py backend/tests/test_spot_merge.py
 git commit -m "feat: greedy spot agglomeration with a diameter cap and correlation veto"
 ```
 
@@ -477,7 +477,7 @@ git commit -m "feat: greedy spot agglomeration with a diameter cap and correlati
 ### Task 3: Eligibility modes
 
 **Files:**
-- Modify: `backend/xcell/spot_merge.py`
+- Modify: `backend/skopia/spot_merge.py`
 - Test: `backend/tests/test_spot_merge.py`
 
 **Interfaces:**
@@ -487,7 +487,7 @@ git commit -m "feat: greedy spot agglomeration with a diameter cap and correlati
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from xcell.spot_merge import eligible_mask
+from skopia.spot_merge import eligible_mask
 
 
 def test_all_is_the_default_and_takes_everything():
@@ -538,7 +538,7 @@ Expected: FAIL — `ImportError: cannot import name 'eligible_mask'`
 
 - [ ] **Step 3: Write minimal implementation**
 
-Add to `backend/xcell/spot_merge.py`:
+Add to `backend/skopia/spot_merge.py`:
 
 ```python
 def eligible_mask(counts: np.ndarray, params: MergeParams) -> np.ndarray:
@@ -591,7 +591,7 @@ Expected: PASS (22 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/spot_merge.py backend/tests/test_spot_merge.py
+git add backend/skopia/spot_merge.py backend/tests/test_spot_merge.py
 git commit -m "feat: eligibility modes for spot merging"
 ```
 
@@ -600,7 +600,7 @@ git commit -m "feat: eligibility modes for spot merging"
 ### Task 4: DataAdaptor.merge_spots assembles the merged AnnData
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (add method near the other spatial methods)
+- Modify: `backend/skopia/adaptor.py` (add method near the other spatial methods)
 - Test: `backend/tests/test_spot_merge_adaptor.py`
 
 **Interfaces:**
@@ -618,8 +618,8 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.spot_merge import MergeParams
+from skopia.adaptor import DataAdaptor
+from skopia.spot_merge import MergeParams
 
 
 def _adata(n_side: int = 6, pitch: float = 15.0) -> anndata.AnnData:
@@ -637,7 +637,7 @@ def _adata(n_side: int = 6, pitch: float = 15.0) -> anndata.AnnData:
     ad.obs["ucell_score"] = rng.random(n)                # numeric — dropped
     ad.obsm["spatial"] = coords
     ad.obsm["X_umap"] = rng.normal(size=(n, 2))          # must be dropped
-    ad.uns["xcell_spatial_scale"] = {"um_per_unit": 1.0}
+    ad.uns["skopia_spatial_scale"] = {"um_per_unit": 1.0}
     return ad
 
 
@@ -725,7 +725,7 @@ def test_only_the_spatial_obsm_survives():
 def test_provenance_records_how_it_was_made():
     a = _adaptor()
     _, merged = a.merge_spots(_region(a), MergeParams(max_diameter_um=40.0), dry_run=False)
-    prov = merged.uns["xcell_spot_merge"]
+    prov = merged.uns["skopia_spot_merge"]
     assert prov["params"]["max_diameter_um"] == 40.0
     assert prov["n_spots_before"] == 36
     assert prov["n_spots_after"] == merged.n_obs
@@ -746,7 +746,7 @@ def test_a_region_of_one_spot_is_refused():
 
 def test_missing_spatial_scale_is_refused():
     ad = _adata()
-    del ad.uns["xcell_spatial_scale"]
+    del ad.uns["skopia_spatial_scale"]
     a = DataAdaptor("x.h5ad", adata=ad)
     with pytest.raises(ValueError, match="µm per coordinate unit|um_per_unit"):
         a.merge_spots(list(range(9)), MergeParams(), dry_run=True)
@@ -768,7 +768,7 @@ Expected: FAIL — `AttributeError: 'DataAdaptor' object has no attribute 'merge
 
 - [ ] **Step 3: Write minimal implementation**
 
-Add to `backend/xcell/adaptor.py`, near the other spatial methods:
+Add to `backend/skopia/adaptor.py`, near the other spatial methods:
 
 ```python
     def merge_spots(
@@ -788,7 +788,7 @@ Add to `backend/xcell/adaptor.py`, near the other spatial methods:
 
         Returns (stats, merged_adata). merged_adata is None when dry_run.
         """
-        from xcell.spot_merge import MergeParams as _MP, eligible_mask, merge_spots
+        from skopia.spot_merge import MergeParams as _MP, eligible_mask, merge_spots
 
         spatial_key = self._get_spatial_key()
         if spatial_key is None:
@@ -926,7 +926,7 @@ And the assembly helper, immediately below it:
         merged = anndata.AnnData(X=X.astype(np.float32), obs=obs, var=self.adata.var.copy())
         merged.layers['counts'] = merged.X.copy()
         merged.obsm[spatial_key] = np.asarray(coords_out, dtype=float)
-        merged.uns['xcell_spot_merge'] = {
+        merged.uns['skopia_spot_merge'] = {
             'params': {
                 'max_diameter_um': float(params.max_diameter_um),
                 'min_correlation': float(params.min_correlation),
@@ -951,7 +951,7 @@ Expected: PASS (13 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_spot_merge_adaptor.py
+git add backend/skopia/adaptor.py backend/tests/test_spot_merge_adaptor.py
 git commit -m "feat: assemble the merged AnnData without touching the source"
 ```
 
@@ -960,7 +960,7 @@ git commit -m "feat: assemble the merged AnnData without touching the source"
 ### Task 5: POST /api/spots/merge
 
 **Files:**
-- Modify: `backend/xcell/api/routes.py` (add near the other spatial routes)
+- Modify: `backend/skopia/api/routes.py` (add near the other spatial routes)
 - Test: `backend/tests/test_spot_merge_routes.py`
 
 **Interfaces:**
@@ -978,9 +978,9 @@ import pandas as pd
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.main import app
-from xcell.api import routes
-from xcell.adaptor import DataAdaptor
+from skopia.main import app
+from skopia.api import routes
+from skopia.adaptor import DataAdaptor
 
 
 def _install(n_side: int = 6, pitch: float = 15.0, scale: bool = True):
@@ -996,7 +996,7 @@ def _install(n_side: int = 6, pitch: float = 15.0, scale: bool = True):
     ad.obs["cell_type"] = pd.Categorical(["hyper"] * len(coords))
     ad.obsm["spatial"] = coords
     if scale:
-        ad.uns["xcell_spatial_scale"] = {"um_per_unit": 1.0}
+        ad.uns["skopia_spatial_scale"] = {"um_per_unit": 1.0}
     routes.set_adaptor(DataAdaptor("src.h5ad", adata=ad), slot="primary")
     return np.where((coords[:, 0] < 40) & (coords[:, 1] < 40))[0].tolist()
 
@@ -1061,7 +1061,7 @@ Expected: FAIL — 404, the route does not exist
 
 - [ ] **Step 3: Write minimal implementation**
 
-Add to `backend/xcell/api/routes.py`:
+Add to `backend/skopia/api/routes.py`:
 
 ```python
 class MergeSpotsRequest(BaseModel):
@@ -1089,7 +1089,7 @@ def merge_spots(request: MergeSpotsRequest, dataset: str | None = Query(None)):
     Synchronous, following /combine: a lassoed region is hundreds to low
     thousands of spots, which agglomerates in well under a second.
     """
-    from xcell.spot_merge import MergeParams
+    from skopia.spot_merge import MergeParams
 
     adaptor = get_adaptor(dataset)
     if not request.dry_run and not request.slot:
@@ -1137,7 +1137,7 @@ Expected: PASS (6 tests)
 
 ```bash
 cd backend && pixi run -e dev pytest -q
-git add backend/xcell/api/routes.py backend/tests/test_spot_merge_routes.py
+git add backend/skopia/api/routes.py backend/tests/test_spot_merge_routes.py
 git commit -m "feat: POST /api/spots/merge creates the merged dataset"
 ```
 
@@ -1330,7 +1330,7 @@ git commit -m "feat: Merge Spots modal under Analyze -> Spatial"
 
 - [ ] **Step 1: Start the isolated stack**
 
-Check `lsof -nP -iTCP:8000 -sTCP:LISTEN` first. Run the worktree's backend on `:8100` and Vite on `:5273` with `XCELL_BACKEND=http://127.0.0.1:8100`, per the isolated-stack recipe.
+Check `lsof -nP -iTCP:8000 -sTCP:LISTEN` first. Run the worktree's backend on `:8100` and Vite on `:5273` with `SKOPIA_BACKEND=http://127.0.0.1:8100`, per the isolated-stack recipe.
 
 - [ ] **Step 2: Load a spatial dataset and set its scale**
 

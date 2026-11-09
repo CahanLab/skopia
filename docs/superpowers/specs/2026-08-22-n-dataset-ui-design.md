@@ -20,7 +20,7 @@ Two names, not one:
   rather than climbing forever.
 - **The label** is what a person reads, and it comes from the data:
   `schema.filename` with its directory and extension stripped. A tab reading
-  `E11.5_hindlimbs_102424_xcell_qced` is worth having; four tabs reading
+  `E11.5_hindlimbs_102424_skopia_qced` is worth having; four tabs reading
   Primary, Secondary, Slot3, Slot4 are not. It falls back to the capitalized
   slot key when a dataset has no filename.
 

@@ -15,7 +15,7 @@ export function restrictionWire(r: MarkerRestriction): MarkerRestrictionWire {
 }
 
 export interface MarkerSource {
-  /** Key of the run in `uns['xcell_marker_genes']`. */
+  /** Key of the run in `uns['skopia_marker_genes']`. */
   key: string
   /** What the picker showed: the run's column (and label when it has one). */
   label: string

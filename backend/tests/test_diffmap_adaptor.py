@@ -21,10 +21,10 @@ from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 from scipy.stats import spearmanr
 
-from xcell import codegen
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.main import app
+from skopia import codegen
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.main import app
 
 N = 80
 
@@ -73,7 +73,7 @@ def test_diffmap_on_the_default_graph_writes_X_diffmap_and_scanpys_evals():
     assert X.shape == (N, 10)
     assert np.isfinite(X).all()
     np.testing.assert_array_equal(a.adata.uns["diffmap_evals"], np.asarray(r["eigenvalues"], dtype=np.float32))
-    entry = a.adata.uns["xcell_diffmaps"]["X_diffmap"]
+    entry = a.adata.uns["skopia_diffmaps"]["X_diffmap"]
     assert entry["graph_key"] == "connectivities"
     assert int(entry["n_comps"]) == 10
     assert r["view_dims"] == [1, 2]
@@ -94,7 +94,7 @@ def test_diffmap_on_the_spatial_graph_gets_its_own_key():
     r = a.run_diffmap(n_comps=8, graph_key="spatial_connectivities")
     assert r["embedding_name"] == "X_diffmap_spatial"
     assert "X_diffmap" not in a.adata.obsm
-    assert a.adata.uns["xcell_diffmaps"]["X_diffmap_spatial"]["graph_key"] == "spatial_connectivities"
+    assert a.adata.uns["skopia_diffmaps"]["X_diffmap_spatial"]["graph_key"] == "spatial_connectivities"
     # squidpy's kNN spatial graph is not mutual.
     assert r["symmetrized"] is True
 
@@ -137,7 +137,7 @@ def test_diffmap_on_a_subset_never_lands_on_the_datasets_key():
     assert "X_diffmap" not in a.adata.obsm
     X = a.adata.obsm["X_diffmap_early"]
     assert np.isfinite(X[:30]).all() and np.isnan(X[30:]).all()
-    assert a.adata.uns["xcell_diffmaps"]["X_diffmap_early"]["cell_subset"] == "early"
+    assert a.adata.uns["skopia_diffmaps"]["X_diffmap_early"]["cell_subset"] == "early"
 
 
 def test_diffmap_on_a_subset_is_recorded_in_the_tree():
@@ -304,7 +304,7 @@ def test_dpt_records_the_resolved_root_and_writes_the_registry():
     assert step.action == "dpt"
     assert step.params["root_mode"] == "cells"
     assert step.params["root_cells"] == [r["root_index"]]
-    entry = a.adata.uns["xcell_dpt"]["dpt_pseudotime"]
+    entry = a.adata.uns["skopia_dpt"]["dpt_pseudotime"]
     assert entry["diffmap_key"] == "X_diffmap"
     assert int(entry["root_index"]) == r["root_index"]
     assert a.adata.uns["iroot"] == r["root_index"]
@@ -321,8 +321,8 @@ def test_subset_cascade_delete_drops_diffmaps_and_pseudotime():
     assert "X_diffmap_early" in out["dropped"] and "dpt_pseudotime_early" in out["dropped"]
     assert "X_diffmap_early" not in a.adata.obsm
     assert "dpt_pseudotime_early" not in a.adata.obs
-    assert "X_diffmap_early" not in a.adata.uns.get("xcell_diffmaps", {})
-    assert "dpt_pseudotime_early" not in a.adata.uns.get("xcell_dpt", {})
+    assert "X_diffmap_early" not in a.adata.uns.get("skopia_diffmaps", {})
+    assert "dpt_pseudotime_early" not in a.adata.uns.get("skopia_dpt", {})
 
 
 def test_list_diffmaps_and_potency_columns():
@@ -455,7 +455,7 @@ def test_a_subset_named_like_a_graph_does_not_claim_its_maps():
         a.create_cell_subset("spatial", list(range(30)))
     # A file saved before the name was refused can still hold one.
     a.adata.obs["subset_spatial"] = np.arange(N) < 30
-    a.adata.uns["xcell_cell_subsets"] = {"spatial": {"obs_key": "subset_spatial"}}
+    a.adata.uns["skopia_cell_subsets"] = {"spatial": {"obs_key": "subset_spatial"}}
     summary = next(s for s in a.list_cell_subsets() if s["name"] == "spatial")
     assert summary["derived"]["diffmap"] == []
     assert summary["derived"]["dpt"] == []

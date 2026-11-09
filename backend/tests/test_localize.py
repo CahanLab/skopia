@@ -13,7 +13,7 @@ import math
 import numpy as np
 import pytest
 
-from xcell.localize import (
+from skopia.localize import (
     AGGREGATIONS,
     METRICS,
     TRANSFORMS,
@@ -736,7 +736,7 @@ def test_candidate_assignment_stays_solvable_when_every_cell_wants_the_same_spot
 
 def test_the_seed_alone_is_already_a_valid_assignment():
     """It has to be: it is what makes the matching a theorem rather than a hope."""
-    from xcell.localize import _feasible_seed
+    from skopia.localize import _feasible_seed
     S = np.random.default_rng(3).random((30, 45))
     idx, sim = _candidates(S, 4)
     seed = _feasible_seed(idx, sim.max(axis=1), 45)
@@ -763,7 +763,7 @@ def test_a_small_problem_still_gets_the_exact_assignment():
 def test_a_large_problem_takes_the_candidate_path(monkeypatch):
     """Forced by lowering the ceiling rather than by building a real matrix that
     would not fit — the point is the branch, not the arithmetic."""
-    import xcell.localize as lz
+    import skopia.localize as lz
     monkeypatch.setattr(lz, '_DENSE_MAX_ENTRIES', 10)
     ref_expr, ref_coords, q_expr, q_coords = _matched()
     p = project_knn(q_expr, ref_expr, ref_coords, k=10, aggregation='injective')
@@ -777,7 +777,7 @@ def test_a_large_problem_takes_the_candidate_path(monkeypatch):
 
 
 def test_the_candidate_path_still_spreads_what_best_match_piles_up(monkeypatch):
-    import xcell.localize as lz
+    import skopia.localize as lz
     monkeypatch.setattr(lz, '_DENSE_MAX_ENTRIES', 10)
     ref_expr, ref_coords, q_expr = _clones()
     p = project_knn(q_expr, ref_expr, ref_coords, k=15,
@@ -797,7 +797,7 @@ def test_both_paths_agree_on_this_problem(monkeypatch):
     problem this size with 128 candidates out of 400 spots it should land on the
     same answer, and a large disagreement means the wiring is wrong rather than
     the approximation biting."""
-    import xcell.localize as lz
+    import skopia.localize as lz
     ref_expr, ref_coords, q_expr, _ = _matched()
     exact = project_knn(q_expr, ref_expr, ref_coords, k=10, aggregation='injective')
     monkeypatch.setattr(lz, '_DENSE_MAX_ENTRIES', 10)
@@ -810,7 +810,7 @@ def test_the_chunk_shrinks_as_the_reference_grows():
     """A fixed 2,048-row chunk is 820 MB of transient block against a
     100,000-spot reference, which blocks every aggregation and not just the
     assigning one."""
-    from xcell.localize import _chunk_rows
+    from skopia.localize import _chunk_rows
     assert _chunk_rows(1_000) == 2048           # small reference: unchanged
     assert _chunk_rows(100_000) == 200
     assert _chunk_rows(50_000_000) == 1         # never zero
@@ -827,7 +827,7 @@ def test_chunking_does_not_change_which_neighbours_are_chosen(monkeypatch):
     a 2,000-cell and a 3,000-cell query, since both are chunked. A real
     regression here would move cells by whole tissue units, not by 1e-5 of one.
     """
-    import xcell.localize as lz
+    import skopia.localize as lz
     ref_expr, ref_coords, q_expr, _ = _matched(n_query=97)
     big = project_knn(q_expr, ref_expr, ref_coords, k=10)
     monkeypatch.setattr(lz, '_MAX_BLOCK_ENTRIES', 400)     # forces a chunk of 1

@@ -14,9 +14,9 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.main import app
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.main import app
 
 
 N_SAMPLES, N_CELLS, N_GENES = 3, 200, 45
@@ -122,7 +122,7 @@ def test_run_writes_a_registered_score_matrix():
     out = _run(a, key="MP")
     names = [mp["name"] for mp in out["metaprograms"]]
     assert a.adata.obsm["MP"].shape == (N_SAMPLES * N_CELLS, len(names))
-    reg = a.adata.uns["xcell_score_matrices"]["MP"]
+    reg = a.adata.uns["skopia_score_matrices"]["MP"]
     assert reg["columns"] == names
     assert reg["source"] == "gene_nmf_meta"
 
@@ -147,7 +147,7 @@ def test_run_separates_a_private_program_by_sample_coverage():
 def test_run_records_everything_needed_to_redraw_the_heatmap():
     a = _adaptor()
     out = _run(a, key="MP")
-    rec = a.adata.uns["xcell_gene_nmf_meta"]["MP"]
+    rec = a.adata.uns["skopia_gene_nmf_meta"]["MP"]
     n = len(rec["program_labels"])
     assert np.asarray(rec["similarity"]).shape == (n, n)
     assert len(rec["clusters"]) == n
@@ -161,7 +161,7 @@ def test_stored_record_survives_an_h5ad_round_trip(tmp_path):
     path = tmp_path / "mp.h5ad"
     a.adata.write_h5ad(path)
     back = anndata.read_h5ad(path)
-    rec = back.uns["xcell_gene_nmf_meta"]["MP"]
+    rec = back.uns["skopia_gene_nmf_meta"]["MP"]
     assert list(rec["metaprogram_names"]) == [
         mp["name"] for mp in out["metaprograms"]
     ]

@@ -14,7 +14,7 @@ each cell with `obs['sample']`). The new bundled `toy_spatial_3sections.h5ad`
 **The core invariant such data violates:** Euclidean distance *between* cells on
 *different* sections is meaningless. Any analysis that treats the global `(x, y)`
 plane as one continuous tissue will silently couple distinct sections across the
-gaps. Today **no** xcell analysis consults the `section`/`sample` column.
+gaps. Today **no** skopia analysis consults the `section`/`sample` column.
 
 ## Exploration — implications across analyses
 

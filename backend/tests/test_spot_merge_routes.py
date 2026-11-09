@@ -10,9 +10,9 @@ import pandas as pd
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.main import app
-from xcell.api import routes
-from xcell.adaptor import DataAdaptor
+from skopia.main import app
+from skopia.api import routes
+from skopia.adaptor import DataAdaptor
 
 
 def _install(n_side: int = 6, pitch: float = 15.0, scale: bool = True):
@@ -28,7 +28,7 @@ def _install(n_side: int = 6, pitch: float = 15.0, scale: bool = True):
     ad.obs["cell_type"] = pd.Categorical(["hyper"] * len(coords))
     ad.obsm["spatial"] = coords
     if scale:
-        ad.uns["xcell_spatial_scale"] = {"um_per_unit": 1.0}
+        ad.uns["skopia_spatial_scale"] = {"um_per_unit": 1.0}
     routes.set_adaptor(DataAdaptor("src.h5ad", adata=ad), slot="primary")
     return np.where((coords[:, 0] < 40) & (coords[:, 1] < 40))[0].tolist()
 

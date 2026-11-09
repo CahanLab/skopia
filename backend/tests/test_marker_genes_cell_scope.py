@@ -16,10 +16,10 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.codegen import translate
-from xcell.main import app
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.codegen import translate
+from skopia.main import app
 
 
 N_CELLS, N_GENES = 120, 8

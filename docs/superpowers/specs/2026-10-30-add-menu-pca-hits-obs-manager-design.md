@@ -4,8 +4,8 @@ Date: 2026-10-30. Requested by Patrick; he waived design review ("proceed
 without my feedback unless needed"), so every choice below not quoted from
 him is the implementer's call and is marked *(call)*.
 
-Constraint for all three: his live xcell (:8000 / :5173) holds a real dataset.
-Work happens only in `/private/tmp/claude-501/xcell-wt-*` worktrees on their
+Constraint for all three: his live skopia (:8000 / :5173) holds a real dataset.
+Work happens only in `/private/tmp/claude-501/skopia-wt-*` worktrees on their
 own ports; nothing is merged into `main` until he says so.
 
 ---
@@ -39,7 +39,7 @@ parameters such as color and size).
   zooming; size is in screen pixels like axis labels in every plotting tool.
 - **Per dataset**: lives in `DatasetState` (`textAnnotations`) with a flat
   mirror, like `drawnLines` (see the per-dataset state invariant).
-- **Persistence**: backend `uns['xcell_text_annotations_json']` (JSON string,
+- **Persistence**: backend `uns['skopia_text_annotations_json']` (JSON string,
   h5ad-safe), `GET/POST /api/text_annotations`, restored when a dataset loads
   and carried by every export because it is in `uns`. Synced the way lines
   are (`syncLinesToBackend`).

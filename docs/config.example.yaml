@@ -1,6 +1,6 @@
-# xcell user configuration — parameter-default overrides.
+# skopia user configuration — parameter-default overrides.
 #
-# Copy this file to ~/.xcell/config.yaml (or set XCELL_CONFIG_PATH to point
+# Copy this file to ~/.skopia/config.yaml (or set SKOPIA_CONFIG_PATH to point
 # to it) and edit the values you want to override. Remove entries you don't
 # care about — unknown keys are silently ignored, missing ones fall back to
 # the hardcoded application defaults. A backend restart is required to pick
@@ -97,8 +97,8 @@ display:
 # cache and searched locally after that. STRING is queried live.
 # ---------------------------------------------------------------------------
 gene_set_sources:
-  # Where fetched libraries live. Default: $XDG_CACHE_HOME/xcell/gene_set_sources,
-  # i.e. ~/.cache/xcell/gene_set_sources. Delete the directory to start over.
+  # Where fetched libraries live. Default: $XDG_CACHE_HOME/skopia/gene_set_sources,
+  # i.e. ~/.cache/skopia/gene_set_sources. Delete the directory to start over.
   cache_dir: null
   # Re-list a source's available libraries after this many days.
   catalogue_ttl_days: 7

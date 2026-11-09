@@ -1,6 +1,6 @@
 """Guard the bundled 3-section toy dataset's structure.
 
-Regenerate with: cd backend && pixi run -e dev python -m xcell.data.generate_toy_3sections
+Regenerate with: cd backend && pixi run -e dev python -m skopia.data.generate_toy_3sections
 """
 
 from pathlib import Path
@@ -9,7 +9,7 @@ import anndata
 import numpy as np
 import pytest
 
-DATA = Path(__file__).resolve().parents[1] / "xcell" / "data" / "toy_spatial_3sections.h5ad"
+DATA = Path(__file__).resolve().parents[1] / "skopia" / "data" / "toy_spatial_3sections.h5ad"
 
 
 @pytest.fixture(scope="module")

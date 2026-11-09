@@ -1,6 +1,6 @@
-"""The developmental-signalling pathway bundles shipped with xcell.
+"""The developmental-signalling pathway bundles shipped with skopia.
 
-Two files under ``xcell/data/gene_sets/`` — one per species — hold the major
+Two files under ``skopia/data/gene_sets/`` — one per species — hold the major
 developmental pathways as folders (Wnt, BMP, FGF, Hedgehog, Notch, …), each
 folder carrying its genes split by role (ligands, receptors, modulators,
 effectors, inhibitors, targets) in a fixed order. The heatmap groups rows by
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from xcell import gene_set_library, gene_symbols
+from skopia import gene_set_library, gene_symbols
 
 DATA = Path(gene_set_library.LIBRARY_DIR)
 ROLES = ['ligands', 'receptors', 'modulators', 'effectors', 'inhibitors', 'targets']

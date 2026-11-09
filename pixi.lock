@@ -27866,7 +27866,7 @@ packages:
   size: 388453
   timestamp: 1764777142545
 - pypi: backend
-  name: xcell
+  name: skopia
   requires_dist:
   - fastapi>=0.104.0
   - uvicorn[standard]>=0.24.0

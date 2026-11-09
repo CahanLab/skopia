@@ -17,7 +17,7 @@ Spatial transcriptomics datasets often contain multiple tissue sections or repli
 
 ### 1. Lines Panel — Line Selection Checkboxes
 
-**File:** `xcell/frontend/src/components/ShapeManager.tsx`
+**File:** `skopia/frontend/src/components/ShapeManager.tsx`
 
 - Add a checkbox to each line row where `projections.length > 0`.
 - Store checked line IDs in local component state (`checkedLineIds: Set<string>`).
@@ -29,7 +29,7 @@ Spatial transcriptomics datasets often contain multiple tissue sections or repli
 
 ### 2. Line Tools Modal — Multi-Line Mode
 
-**File:** `xcell/frontend/src/components/ShapeManager.tsx` (existing `LineToolsModal`)
+**File:** `skopia/frontend/src/components/ShapeManager.tsx` (existing `LineToolsModal`)
 
 Currently the modal accepts a single `line` prop. Add support for a `lines` prop (array) for multi-line mode.
 
@@ -51,7 +51,7 @@ Currently the modal accepts a single `line` prop. Add support for a `lines` prop
 
 ### 3. Backend — Shared Regression Helper
 
-**File:** `xcell/backend/xcell/adaptor.py`
+**File:** `skopia/backend/skopia/adaptor.py`
 
 Extract the core spline regression logic from `test_line_association` into a private method:
 
@@ -88,7 +88,7 @@ Refactor `test_line_association` to:
 
 ### 4. Backend — Multi-Line Association Method
 
-**File:** `xcell/backend/xcell/adaptor.py`
+**File:** `skopia/backend/skopia/adaptor.py`
 
 ```python
 def test_multi_line_association(
@@ -118,7 +118,7 @@ Logic:
 
 ### 5. API — New Endpoint
 
-**File:** `xcell/backend/xcell/api/routes.py`
+**File:** `skopia/backend/skopia/api/routes.py`
 
 New request model:
 
@@ -151,7 +151,7 @@ Existing `POST /lines/association` endpoint remains unchanged.
 
 ### 6. Frontend — Multi-Line Analysis Call
 
-**File:** `xcell/frontend/src/hooks/useData.ts`
+**File:** `skopia/frontend/src/hooks/useData.ts`
 
 Add `runMultiLineAssociation` function:
 
@@ -177,7 +177,7 @@ Posts to `/api/lines/multi-association`. The `useLineAssociation` hook gains a `
 
 ### 7. Store — Response Type Extension
 
-**File:** `xcell/frontend/src/store.ts`
+**File:** `skopia/frontend/src/store.ts`
 
 Add optional fields to `LineAssociationResult`:
 
@@ -188,7 +188,7 @@ lines_used?: string[]
 
 ### 8. Results Modal — Multi-Line Display
 
-**File:** `xcell/frontend/src/components/LineAssociationModal.tsx`
+**File:** `skopia/frontend/src/components/LineAssociationModal.tsx`
 
 - When `n_lines > 1`: header shows "Line Association: {lines_used joined by ' + '}"
 - Summary stats bar adds a "Lines" item showing the count
@@ -196,7 +196,7 @@ lines_used?: string[]
 
 ### 9. Cell Panel — Selection Highlight
 
-**File:** `xcell/frontend/src/components/CellPanel.tsx`
+**File:** `skopia/frontend/src/components/CellPanel.tsx`
 
 When a user clicks a category value to select those cells, highlight the clicked row with a visual indicator:
 

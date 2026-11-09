@@ -1,7 +1,7 @@
 # Which transform should kNN smoothing run on?
 
 **Date:** 2026-08-21
-**Question:** xcell's Smooth writes `layers[out] = (D⁻¹(A+αI))ⁿ · M` for whatever
+**Question:** skopia's Smooth writes `layers[out] = (D⁻¹(A+αI))ⁿ · M` for whatever
 matrix `M` you point it at. Does it matter whether `M` holds raw counts,
 library-normalized values, or log-normalized values — and is it better to
 smooth the raw counts?
@@ -89,7 +89,7 @@ looks right — but the values are no longer on the log-expression scale they
 claim, and anything comparing them against unsmoothed values, or against a
 threshold, is wrong by a factor of ~5.
 
-**This is the practical finding.** xcell's Smooth defaults to `.X`, and on a
+**This is the practical finding.** skopia's Smooth defaults to `.X`, and on a
 typical dataset `.X` is log-normalized, so the default path produced exactly
 this matrix.
 
@@ -150,7 +150,7 @@ on this data.
 
 1. **Smooth counts, transform after.** `Preprocess → Smooth` now has an
    *After averaging* option (`none` / `cp10k` / `lognorm`) so this is one step;
-   before it, the recommended pipeline was not expressible in xcell at all,
+   before it, the recommended pipeline was not expressible in skopia at all,
    because Normalize Total and Log1p can only write `.X`.
 2. **Do not smooth a log-normalized matrix and treat the result as expression.**
    The ordering survives; the scale does not. The Smooth panel now says so when

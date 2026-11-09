@@ -1,8 +1,8 @@
 # Transcription factor annotations for human and mouse (survey, 2026-11-03)
 
 Purpose: a TF list to feed the marker-selection *Show only* picker (and any
-later bundled gene-set source). The lists built here ship with xcell as
-`backend/xcell/data/tf_census/` (`human_codebook_table14.tsv`,
+later bundled gene-set source). The lists built here ship with skopia as
+`backend/skopia/data/tf_census/` (`human_codebook_table14.tsv`,
 `mouse_tfs.tsv`, `unmapped_human_tfs.tsv`); `build_tf_census.py` beside them
 turns the two into the *Transcription factors* gene-set bundles
 (`gene_sets/tf_census_{human,mouse}.json`). Edit a table, run the build,

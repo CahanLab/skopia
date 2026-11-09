@@ -6,8 +6,8 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.localize import project_knn
+from skopia.adaptor import DataAdaptor
+from skopia.localize import project_knn
 
 
 def _pair(n_query=60, n_ref=120, n_genes=40, seed=0):
@@ -105,7 +105,7 @@ def test_transport_keeps_a_cell_within_one_section():
 
 
 def test_transport_subsamples_a_reference_too_large_to_solve_whole(monkeypatch):
-    from xcell import localize as lz
+    from skopia import localize as lz
 
     q, r, c, _ = _pair(n_query=40, n_ref=200)
     # Force the ceiling below this pair rather than building a huge one.

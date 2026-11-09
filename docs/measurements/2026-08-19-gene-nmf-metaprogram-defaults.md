@@ -1,7 +1,7 @@
 # Meta-program defaults: specificity_weight 5.0, weight_explained 0.8
 
 **Date:** 2026-08-19
-**Data:** `E11.5_hindlimbs_102424_xcell_qced-08132026.h5ad` — 24,172 cells ×
+**Data:** `E11.5_hindlimbs_102424_skopia_qced-08132026.h5ad` — 24,172 cells ×
 12,236 genes, 5,001 highly variable, three real sections
 (A 7,981 / B 7,046 / C 9,145).
 **Run:** `multi_nmf(ks=4..9, seed=0)` → **117 programs in 1.9 s**, then

@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 MOUSE = ['ENSMUSG00000002603', 'ENSMUSG00000051951', 'ENSMUSG00000000001']
 

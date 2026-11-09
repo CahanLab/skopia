@@ -13,9 +13,9 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell import gene_set_sources as gss
-from xcell import go_semantic as gos
-from xcell.adaptor import DataAdaptor
+from skopia import gene_set_sources as gss
+from skopia import go_semantic as gos
+from skopia.adaptor import DataAdaptor
 
 N_CELLS, N_GENES = 120, 30
 GENES = [f"G{i:03d}" for i in range(N_GENES)]
@@ -97,7 +97,7 @@ def test_go_channel_alone_recovers_the_annotated_blocks(go_files):
     assert set(out['channel_weights']) == {'go'} and out['channel_weights']['go'] == pytest.approx(1.0)
     assert out['channels']['go'] == {'weight': 1.0, 'species': 'mouse', 'aspect': 'bp',
                                      'n_genes_annotated': 30, 'n_terms': 4}
-    rec = a.adata.uns['xcell_gene_maps']['gomap']
+    rec = a.adata.uns['skopia_gene_maps']['gomap']
     S = np.asarray(rec['similarity'])
     # Same term → identical closed sets → 1; different leaves share only the root (IC 0) → 0.
     assert S[0, 1] == pytest.approx(1.0) and S[0, 10] == pytest.approx(0.0)
@@ -126,8 +126,8 @@ def test_a_bad_aspect_is_a_400_before_the_task(go_files):
 
 
 def test_the_route_takes_the_go_parameters(go_files, monkeypatch):
-    from xcell.api import routes
-    from xcell.main import app
+    from skopia.api import routes
+    from skopia.main import app
     a = _adaptor()
     monkeypatch.setattr(routes, 'get_adaptor', lambda dataset=None: a)
     client = TestClient(app)

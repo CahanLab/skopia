@@ -19,8 +19,8 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.heatmap import compute_heatmap_data
+from skopia.adaptor import DataAdaptor
+from skopia.heatmap import compute_heatmap_data
 
 
 N_CELLS, N_GENES = 60, 10

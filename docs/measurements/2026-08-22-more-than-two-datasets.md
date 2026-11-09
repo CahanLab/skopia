@@ -1,4 +1,4 @@
-# Can xcell hold more than two datasets?
+# Can skopia hold more than two datasets?
 
 2026-08-22. Measured on the bundled toy data plus two of Patrick's real files.
 
@@ -10,7 +10,7 @@ datasets are loaded.
 
 ## The backend has no two-slot limit today
 
-`backend/xcell/api/routes.py` keeps datasets in `_adaptors: dict[str,
+`backend/skopia/api/routes.py` keeps datasets in `_adaptors: dict[str,
 DataAdaptor]`, keyed by an arbitrary string. `LoadRequest.slot` is a plain `str`
 with no enum and no validation, every data route already ends in `dataset: str |
 None = Query(None)`, and `GET /api/datasets` / `DELETE /api/datasets/{slot}`

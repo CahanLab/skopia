@@ -3,7 +3,7 @@
 Reference `E11.5_best_102424.h5ad` (9,773 spots), query
 `GSM4227224_E11_112125.h5ad` (2,683 cells), 22,016 shared genes.
 Settings as actually used: `transform='none'`, `metric='cosine'`.
-Scored with the Phase 1 harness (`xcell.localize_metrics.evaluate_map`), so
+Scored with the Phase 1 harness (`skopia.localize_metrics.evaluate_map`), so
 these are the numbers the Map quality panel reports.
 
 Marker sets: **proximal** `Meis1, Meis2, Irx3, Pbx1` and **distal** `Hoxd12,

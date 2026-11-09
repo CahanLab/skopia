@@ -17,10 +17,10 @@ import pytest
 from scipy.sparse import csr_matrix, issparse
 from fastapi.testclient import TestClient
 
-from xcell import pyscn
-from xcell.adaptor import DataAdaptor
-from xcell.main import app
-from xcell.api import routes
+from skopia import pyscn
+from skopia.adaptor import DataAdaptor
+from skopia.main import app
+from skopia.api import routes
 
 
 HAVE_PYSCN = pyscn.availability()['available']
@@ -323,8 +323,8 @@ def test_apply_classification_writes_obs_obsm_and_registry():
     assert 'SCN_class_type' in ad.obs
     assert ad.obsm['SCN_score'].shape == (5, 3)
     # Registered so the existing score-matrix UI can name the columns.
-    assert ad.uns['xcell_score_matrices']['SCN_score']['columns'] == CLASSES
-    # Colors flow to scanpy's per-column convention, which xcell already reads.
+    assert ad.uns['skopia_score_matrices']['SCN_score']['columns'] == CLASSES
+    # Colors flow to scanpy's per-column convention, which skopia already reads.
     assert ad.uns['SCN_class_argmax_colors'][0] == '#1a33e6'
 
 
@@ -380,7 +380,7 @@ def test_composition_summary_counts_cells_per_class():
     assert out['class_types'][0]['name'] == 'Singular'  # ordered, not by count
 
 
-# --- score matrices produced outside xcell (e.g. by PySCN itself) ----------
+# --- score matrices produced outside skopia (e.g. by PySCN itself) ----------
 
 def test_dataframe_obsm_columns_are_readable():
     """An h5ad classified in PySCN stores obsm['SCN_score'] as a DataFrame."""
@@ -542,7 +542,7 @@ def test_training_refuses_a_column_with_one_label(tmp_path):
 # PySCN encodes each top-scoring pair as the string "geneA_geneB" and decodes
 # it with split("_"). A symbol that itself contains an underscore therefore
 # decodes into fragments that are not genes, and the transform fails deep
-# inside pandas with an opaque KeyError. xcell has to see this coming.
+# inside pandas with an opaque KeyError. skopia has to see this coming.
 # --------------------------------------------------------------------------
 
 def test_underscore_gene_names_are_identified():
@@ -600,7 +600,7 @@ def test_training_refuses_when_every_gene_has_an_underscore(tmp_path):
 # Plenty of reference datasets are distributed only as log-normalized values.
 # Running normalize_total + log1p over those again produces log1p(scale(log1p(x))),
 # which distorts the fold changes that drive marker-gene selection and makes
-# seurat_v3 HVG (which requires integer counts) meaningless. xcell decides what
+# seurat_v3 HVG (which requires integer counts) meaningless. skopia decides what
 # preprocessing is still owed from the detected scale of the source matrix.
 # --------------------------------------------------------------------------
 
@@ -675,7 +675,7 @@ def _lognorm_adata(n_genes=200, n_cells=120, seed=0):
 
 def test_lognormalized_input_is_detected_as_such():
     """Guard the assumption the training plan rests on."""
-    from xcell import layer_scale
+    from skopia import layer_scale
     ad = _lognorm_adata()
     assert layer_scale.assess_matrix_scale(ad.X)['verdict'] == 'log_normalized'
 

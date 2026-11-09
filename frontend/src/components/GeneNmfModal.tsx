@@ -221,7 +221,7 @@ export default function GeneNmfModal() {
     [layers, layer],
   )
 
-  // xcell's usual log1p default is wrong on a matrix that is already logged,
+  // skopia's usual log1p default is wrong on a matrix that is already logged,
   // so follow the detected scale until the user says otherwise.
   useEffect(() => {
     if (transformTouched) return

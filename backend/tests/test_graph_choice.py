@@ -11,7 +11,7 @@ import anndata
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor, _default_output_name, _graph_suffix
+from skopia.adaptor import DataAdaptor, _default_output_name, _graph_suffix
 
 
 def _adata(n_genes=8):
@@ -102,7 +102,7 @@ def test_umap_on_spatial_graph_writes_its_own_embedding():
 
 
 def test_umap_leaves_no_temporary_neighbors_entry():
-    from xcell.adaptor import _GRAPH_META_KEY
+    from skopia.adaptor import _GRAPH_META_KEY
 
     a = _expression_and_spatial()
     a.run_umap(graph_key="spatial_connectivities")
@@ -111,8 +111,8 @@ def test_umap_leaves_no_temporary_neighbors_entry():
 
 
 def test_temporary_entry_is_removed_even_when_umap_raises(monkeypatch):
-    from xcell import adaptor as adaptor_mod
-    from xcell.adaptor import _GRAPH_META_KEY
+    from skopia import adaptor as adaptor_mod
+    from skopia.adaptor import _GRAPH_META_KEY
 
     a = _expression_and_spatial()
 
@@ -165,7 +165,7 @@ def test_umap_on_spatial_graph_without_pca_does_not_invent_one():
 
 
 def test_umap_keeps_a_real_uns_entrys_recorded_params():
-    from xcell.adaptor import _umap_neighbors_meta
+    from skopia.adaptor import _umap_neighbors_meta
 
     a = _adaptor()
     a.run_spatial_neighbors(n_neighs=6, coord_type="generic")

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 /**
  * "Is this matrix raw counts or already normalized?"
  *
- * The backend (xcell/layer_scale.py) classifies every readable matrix — .X and
+ * The backend (skopia/layer_scale.py) classifies every readable matrix — .X and
  * each adata.layers key — from its own values, and ships the evidence along
  * with the verdict. This module renders that as an unobtrusive badge: a short
  * label inline wherever a layer is named, and a click-to-open popover with the
@@ -29,7 +29,7 @@ export interface LayerScale {
   confidence: 'high' | 'medium' | 'low'
   /** Why the classifier landed here, in plain language. */
   reasons: string[]
-  /** Facts recorded by scanpy/xcell, as opposed to inferred from values. */
+  /** Facts recorded by scanpy/skopia, as opposed to inferred from values. */
   provenance: string[]
   stats: {
     n_cells_sampled: number

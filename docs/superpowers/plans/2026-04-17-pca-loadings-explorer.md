@@ -8,19 +8,19 @@
 
 **Tech Stack:** Python 3.9+ / FastAPI / AnnData / NumPy / scanpy (backend); React 18 + TypeScript + Zustand 4 (frontend). No new dependencies.
 
-**Repository note:** The working root is `/Users/pcahan/code/xcell/`. The active project is `xcell/`. All file paths below are relative to the git root at `xcell/`. Run commands from that directory unless otherwise specified.
+**Repository note:** The working root is `/Users/pcahan/code/skopia/`. The active project is `skopia/`. All file paths below are relative to the git root at `skopia/`. Run commands from that directory unless otherwise specified.
 
 **Spec:** `docs/superpowers/specs/2026-04-17-pca-loadings-explorer-design.md`
 
-**Testing note:** This project has no automated tests. Verify Python changes by importing the module (`python -c "from xcell.adaptor import DataAdaptor"`) and running the dev server (`uvicorn xcell.main:app --reload`) against `backend/xcell/data/toy_spatial.h5ad`. Verify frontend changes with `npm run build` (from `frontend/`) plus manual browser testing.
+**Testing note:** This project has no automated tests. Verify Python changes by importing the module (`python -c "from skopia.adaptor import DataAdaptor"`) and running the dev server (`uvicorn skopia.main:app --reload`) against `backend/skopia/data/toy_spatial.h5ad`. Verify frontend changes with `npm run build` (from `frontend/`) plus manual browser testing.
 
 ---
 
 ## File Map
 
 **Backend — modified:**
-- `backend/xcell/adaptor.py` — fix `run_pca` loadings copy-back; add derived-slot invalidation at end of `run_pca`; add `use_rep` to `run_neighbors`; add `get_pca_loadings`, `create_pca_subset`, `list_pca_subsets`, `delete_pca_subset`; add `pca_loadings` entry to `check_prerequisites`.
-- `backend/xcell/api/routes.py` — add `NeighborsRequest.use_rep`; plumb `use_rep` through `/api/scanpy/neighbors`; add `/api/scanpy/pca_loadings`, `/api/scanpy/pca_subsets` (GET/POST), `/api/scanpy/pca_subsets/{obsm_key}` (DELETE).
+- `backend/skopia/adaptor.py` — fix `run_pca` loadings copy-back; add derived-slot invalidation at end of `run_pca`; add `use_rep` to `run_neighbors`; add `get_pca_loadings`, `create_pca_subset`, `list_pca_subsets`, `delete_pca_subset`; add `pca_loadings` entry to `check_prerequisites`.
+- `backend/skopia/api/routes.py` — add `NeighborsRequest.use_rep`; plumb `use_rep` through `/api/scanpy/neighbors`; add `/api/scanpy/pca_loadings`, `/api/scanpy/pca_subsets` (GET/POST), `/api/scanpy/pca_subsets/{obsm_key}` (DELETE).
 
 **Frontend — modified:**
 - `frontend/src/store.ts` — add `PCASubsetSummary` type; add `pcaSubsets` field to `DatasetState` (default, syncFlatFields, top-level mirror); add `setPcaSubsets` action.
@@ -46,11 +46,11 @@
 **Goal:** Ensure `self.adata.varm['PCs']` is populated after `run_pca`, even when `gene_subset` restricts PCA to a subset of genes. Loadings for non-subset genes become NaN rows, mirroring how `X_pca` is NaN-padded for inactive cells.
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — around lines 3073-3091 (within `run_pca`).
+- Modify: `backend/skopia/adaptor.py` — around lines 3073-3091 (within `run_pca`).
 
 - [ ] **Step 1: Inspect the current copy-back block**
 
-Open `backend/xcell/adaptor.py`. Find `run_pca`'s result-copying section (currently around lines 3076-3090). It looks like:
+Open `backend/skopia/adaptor.py`. Find `run_pca`'s result-copying section (currently around lines 3076-3090). It looks like:
 
 ```python
         # Copy results back to main adata
@@ -111,16 +111,16 @@ The `gene_mask` variable comes from `_resolve_gene_mask()` earlier in the method
 Start the backend server from `backend/`:
 
 ```bash
-uvicorn xcell.main:app --reload
+uvicorn skopia.main:app --reload
 ```
 
 In another shell, run this one-liner to exercise both the default path and a subset path:
 
 ```bash
 python -c "
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 import numpy as np
-a = DataAdaptor('backend/xcell/data/toy_spatial.h5ad')
+a = DataAdaptor('backend/skopia/data/toy_spatial.h5ad')
 a.run_pca(n_comps=10)
 assert 'PCs' in a.adata.varm, 'PCs missing after default run'
 assert a.adata.varm['PCs'].shape == (a.n_genes, 10), a.adata.varm['PCs'].shape
@@ -134,7 +134,7 @@ Expected output: `default OK (N, 10)` where `N = a.n_genes`.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py
+git add backend/skopia/adaptor.py
 git commit -m "Fix run_pca loadings copy-back for subset runs
 
 Pad varm['PCs'] to full (n_genes, n_comps) with NaN rows for
@@ -149,12 +149,12 @@ access works after a subset PCA."
 **Goal:** Expose top +/− loading genes per PC via a new adaptor method and route.
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — add `get_pca_loadings`; extend `check_prerequisites`.
-- Modify: `backend/xcell/api/routes.py` — add `GET /api/scanpy/pca_loadings`.
+- Modify: `backend/skopia/adaptor.py` — add `get_pca_loadings`; extend `check_prerequisites`.
+- Modify: `backend/skopia/api/routes.py` — add `GET /api/scanpy/pca_loadings`.
 
 - [ ] **Step 1: Add `get_pca_loadings` method**
 
-Open `backend/xcell/adaptor.py`. Scroll to the end of `run_pca` (the method ends around line 3108 with `return result`). Immediately after `run_pca`, insert:
+Open `backend/skopia/adaptor.py`. Scroll to the end of `run_pca` (the method ends around line 3108 with `return result`). Immediately after `run_pca`, insert:
 
 ```python
     def get_pca_loadings(self, top_n: int = 10) -> dict[str, Any]:
@@ -234,7 +234,7 @@ Open `backend/xcell/adaptor.py`. Scroll to the end of `run_pca` (the method ends
 
 - [ ] **Step 2: Add `pca_loadings` to `check_prerequisites`**
 
-Still in `backend/xcell/adaptor.py`, find `check_prerequisites` (around line 2188). In the `prereqs` dict (around line 2197), add `'pca_loadings': ['pca_with_loadings']` to the `# Cell analysis` group. Then in the prerequisite-check loop below, add a new `elif` clause for the new sentinel:
+Still in `backend/skopia/adaptor.py`, find `check_prerequisites` (around line 2188). In the `prereqs` dict (around line 2197), add `'pca_loadings': ['pca_with_loadings']` to the `# Cell analysis` group. Then in the prerequisite-check loop below, add a new `elif` clause for the new sentinel:
 
 Update the `prereqs` dict, adding the new key after `'leiden': ['neighbors']`:
 
@@ -253,7 +253,7 @@ Then inside the loop (which currently starts with `if prereq == 'pca':` around l
 
 - [ ] **Step 3: Add the route**
 
-Open `backend/xcell/api/routes.py`. Scroll to the bottom of the scanpy cell-analysis routes — find `@router.post("/scanpy/leiden")` (around line 1571). After the `run_leiden` function body, add the new route (pick an insertion point that stays grouped with the cell-analysis endpoints):
+Open `backend/skopia/api/routes.py`. Scroll to the bottom of the scanpy cell-analysis routes — find `@router.post("/scanpy/leiden")` (around line 1571). After the `run_leiden` function body, add the new route (pick an insertion point that stays grouped with the cell-analysis endpoints):
 
 ```python
 @router.get("/scanpy/pca_loadings")
@@ -271,7 +271,7 @@ def get_pca_loadings(
 
 - [ ] **Step 4: Exercise the endpoint**
 
-With `uvicorn xcell.main:app --reload` running and the default toy dataset loaded:
+With `uvicorn skopia.main:app --reload` running and the default toy dataset loaded:
 
 ```bash
 curl -s 'http://localhost:8000/api/scanpy/pca_loadings?top_n=3' | head -200
@@ -296,7 +296,7 @@ Expected: JSON containing `n_pcs: 10`, `top_n: 3`, and a `pcs` array with 10 ent
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/xcell/api/routes.py
+git add backend/skopia/adaptor.py backend/skopia/api/routes.py
 git commit -m "Add get_pca_loadings adaptor method and route
 
 Exposes top +/- loading genes per PC, with NaN-row skipping so
@@ -311,12 +311,12 @@ pca_loadings prerequisite."
 **Goal:** Provide the persistence layer for derived `X_pca_no*` slots — create, list, delete.
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — add three methods after `get_pca_loadings`.
-- Modify: `backend/xcell/api/routes.py` — add three routes under `/scanpy/pca_subsets*`.
+- Modify: `backend/skopia/adaptor.py` — add three methods after `get_pca_loadings`.
+- Modify: `backend/skopia/api/routes.py` — add three routes under `/scanpy/pca_subsets*`.
 
 - [ ] **Step 1: Add `create_pca_subset`**
 
-In `backend/xcell/adaptor.py`, immediately after the newly added `get_pca_loadings` method, insert:
+In `backend/skopia/adaptor.py`, immediately after the newly added `get_pca_loadings` method, insert:
 
 ```python
     def create_pca_subset(
@@ -463,7 +463,7 @@ Immediately after `create_pca_subset`, add:
 
 - [ ] **Step 3: Add Pydantic request model + routes**
 
-Open `backend/xcell/api/routes.py`. Find the existing `NeighborsRequest` class (around line 1339). After it, add:
+Open `backend/skopia/api/routes.py`. Find the existing `NeighborsRequest` class (around line 1339). After it, add:
 
 ```python
 class CreatePcaSubsetRequest(BaseModel):
@@ -569,7 +569,7 @@ Expected: `{"status": "deleted", "obsm_key": "X_pca_noPC2_5"}`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/xcell/api/routes.py
+git add backend/skopia/adaptor.py backend/skopia/api/routes.py
 git commit -m "Add create/list/delete PCA subset methods and routes
 
 Implements pySCN-style drop_pcs_from_embedding: creates
@@ -585,11 +585,11 @@ Suffix collisions return 409."
 **Goal:** When `run_pca` is called again, remove any existing `X_pca_no*` derived slots (they reference stale eigenvector columns) and return `cleared_subsets` so the frontend can toast and reset.
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — append invalidation logic inside `run_pca`, before the `return result` line.
+- Modify: `backend/skopia/adaptor.py` — append invalidation logic inside `run_pca`, before the `return result` line.
 
 - [ ] **Step 1: Add invalidation block**
 
-Open `backend/xcell/adaptor.py`. Find the end of `run_pca` (just before the final `return result`, around line 3107). Insert immediately before the existing `self._log_action('pca', ...)` call:
+Open `backend/skopia/adaptor.py`. Find the end of `run_pca` (just before the final `return result`, around line 3107). Insert immediately before the existing `self._log_action('pca', ...)` call:
 
 ```python
         # Clear derived PC subsets — they reference columns of the previous
@@ -647,7 +647,7 @@ Expected: `{"subsets": []}`.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py
+git add backend/skopia/adaptor.py
 git commit -m "Auto-clear derived PC subsets on PCA re-run
 
 Scan obsm for X_pca_* keys (except X_pca) at end of run_pca and
@@ -662,12 +662,12 @@ list under 'cleared_subsets' in the response so the UI can toast."
 **Goal:** Let the Neighbors route target any obsm slot (e.g. a derived `X_pca_noPC2_5`) via a new `use_rep` argument. `n_pcs` semantics unchanged: first N of whatever `use_rep` resolves to.
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — extend `run_neighbors` signature, kwargs, and subset path.
-- Modify: `backend/xcell/api/routes.py` — add `use_rep` to `NeighborsRequest` and pass it through.
+- Modify: `backend/skopia/adaptor.py` — extend `run_neighbors` signature, kwargs, and subset path.
+- Modify: `backend/skopia/api/routes.py` — add `use_rep` to `NeighborsRequest` and pass it through.
 
 - [ ] **Step 1: Extend `run_neighbors`**
 
-Open `backend/xcell/adaptor.py`. Find `run_neighbors` (around line 3110). Update its signature and body.
+Open `backend/skopia/adaptor.py`. Find `run_neighbors` (around line 3110). Update its signature and body.
 
 Before (around lines 3110-3173):
 
@@ -750,7 +750,7 @@ Replace with:
 
 - [ ] **Step 2: Extend `NeighborsRequest` and route**
 
-Open `backend/xcell/api/routes.py`. Find `NeighborsRequest` (around line 1339). Update it to:
+Open `backend/skopia/api/routes.py`. Find `NeighborsRequest` (around line 1339). Update it to:
 
 ```python
 class NeighborsRequest(BaseModel):
@@ -814,7 +814,7 @@ Expected: first two succeed (`status: completed`), third returns `400`.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/xcell/api/routes.py
+git add backend/skopia/adaptor.py backend/skopia/api/routes.py
 git commit -m "Add use_rep to run_neighbors and the /scanpy/neighbors route
 
 Lets Neighbors target any obsm slot (e.g., derived X_pca_no*).

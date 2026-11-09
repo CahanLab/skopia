@@ -36,7 +36,7 @@ export function clusterBands(clusters: number[], order: number[]): ClusterBand[]
   return bands
 }
 
-/** Similarity in [0, 1] to a color on xcell's dark inset → accent ramp. */
+/** Similarity in [0, 1] to a color on skopia's dark inset → accent ramp. */
 export function similarityColor(value: number): string {
   const v = Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0
   // #0f1625 (inset) → #4ecdc4 (accent), eased so mid similarities stay legible

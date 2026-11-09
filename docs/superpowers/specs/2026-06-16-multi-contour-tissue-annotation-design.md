@@ -5,7 +5,7 @@
 
 ## Problem / goal
 
-xcell's **Contourize** (Analyze → Spatial) turns one gene set into a banded
+skopia's **Contourize** (Analyze → Spatial) turns one gene set into a banded
 spatial-expression column. Users want to annotate a whole tissue section by
 running several tissue modules (cartilage, muscle, tendon, interzone, skin,
 dermis…) and **fusing them into one `.obs` annotation** where each spot is
@@ -67,7 +67,7 @@ Two-phase backend so the per-module binning review is interactive:
 - **`finalize_multicontour(token | recompute, cutoffs, profile_k, out_name,
   save_qc)`** — binarize → assign → resolve → write `.obs` column(s); log action.
 
-New module **`backend/xcell/multicontour.py`** (pure, testable):
+New module **`backend/skopia/multicontour.py`** (pure, testable):
 `compute_module_score`, `auto_cutoff`, `binarize`, `assign_single_high`,
 `resolve_conflicts_knn`. The adaptor exposes thin `prepare_multicontour` /
 `finalize_multicontour` orchestration methods (matching the existing

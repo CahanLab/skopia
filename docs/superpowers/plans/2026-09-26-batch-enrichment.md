@@ -16,7 +16,7 @@
 - A group with < 2 cells on either side is skipped and reported in `skipped`; all skipped → `ValueError`.
 - No new dependencies. JSON-safe outputs. Every new `_log_action` name gets a `codegen.REGISTRY` entry in the same commit (test_codegen enforces it).
 - `gene_subset` keeps the full union type in request models.
-- Worktree `/private/tmp/claude-501/xcell-wt` (branch `feat/figures`). Backend tests: `cd backend && "/Users/pcahan/Dropbox (Personal)/Code/xcell/.pixi/envs/dev/bin/python" -m pytest tests/<file> -q -p no:cacheprovider`. Frontend: `cd frontend && npx tsc --noEmit && npx vitest run`.
+- Worktree `/private/tmp/claude-501/skopia-wt` (branch `feat/figures`). Backend tests: `cd backend && "/Users/pcahan/Dropbox (Personal)/Code/skopia/.pixi/envs/dev/bin/python" -m pytest tests/<file> -q -p no:cacheprovider`. Frontend: `cd frontend && npx tsc --noEmit && npx vitest run`.
 
 ## Review Focus
 
@@ -31,7 +31,7 @@
 ### Task 1: `prepare_gsea_batch` + collection listing/expansion
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (enrichment section, after `prepare_gsea`)
+- Modify: `backend/skopia/adaptor.py` (enrichment section, after `prepare_gsea`)
 - Test: `backend/tests/test_enrichment_batch.py`
 
 **Interfaces:**
@@ -50,8 +50,8 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell import gene_set_sources as gss
-from xcell.adaptor import DataAdaptor
+from skopia import gene_set_sources as gss
+from skopia.adaptor import DataAdaptor
 
 GENES = ['Col1a1', 'Col1a2', 'Col3a1', 'Ptprc', 'Cd3e', 'Cd19', 'Hoxd13', 'Meis1'] + [f'G{i}' for i in range(24)]
 LIB = [{'source': 'msigdb', 'id': 'toy', 'species': 'mouse'}]
@@ -97,7 +97,7 @@ def test_gsea_batch_stores_members_and_collection_and_skips_tiny_group():
     assert col['kind'] == 'gsea_batch' and col['key'] == 'gsea_grp_batch'
     assert col['groups'] == ['a', 'b', 'c'] and col['skipped'] == {'d': 'fewer than 2 cells in group'}
     assert col['members'] == {'a': 'gsea_grp_a_vs_rest', 'b': 'gsea_grp_b_vs_rest', 'c': 'gsea_grp_c_vs_rest'}
-    store = a.adata.uns['xcell_enrichment']
+    store = a.adata.uns['skopia_enrichment']
     assert set(col['members'].values()) <= set(store) and 'gsea_grp_batch' in store
     member = json.loads(store['gsea_grp_a_vs_rest'])
     assert member['kind'] == 'gsea' and {r['name']: r for r in member['results']}['COLLAGEN']['nes'] > 0
@@ -150,7 +150,7 @@ def test_gsea_batch_validation():
         record lists them for the batch view and for figures.
         """
         from datetime import datetime, timezone  # noqa: PLC0415
-        from xcell import enrichment as en  # noqa: PLC0415
+        from skopia import enrichment as en  # noqa: PLC0415
         if not 10 <= n_perm <= self.GSEA_MAX_PERMUTATIONS:
             raise ValueError(f'n_perm must be between 10 and {self.GSEA_MAX_PERMUTATIONS}')
         if min_set_size < 1 or max_set_size < min_set_size:
@@ -303,7 +303,7 @@ Then extend `get_enrichment_results` (add `'n_groups': len(r['members']) if isin
 
 ### Task 2: `run_overlap_enrichment_batch` (marker genes → ORA per group)
 
-**Files:** `backend/xcell/adaptor.py`; test `backend/tests/test_enrichment_batch.py`.
+**Files:** `backend/skopia/adaptor.py`; test `backend/tests/test_enrichment_batch.py`.
 
 **Interfaces:** `run_overlap_enrichment_batch(obs_column, *, groups=None, top_n=100, min_in_group_fraction=None, max_out_group_fraction=None, min_fold_change=None, libraries=None, sets=None, gene_subset=None, min_set_size=5, max_set_size=500, min_overlap=2, key=None) -> dict` returning `{key, kind:'ora_batch', label, created_at, obs_column, groups, members, skipped, markers: {group: [genes]}, top_n, universe_size, gene_subset_type, n_sets_tested, n_significant, params}`.
 
@@ -391,7 +391,7 @@ Add `_log: bool = True` to `run_marker_genes` and `run_overlap_enrichment` (guar
 
 ### Task 3: Routes + codegen + config
 
-**Files:** `backend/xcell/api/routes.py` (after `/enrichment/gsea`), `backend/xcell/codegen.py`, `backend/tests/test_enrichment_routes.py`, `backend/tests/test_codegen.py` (only via the existing scans).
+**Files:** `backend/skopia/api/routes.py` (after `/enrichment/gsea`), `backend/skopia/codegen.py`, `backend/tests/test_enrichment_routes.py`, `backend/tests/test_codegen.py` (only via the existing scans).
 
 - [ ] **Step 1: Failing route tests** (append to `test_enrichment_routes.py`)
 
@@ -507,7 +507,7 @@ Codegen (next to the enrichment entries):
 
 ```python
     'enrichment_gsea_batch': ActionSpec(
-        label='Preranked GSEA for every group', fidelity=XCELL, imports=XCELL_API,
+        label='Preranked GSEA for every group', fidelity=SKOPIA, imports=SKOPIA_API,
         code=_two_phase('prepare_gsea_batch',
                         ('obs_column', 'groups', 'reference', 'method', 'metric', 'cell_subset',
                          'libraries', 'sets', 'gene_subset', 'n_perm', 'min_set_size', 'max_set_size',
@@ -515,19 +515,19 @@ Codegen (next to the enrichment entries):
         summary=lambda p, r: (
             f"GSEA of every group in '{p.get('obs_column')}' vs {p.get('reference')} "
             f"({_n(len((r.get('members') or {})))} groups, {_n(p.get('n_perm'))} permutations): "
-            f"{_n(r.get('n_significant'))} significant rows → `.uns['xcell_enrichment']['{r.get('key')}']`"
+            f"{_n(r.get('n_significant'))} significant rows → `.uns['skopia_enrichment']['{r.get('key')}']`"
             + (f"; skipped {', '.join((r.get('skipped') or {}))}." if r.get('skipped') else '.')
         ),
     ),
     'enrichment_ora_batch': ActionSpec(
-        label='Marker-gene overlap enrichment for every group', fidelity=XCELL, imports=XCELL_API,
+        label='Marker-gene overlap enrichment for every group', fidelity=SKOPIA, imports=SKOPIA_API,
         code=_direct('run_overlap_enrichment_batch',
                      ('obs_column', 'groups', 'top_n', 'min_in_group_fraction', 'max_out_group_fraction',
                       'min_fold_change', 'libraries', 'sets', 'gene_subset', 'min_set_size', 'max_set_size',
                       'min_overlap')),
         summary=lambda p, r: (
             f"Top {_n(p.get('top_n'))} markers of every group in '{p.get('obs_column')}' tested for overlap: "
-            f"{_n(r.get('n_significant'))} significant rows → `.uns['xcell_enrichment']['{r.get('key')}']`."
+            f"{_n(r.get('n_significant'))} significant rows → `.uns['skopia_enrichment']['{r.get('key')}']`."
         ),
     ),
 ```

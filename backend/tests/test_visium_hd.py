@@ -1,4 +1,4 @@
-"""Tests for the Visium HD ``feature_slice.h5`` loader (xcell.visium_hd).
+"""Tests for the Visium HD ``feature_slice.h5`` loader (skopia.visium_hd).
 
 A synthetic fixture writes a minimal feature_slice.h5 so the rebinned counts can
 be hand-computed and asserted exactly. No real 700MB file needed.
@@ -30,7 +30,7 @@ import h5py
 import numpy as np
 import pytest
 
-import xcell.visium_hd as vh
+import skopia.visium_hd as vh
 
 
 def _bytes_arr(strings):
@@ -147,7 +147,7 @@ def test_clusters_skipped_when_disabled(fs_path):
 
 def test_cache_created_and_reused(fs_path, monkeypatch):
     adata1 = vh.load_feature_slice_cached(fs_path, bin_size=8)
-    cache = fs_path.with_name("Sample_feature_slice.xcell.square_008um.h5ad")
+    cache = fs_path.with_name("Sample_feature_slice.skopia.square_008um.h5ad")
     assert cache.exists()
     assert adata1.shape == (3, 3)
 

@@ -12,10 +12,10 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.codegen import EXACT, translate
-from xcell.main import app
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.codegen import EXACT, translate
+from skopia.main import app
 
 
 def _adata(n_cells=30, n_genes=20, seed=0):
@@ -59,7 +59,7 @@ def test_deleting_a_subsets_column_removes_its_registry_entry():
     a.create_cell_subset('chondro', list(range(0, 30, 2)))
     out = a.delete_obs_column('subset_chondro')
     assert out['subset_removed'] == 'chondro'
-    assert 'chondro' not in a.adata.uns['xcell_cell_subsets']
+    assert 'chondro' not in a.adata.uns['skopia_cell_subsets']
     assert a.list_cell_subsets() == []
 
 

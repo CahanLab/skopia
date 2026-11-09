@@ -25,7 +25,7 @@ cap warning.
 - A selection on a stored run can be restricted to an allowed gene list
   with no re-run, from three places: the Find Marker Genes modal, the
   Expression tab's marker rows, and a saved heatmap / dot plot figure.
-- The allowed list comes from what xcell already has: a Gene Panel gene set
+- The allowed list comes from what skopia already has: a Gene Panel gene set
   (up and down genes together) or a boolean `.var` column.
 - Every surface says what the restriction is ("in TFs") and how many
   candidates each group had after it.

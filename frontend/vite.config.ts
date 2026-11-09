@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { execSync } from 'node:child_process'
 import pkg from './package.json'
 
-const BACKEND = process.env.XCELL_BACKEND || 'http://127.0.0.1:8000'
+const BACKEND = process.env.SKOPIA_BACKEND || 'http://127.0.0.1:8000'
 
 // One warning per outage, not one per request — a page load fires many /api
 // calls and would otherwise bury the message in repeats.
@@ -24,15 +24,15 @@ function gitCommit(): string {
 export default defineConfig({
   plugins: [react()],
   define: {
-    __XCELL_VERSION__: JSON.stringify(pkg.version),
-    __XCELL_COMMIT__: JSON.stringify(gitCommit()),
+    __SKOPIA_VERSION__: JSON.stringify(pkg.version),
+    __SKOPIA_COMMIT__: JSON.stringify(gitCommit()),
   },
   server: {
     port: 5173,
     // Proxy API requests to FastAPI backend during development.
     // Use 127.0.0.1, not localhost: modern Node may resolve "localhost" to
     // IPv6 ::1, but uvicorn binds IPv4 127.0.0.1 only -> ECONNREFUSED.
-    // Override the target with XCELL_BACKEND to point at a non-default backend.
+    // Override the target with SKOPIA_BACKEND to point at a non-default backend.
     proxy: {
       '/api': {
         target: BACKEND,
@@ -58,7 +58,7 @@ export default defineConfig({
                   ? 'it is still starting up (the port is open but not answering yet)'
                   : 'nothing is listening there'
                 console.warn(
-                  `\n  [xcell] Backend at ${BACKEND} is not reachable — ${why}.\n` +
+                  `\n  [skopia] Backend at ${BACKEND} is not reachable — ${why}.\n` +
                   '          Start it with `pixi run backend` (or `pixi run -e pyscn backend`)\n' +
                   "          and wait for `Application startup complete`, then reload the page.\n" +
                   '          A first start in a fresh environment can take ~1 minute.\n',
@@ -75,7 +75,7 @@ export default defineConfig({
               }
               return
             }
-            console.error(`  [xcell] proxy error (${code ?? 'unknown'}):`, err.message)
+            console.error(`  [skopia] proxy error (${code ?? 'unknown'}):`, err.message)
           })
           // Reset once the backend answers, so a later outage warns again.
           proxy.on('proxyRes', () => { warnedUnreachable = false })

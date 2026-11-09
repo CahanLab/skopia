@@ -181,7 +181,7 @@ function ResolutionSummary({
 
 // Sets dragged inside the manager. Its own type, so a drag from the Genes
 // pane (or anywhere else) is never mistaken for one of these.
-const MANAGER_DRAG_TYPE = 'application/x-xcell-manager-sets'
+const MANAGER_DRAG_TYPE = 'application/x-skopia-manager-sets'
 
 // A small "3 sets" badge as the drag image when several ticked sets travel together.
 function setDragBadge(e: DragEvent, text: string) {

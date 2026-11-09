@@ -13,7 +13,7 @@
 ### Task 1: Extract Shared Spline Regression Helper (Backend)
 
 **Files:**
-- Modify: `xcell/backend/xcell/adaptor.py:1218-1609`
+- Modify: `skopia/backend/skopia/adaptor.py:1218-1609`
 
 The current `test_line_association` method does line lookup, cell projection, AND the core spline regression. Extract the regression portion (lines 1332-1609) into a reusable `_run_spline_association` method, then refactor `test_line_association` to call it.
 
@@ -357,7 +357,7 @@ Replace the body of `test_line_association` (lines 1263-1609) with this shorter 
 
 - [ ] **Step 3: Verify the refactored single-line method works**
 
-Run: `cd xcell/backend && python -c "from xcell.adaptor import DataAdaptor; print('Import OK')"`
+Run: `cd skopia/backend && python -c "from skopia.adaptor import DataAdaptor; print('Import OK')"`
 Expected: `Import OK`
 
 Then start the backend and manually test "Find Associated Genes" on a single line in the browser to confirm identical behavior.
@@ -365,7 +365,7 @@ Then start the backend and manually test "Find Associated Genes" on a single lin
 - [ ] **Step 4: Commit**
 
 ```bash
-git add xcell/backend/xcell/adaptor.py
+git add skopia/backend/skopia/adaptor.py
 git commit -m "refactor: extract _run_spline_association helper from test_line_association"
 ```
 
@@ -374,7 +374,7 @@ git commit -m "refactor: extract _run_spline_association helper from test_line_a
 ### Task 2: Add Multi-Line Association Method (Backend)
 
 **Files:**
-- Modify: `xcell/backend/xcell/adaptor.py` (add method after `test_line_association`)
+- Modify: `skopia/backend/skopia/adaptor.py` (add method after `test_line_association`)
 
 - [ ] **Step 1: Add `test_multi_line_association` method**
 
@@ -504,13 +504,13 @@ Insert this method immediately after `test_line_association` (after the closing 
 
 - [ ] **Step 2: Verify import still works**
 
-Run: `cd xcell/backend && python -c "from xcell.adaptor import DataAdaptor; print('Import OK')"`
+Run: `cd skopia/backend && python -c "from skopia.adaptor import DataAdaptor; print('Import OK')"`
 Expected: `Import OK`
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add xcell/backend/xcell/adaptor.py
+git add skopia/backend/skopia/adaptor.py
 git commit -m "feat: add test_multi_line_association for pooled multi-line analysis"
 ```
 
@@ -519,7 +519,7 @@ git commit -m "feat: add test_multi_line_association for pooled multi-line analy
 ### Task 3: Add Multi-Line API Endpoint (Backend)
 
 **Files:**
-- Modify: `xcell/backend/xcell/api/routes.py:978-1077`
+- Modify: `skopia/backend/skopia/api/routes.py:978-1077`
 
 - [ ] **Step 1: Add response model fields and new request/endpoint**
 
@@ -596,13 +596,13 @@ def test_multi_line_association(request: MultiLineAssociationRequest, dataset: s
 
 - [ ] **Step 2: Verify backend starts**
 
-Run: `cd xcell/backend && python -c "from xcell.api.routes import router; print('Routes OK')"`
+Run: `cd skopia/backend && python -c "from skopia.api.routes import router; print('Routes OK')"`
 Expected: `Routes OK`
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add xcell/backend/xcell/api/routes.py
+git add skopia/backend/skopia/api/routes.py
 git commit -m "feat: add POST /lines/multi-association endpoint"
 ```
 
@@ -611,12 +611,12 @@ git commit -m "feat: add POST /lines/multi-association endpoint"
 ### Task 4: Extend Store Types and Add Multi-Line API Function (Frontend)
 
 **Files:**
-- Modify: `xcell/frontend/src/store.ts:209-223`
-- Modify: `xcell/frontend/src/hooks/useData.ts:787-870`
+- Modify: `skopia/frontend/src/store.ts:209-223`
+- Modify: `skopia/frontend/src/hooks/useData.ts:787-870`
 
 - [ ] **Step 1: Add optional fields to `LineAssociationResult` in `store.ts`**
 
-In `xcell/frontend/src/store.ts`, add `n_lines` and `lines_used` to the `LineAssociationResult` interface (after the `diagnostics` field, around line 222):
+In `skopia/frontend/src/store.ts`, add `n_lines` and `lines_used` to the `LineAssociationResult` interface (after the `diagnostics` field, around line 222):
 
 ```typescript
 export interface LineAssociationResult {
@@ -639,7 +639,7 @@ export interface LineAssociationResult {
 
 - [ ] **Step 2: Add `MultiLineEntry` and `MultiLineAssociationParams` interfaces and `runMultiLineAssociation` function in `useData.ts`**
 
-In `xcell/frontend/src/hooks/useData.ts`, add the following after the existing `runLineAssociation` function (after line 829):
+In `skopia/frontend/src/hooks/useData.ts`, add the following after the existing `runLineAssociation` function (after line 829):
 
 ```typescript
 // Multi-line association types and API function
@@ -716,13 +716,13 @@ Update the return statement to include `runMultiAssociation`:
 
 - [ ] **Step 4: Verify build**
 
-Run: `cd xcell/frontend && npm run build`
+Run: `cd skopia/frontend && npm run build`
 Expected: Build succeeds with no TypeScript errors.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add xcell/frontend/src/store.ts xcell/frontend/src/hooks/useData.ts
+git add skopia/frontend/src/store.ts skopia/frontend/src/hooks/useData.ts
 git commit -m "feat: add multi-line association types and API function"
 ```
 
@@ -731,7 +731,7 @@ git commit -m "feat: add multi-line association types and API function"
 ### Task 5: Add Line Selection Checkboxes to Lines Panel
 
 **Files:**
-- Modify: `xcell/frontend/src/components/ShapeManager.tsx:611-750` (the `ShapeManager` component)
+- Modify: `skopia/frontend/src/components/ShapeManager.tsx:611-750` (the `ShapeManager` component)
 
 - [ ] **Step 1: Add checked state and multi-line modal trigger**
 
@@ -838,13 +838,13 @@ In the fragment at the bottom of the return (where `{toolsLine && <LineToolsModa
 
 - [ ] **Step 5: Verify build**
 
-Run: `cd xcell/frontend && npm run build`
+Run: `cd skopia/frontend && npm run build`
 Expected: Build fails because `MultiLineToolsModal` doesn't exist yet. That's expected — we'll add it in Task 6. To verify the rest compiles, temporarily comment out the `MultiLineToolsModal` render, build, then uncomment.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add xcell/frontend/src/components/ShapeManager.tsx
+git add skopia/frontend/src/components/ShapeManager.tsx
 git commit -m "feat: add line selection checkboxes and action bar to Lines panel"
 ```
 
@@ -853,7 +853,7 @@ git commit -m "feat: add line selection checkboxes and action bar to Lines panel
 ### Task 6: Create Multi-Line Tools Modal
 
 **Files:**
-- Modify: `xcell/frontend/src/components/ShapeManager.tsx` (add `MultiLineToolsModal` component)
+- Modify: `skopia/frontend/src/components/ShapeManager.tsx` (add `MultiLineToolsModal` component)
 
 - [ ] **Step 1: Add `MultiLineToolsModal` component**
 
@@ -1138,13 +1138,13 @@ This is already sufficient — `runMultiAssociation` comes from the `useLineAsso
 
 - [ ] **Step 3: Verify build**
 
-Run: `cd xcell/frontend && npm run build`
+Run: `cd skopia/frontend && npm run build`
 Expected: Build succeeds.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add xcell/frontend/src/components/ShapeManager.tsx
+git add skopia/frontend/src/components/ShapeManager.tsx
 git commit -m "feat: add MultiLineToolsModal for combined line association analysis"
 ```
 
@@ -1153,7 +1153,7 @@ git commit -m "feat: add MultiLineToolsModal for combined line association analy
 ### Task 7: Update Results Modal for Multi-Line Display
 
 **Files:**
-- Modify: `xcell/frontend/src/components/LineAssociationModal.tsx:633-750`
+- Modify: `skopia/frontend/src/components/LineAssociationModal.tsx:633-750`
 
 - [ ] **Step 1: Update header to show combined line names**
 
@@ -1208,13 +1208,13 @@ In the summary stats section (the `<div style={styles.summary}>` block), add a "
 
 - [ ] **Step 3: Verify build**
 
-Run: `cd xcell/frontend && npm run build`
+Run: `cd skopia/frontend && npm run build`
 Expected: Build succeeds.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add xcell/frontend/src/components/LineAssociationModal.tsx
+git add skopia/frontend/src/components/LineAssociationModal.tsx
 git commit -m "feat: show multi-line info in association results modal"
 ```
 
@@ -1223,7 +1223,7 @@ git commit -m "feat: show multi-line info in association results modal"
 ### Task 8: Cell Panel Selection Highlight
 
 **Files:**
-- Modify: `xcell/frontend/src/components/CellPanel.tsx`
+- Modify: `skopia/frontend/src/components/CellPanel.tsx`
 
 - [ ] **Step 1: Add local state for tracking category selection source**
 
@@ -1286,13 +1286,13 @@ selectedCategorySource={selectedCategorySource}
 
 - [ ] **Step 5: Verify build**
 
-Run: `cd xcell/frontend && npm run build`
+Run: `cd skopia/frontend && npm run build`
 Expected: Build succeeds.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add xcell/frontend/src/components/CellPanel.tsx
+git add skopia/frontend/src/components/CellPanel.tsx
 git commit -m "feat: highlight category value row when cells are selected from it"
 ```
 
@@ -1301,9 +1301,9 @@ git commit -m "feat: highlight category value row when cells are selected from i
 ### Task 9: Update Documentation
 
 **Files:**
-- Modify: `xcell/CLAUDE.md`
-- Modify: `xcell/CHANGELOG.md`
-- Modify: `xcell/README.md`
+- Modify: `skopia/CLAUDE.md`
+- Modify: `skopia/CHANGELOG.md`
+- Modify: `skopia/README.md`
 
 - [ ] **Step 1: Update CLAUDE.md**
 
@@ -1359,7 +1359,7 @@ Update the Trajectory Analysis section (section 10) to mention multi-line:
 - [ ] **Step 4: Commit**
 
 ```bash
-git add xcell/CLAUDE.md xcell/CHANGELOG.md xcell/README.md
+git add skopia/CLAUDE.md skopia/CHANGELOG.md skopia/README.md
 git commit -m "docs: document multi-line association and cell panel selection highlight"
 ```
 
@@ -1369,20 +1369,20 @@ git commit -m "docs: document multi-line association and cell panel selection hi
 
 - [ ] **Step 1: Full build check**
 
-Run: `cd xcell/frontend && npm run build`
+Run: `cd skopia/frontend && npm run build`
 Expected: Build succeeds with no errors.
 
 - [ ] **Step 2: Backend import check**
 
-Run: `cd xcell/backend && python -c "from xcell.adaptor import DataAdaptor; from xcell.api.routes import router; print('All imports OK')"`
+Run: `cd skopia/backend && python -c "from skopia.adaptor import DataAdaptor; from skopia.api.routes import router; print('All imports OK')"`
 Expected: `All imports OK`
 
 - [ ] **Step 3: Manual browser testing**
 
 Start backend and frontend:
 ```bash
-cd xcell/backend && uvicorn xcell.main:app --reload &
-cd xcell/frontend && npm run dev &
+cd skopia/backend && uvicorn skopia.main:app --reload &
+cd skopia/frontend && npm run dev &
 ```
 
 Test the following:

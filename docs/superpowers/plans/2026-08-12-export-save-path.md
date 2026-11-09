@@ -88,7 +88,7 @@ git commit -m "refactor(ui): composeSavePath takes the extension it should appen
 ### Task 2: The backend write route
 
 **Files:**
-- Modify: `backend/xcell/api/routes.py` (`BROWSE_KINDS` at `:96`; new route beside `/export/h5ad` at `:3074`)
+- Modify: `backend/skopia/api/routes.py` (`BROWSE_KINDS` at `:96`; new route beside `/export/h5ad` at `:3074`)
 - Test: `backend/tests/test_export_save.py`
 
 **Interfaces:**
@@ -107,9 +107,9 @@ import pandas as pd
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.main import app
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.main import app
 
 
 def _install(monkeypatch):
@@ -262,7 +262,7 @@ already calls — do not add a second implementation.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/api/routes.py backend/tests/test_export_save.py
+git add backend/skopia/api/routes.py backend/tests/test_export_save.py
 git commit -m "feat(api): write an export to a path the user picked"
 ```
 
@@ -321,7 +321,7 @@ git commit -m "refactor(ui): one save-path picker, shared"
 
 - [ ] **Step 1: Rework the modal** — each of the three formats gets a
   `SavePathPicker` (`data`/`.h5ad`, `tabular`/`.tsv`, `geneset`/`.json`) with a
-  default name derived from the loaded dataset's filename stem plus `_xcell`,
+  default name derived from the loaded dataset's filename stem plus `_skopia`,
   and a Save button that POSTs to `/api/export/save`. On success show the path
   written and its size rather than closing silently, so the user knows where it
   went.

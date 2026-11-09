@@ -12,10 +12,10 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor, CELL_SUBSETS_UNS
-from xcell.api import routes
-from xcell.codegen import EXACT, translate
-from xcell.main import app
+from skopia.adaptor import DataAdaptor, CELL_SUBSETS_UNS
+from skopia.api import routes
+from skopia.codegen import EXACT, translate
+from skopia.main import app
 
 N = 12
 
@@ -73,7 +73,7 @@ def test_merge_takes_the_first_non_empty_value_in_the_given_order():
 
 
 def test_empty_strings_and_unassigned_count_as_empty_for_labels():
-    """`unassigned` is xcell's own sentinel outside a mask; a merge that stops
+    """`unassigned` is skopia's own sentinel outside a mask; a merge that stops
     at it never reaches the real label."""
     a = _adaptor()
     out = a.merge_obs_columns(['coarse', 'fine'], 'merged')

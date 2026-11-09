@@ -13,10 +13,10 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell import marker_genes as mg
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.main import app
+from skopia import marker_genes as mg
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.main import app
 
 
 # ---------------------------------------------------------------------------
@@ -205,7 +205,7 @@ def test_run_stores_a_record_with_pct_columns():
     a = _adaptor()
     r = a.run_marker_genes(obs_column="grp", top_n=3)
     assert r["key"] == "markers_grp" and r["uid"]
-    store = a.adata.uns["xcell_marker_genes"]
+    store = a.adata.uns["skopia_marker_genes"]
     assert isinstance(store["markers_grp"], str)
     rec = json.loads(store["markers_grp"])
     assert rec["uid"] == r["uid"] and rec["obs_column"] == "grp" and rec["groups"] == ["a", "b", "c"]
@@ -226,7 +226,7 @@ def test_run_stores_a_record_with_pct_columns():
 def test_run_truncates_to_store_top_n():
     a = _adaptor()
     r = a.run_marker_genes(obs_column="grp", top_n=2, store_top_n=3)
-    rec = json.loads(a.adata.uns["xcell_marker_genes"][r["key"]])
+    rec = json.loads(a.adata.uns["skopia_marker_genes"][r["key"]])
     assert all(len(rec["table"][g]["genes"]) == 3 for g in ("a", "b", "c"))
     assert rec["params"]["store_top_n"] == 3
     assert r["truncated"] is True
@@ -238,7 +238,7 @@ def test_keys_do_not_collide_and_a_label_is_kept():
     assert a.run_marker_genes(obs_column="grp", top_n=1)["key"] == "markers_grp"
     r2 = a.run_marker_genes(obs_column="grp", top_n=1, label="second pass")
     assert r2["key"] == "markers_grp_2"
-    assert json.loads(a.adata.uns["xcell_marker_genes"]["markers_grp_2"])["label"] == "second pass"
+    assert json.loads(a.adata.uns["skopia_marker_genes"]["markers_grp_2"])["label"] == "second pass"
     runs = a.list_marker_runs()
     assert [x["key"] for x in runs] == ["markers_grp_2", "markers_grp"]
     assert runs[0]["label"] == "second pass" and runs[0]["n_groups"] == 3 and runs[0]["n_cells_tested"] == N_CELLS
@@ -250,7 +250,7 @@ def test_old_filter_fields_select_post_hoc():
     assert [g["gene"] for g in _group(r, "a")["genes"]] == ["g00"]
     assert [g["gene"] for g in _group(r, "b")["genes"]] == ["g01"]
     # the store still holds the whole ranking: the filters were applied after it
-    rec = json.loads(a.adata.uns["xcell_marker_genes"][r["key"]])
+    rec = json.loads(a.adata.uns["skopia_marker_genes"][r["key"]])
     assert len(rec["table"]["a"]["genes"]) == N_GENES
     # and the logged step records the post hoc thresholds under their new names
     step = a.analysis_record.steps[-1]
@@ -354,7 +354,7 @@ def test_delete_logs_and_removes(monkeypatch):
     client = _client(a, monkeypatch)
     key = a.run_marker_genes(obs_column="grp", top_n=1)["key"]
     assert client.delete(f"/api/marker_genes/runs/{key}").status_code == 200
-    assert key not in a.adata.uns["xcell_marker_genes"]
+    assert key not in a.adata.uns["skopia_marker_genes"]
     assert a.analysis_record.steps[-1].action == "marker_genes_delete"
     assert client.delete(f"/api/marker_genes/runs/{key}").status_code == 404
     with pytest.raises(KeyError):
@@ -371,7 +371,7 @@ def test_record_survives_h5ad_round_trip(tmp_path):
 
 
 def test_the_notebook_summary_names_the_stored_run():
-    from xcell.codegen import translate
+    from skopia.codegen import translate
     a = _adaptor()
     a.run_marker_genes(obs_column="grp", top_n=3)
     t = translate(a.analysis_record.steps[-1])

@@ -13,10 +13,10 @@ import pytest
 from scipy.sparse import csr_matrix
 from fastapi.testclient import TestClient
 
-from xcell.layer_scale import assess_matrix_scale, SCALE_LABELS
-from xcell.adaptor import DataAdaptor
-from xcell.main import app
-from xcell.api import routes
+from skopia.layer_scale import assess_matrix_scale, SCALE_LABELS
+from skopia.adaptor import DataAdaptor
+from skopia.main import app
+from skopia.api import routes
 
 
 # --------------------------------------------------------------------------
@@ -184,7 +184,7 @@ def test_scale_reports_scanpy_log1p_provenance():
     assert any('log1p' in p for p in x['scale']['provenance'])
 
 
-def test_scale_reports_xcell_action_history_provenance():
+def test_scale_reports_skopia_action_history_provenance():
     ad = anndata.AnnData(X=csr_matrix(_counts()))
     a = DataAdaptor('x.h5ad', adata=ad)
     a.run_normalize_total(target_sum=1e4)
@@ -200,7 +200,7 @@ def test_counts_layer_snapshot_is_flagged_as_inferred():
     ad = anndata.AnnData(X=csr_matrix(_counts()))
     a = DataAdaptor('x.h5ad', adata=ad)
     counts = next(L for L in a.list_layers() if L['name'] == 'counts')
-    assert any('xcell' in p.lower() for p in counts['scale']['provenance'])
+    assert any('skopia' in p.lower() for p in counts['scale']['provenance'])
 
 
 def test_scale_assessment_never_blocks_layer_listing():

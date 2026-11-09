@@ -8,8 +8,8 @@ import pytest
 from fastapi import HTTPException
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import TEXT_ANNOTATIONS_UNS, DataAdaptor
-from xcell.api import routes
+from skopia.adaptor import TEXT_ANNOTATIONS_UNS, DataAdaptor
+from skopia.api import routes
 
 
 def _adata(n_cells=40, n_genes=12):

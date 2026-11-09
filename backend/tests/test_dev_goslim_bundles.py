@@ -1,6 +1,6 @@
-"""The developmental GO slim bundles shipped with xcell.
+"""The developmental GO slim bundles shipped with skopia.
 
-Four files under ``xcell/data/gene_sets/`` — coarse and fine, mouse and
+Four files under ``skopia/data/gene_sets/`` — coarse and fine, mouse and
 human — built by ``build_dev_goslim.py`` from ``dev_goslim.tsv``. These pin
 the shipped files to the table: every coarse term is a coarse set and a fine
 folder, every fine term is in its folder, the two species carry the same
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from xcell import gene_set_library
+from skopia import gene_set_library
 
 DATA = Path(gene_set_library.LIBRARY_DIR)
 _SPEC = importlib.util.spec_from_file_location('build_dev_goslim', DATA.parent / 'build_dev_goslim.py')

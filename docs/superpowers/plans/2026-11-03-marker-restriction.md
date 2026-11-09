@@ -32,7 +32,7 @@
 ### Task 1: `select_markers(genes=...)`
 
 **Files:**
-- Modify: `backend/xcell/marker_genes.py:79-125`
+- Modify: `backend/skopia/marker_genes.py:79-125`
 - Test: `backend/tests/test_marker_genes_store.py` (pure section, after `test_select_on_a_group_with_no_rows_is_empty`)
 
 **Interfaces:**
@@ -65,8 +65,8 @@ def test_select_restriction_with_unknown_names_is_empty():
 ### Task 2: Adaptor resolution and routes
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (`get_var_boolean_columns` ~6336; `select_marker_genes` 6950; `marker_gene_set_groups` 6959; `heatmap_groups_from_markers` 7008)
-- Modify: `backend/xcell/api/routes.py:1796-1810` (`MarkerSelection`)
+- Modify: `backend/skopia/adaptor.py` (`get_var_boolean_columns` ~6336; `select_marker_genes` 6950; `marker_gene_set_groups` 6959; `heatmap_groups_from_markers` 7008)
+- Modify: `backend/skopia/api/routes.py:1796-1810` (`MarkerSelection`)
 - Test: `backend/tests/test_marker_genes_store.py` (adaptor + routes sections), `backend/tests/test_dotplot.py`
 
 **Interfaces:**
@@ -120,7 +120,7 @@ In `test_dotplot.py`, extend `test_route_with_gene_sets_and_with_markers`: a sec
 ### Task 3: Figures carry `marker_restrict`
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (`_validate_figure_inputs` 7280-7316; `_figure_row_groups` 7466; `_default_figure_title` 7484)
+- Modify: `backend/skopia/adaptor.py` (`_validate_figure_inputs` 7280-7316; `_figure_row_groups` 7466; `_default_figure_title` 7484)
 - Test: `backend/tests/test_figures_adaptor.py`
 
 **Interfaces:**
@@ -154,7 +154,7 @@ def test_a_figure_restricted_to_an_annotation():
                                                       'marker_restrict': {'label': 'x', 'genes': []}})
 ```
 
-Also add `'marker_restrict': {'label': 'one', 'genes': [first]}` to the existing h5ad round-trip figure test if one covers marker figures, else assert in this test that `json.loads(a.adata.uns['xcell_figures'][f['id']])['inputs']['marker_restrict']['label'] == 'one'`.
+Also add `'marker_restrict': {'label': 'one', 'genes': [first]}` to the existing h5ad round-trip figure test if one covers marker figures, else assert in this test that `json.loads(a.adata.uns['skopia_figures'][f['id']])['inputs']['marker_restrict']['label'] == 'one'`.
 
 - [ ] **Step 2: Run** `pixi run -e dev pytest tests/test_figures_adaptor.py -q -k restricted` — Expected: FAIL (`marker_restrict` missing from `inputs`).
 - [ ] **Step 3: Implement.** In `_validate_figure_inputs`, read `restrict = inputs.get('marker_restrict') or None`; if set and no `marker_key`, `ValueError('inputs.marker_restrict needs inputs.marker_key')`; else call `self._restriction_genes(restrict)` for validation (a `KeyError` from a missing column becomes `ValueError`); include `'marker_restrict': restrict` in both returned dicts. In `_figure_row_groups`, wrap the column resolution: `try: groups += self.marker_gene_set_groups(key, restrict_to=inp.get('marker_restrict'), **sel) except KeyError as e: raise FigureInputMissing(f"Column '{col}' no longer exists; the figure cannot be drawn")`. Title: after `markers <key>`, append `f" in {restrict['label']}"`.

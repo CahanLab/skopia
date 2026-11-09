@@ -1,12 +1,12 @@
-# XCell
+# Skopia
 
 Interactive web application for exploring and analyzing scRNA-seq and spatial transcriptomics data. Load an h5ad, 10x Genomics h5, 10x Visium HD `feature_slice.h5`, Seurat .rds file, 10x CellRanger matrix folder, or prefixed 10x file trio from GEO, visualize cells on a scatter plot, run Scanpy analysis pipelines, and explore results — all from your browser.
 
- ![Screenshot](docs/images/xcell_screenshot.jpg)   
+ ![Screenshot](docs/images/skopia_screenshot.jpg)   
 
 ## Installation
 
-XCell uses [pixi](https://pixi.sh) to manage its environment. A single
+Skopia uses [pixi](https://pixi.sh) to manage its environment. A single
 `pixi install` provisions the exact Python *and* Node versions plus every
 dependency — no manual venv, no Node-version juggling, no version troubleshooting.
 
@@ -35,22 +35,22 @@ git --version
 ```
 
 > **Prefer not to use Git?** You can also click the green **Code** button at
-> <https://github.com/cahanlab/xcell>, choose **Download ZIP**, then unzip it
+> <https://github.com/cahanlab/skopia>, choose **Download ZIP**, then unzip it
 > anywhere on your machine. Skip ahead to step 3.
 
-### 2. Download XCell from GitHub
+### 2. Download Skopia from GitHub
 
-Pick a folder where you'd like XCell to live (your home directory is fine) and
+Pick a folder where you'd like Skopia to live (your home directory is fine) and
 clone the repository into it:
 
 ```bash
-cd ~                                              # or wherever you want the xcell/ folder created
-git clone https://github.com/cahanlab/xcell.git
-cd xcell
+cd ~                                              # or wherever you want the skopia/ folder created
+git clone https://github.com/cahanlab/skopia.git
+cd skopia
 ```
 
-This creates an `xcell/` directory containing the source code. The final
-`cd xcell` puts your terminal *inside* that directory — every command from here
+This creates an `skopia/` directory containing the source code. The final
+`cd skopia` puts your terminal *inside* that directory — every command from here
 on must be run from there.
 
 ### 3. Install pixi (once per machine)
@@ -64,7 +64,7 @@ curl -fsSL https://pixi.sh/install.sh | bash      # macOS / Linux
 
 pixi is a single self-contained binary. It does not require — or conflict with —
 an existing conda installation. **Close and reopen your terminal** after the
-install so `pixi` is on `PATH`, then `cd xcell` again. Verify with:
+install so `pixi` is on `PATH`, then `cd skopia` again. Verify with:
 
 ```bash
 pixi --version
@@ -72,7 +72,7 @@ pixi --version
 
 ### 4. Set up the project
 
-From inside the `xcell/` directory:
+From inside the `skopia/` directory:
 
 ```bash
 pixi install      # creates ./.pixi/ with Python, Node, and all dependencies
@@ -97,8 +97,8 @@ shows install instructions rather than failing.
 
 ### 5. Launch
 
-XCell runs as two processes: a Python backend and a JavaScript frontend. You'll
-need **two terminal windows**, both `cd`'d into the `xcell/` directory.
+Skopia runs as two processes: a Python backend and a JavaScript frontend. You'll
+need **two terminal windows**, both `cd`'d into the `skopia/` directory.
 
 In the **first** terminal:
 
@@ -122,19 +122,19 @@ pixi run dev      # Vite dev server on http://localhost:5173 (installs frontend 
 
 Wait until the second terminal prints something like `Local: http://localhost:5173/`,
 then open <http://localhost:5173> in your browser. Leave both terminals running
-while you use XCell; press **Ctrl+C** in each one to stop the servers when done.
+while you use Skopia; press **Ctrl+C** in each one to stop the servers when done.
 
 ### 6. (Optional) Load your own data
 
-A bundled toy dataset (`toy_spatial.h5ad`) loads automatically if no data path is specified. A second bundled dataset, `toy_spatial_3sections.h5ad` (three separated sections of the same tissue, with an `obs['section']` label), is handy for testing spatial workflows — like (multi)contour — where distances between spots on different sections aren't meaningful; point `XCELL_DATA_PATH` at it to use it. To load your own data, set the `XCELL_DATA_PATH` environment variable when starting the backend:
+A bundled toy dataset (`toy_spatial.h5ad`) loads automatically if no data path is specified. A second bundled dataset, `toy_spatial_3sections.h5ad` (three separated sections of the same tissue, with an `obs['section']` label), is handy for testing spatial workflows — like (multi)contour — where distances between spots on different sections aren't meaningful; point `SKOPIA_DATA_PATH` at it to use it. To load your own data, set the `SKOPIA_DATA_PATH` environment variable when starting the backend:
 
 ```bash
-XCELL_DATA_PATH=/path/to/your/data.h5ad pixi run backend  # also .h5, .rds, a 10x matrix folder, or a *_matrix.mtx(.gz) trio
+SKOPIA_DATA_PATH=/path/to/your/data.h5ad pixi run backend  # also .h5, .rds, a 10x matrix folder, or a *_matrix.mtx(.gz) trio
 ```
 
 ### Updating to the latest version
 
-From inside the `xcell/` directory:
+From inside the `skopia/` directory:
 
 ```bash
 git pull          # fetch the latest code
@@ -146,7 +146,7 @@ Then restart the two `pixi run` commands.
 ### Releases
 
 `git pull` follows `main`, which moves ahead of the last release. Tagged
-releases are listed on the [Releases](https://github.com/CahanLab/xcell/releases)
+releases are listed on the [Releases](https://github.com/CahanLab/skopia/releases)
 page, each with its changelog; to run one instead:
 
 ```bash
@@ -171,7 +171,7 @@ from that changelog section. `pixi run version` prints the current version.
 > packages installed separately — SeuratDisk is not available as a conda package.
 >
 > **Loading a 10x Visium HD `feature_slice.h5`** works directly — point
-> `XCELL_DATA_PATH` (or the file browser) at the `*_feature_slice.h5`. XCell
+> `SKOPIA_DATA_PATH` (or the file browser) at the `*_feature_slice.h5`. Skopia
 > rebins the 2 µm expression to 8 µm tissue bins, attaches spatial coordinates,
 > and imports the precomputed graph/k-means clusters as colorable metadata.
 > First load takes ~1–2 minutes; the result is cached as a `.h5ad` next to the
@@ -187,13 +187,13 @@ from that changelog section. `pixi run version` prints the current version.
 > v3 (`features.tsv`, three columns) gene lists are accepted — including GEO's
 > gzipped v2 output, `genes.tsv.gz`, which scanpy's own reader cannot open.
 >
-> **Not using pixi?** XCell still installs the classic way (`pip install -e backend`
+> **Not using pixi?** Skopia still installs the classic way (`pip install -e backend`
 > in a Python 3.10+ venv, `npm install` in `frontend/` on Node 18+). pixi just
 > removes the version-matching guesswork.
 
 ## Getting Started with Toy Data
 
-The included `test_data/toy_spatial.h5ad` dataset is a small spatial transcriptomics dataset for exploring XCell's features. Here's a step-by-step walkthrough:
+The included `test_data/toy_spatial.h5ad` dataset is a small spatial transcriptomics dataset for exploring Skopia's features. Here's a step-by-step walkthrough:
 
 ### 1. Explore the Embedding
 
@@ -255,9 +255,9 @@ scale of each matrix inline — `.X (default) — log-normalized`, `counts — r
 counts` — and the small **ⓘ** next to it opens the reasoning:
 
 - the **verdict** and how confident it is
-- **what the file records** — `uns['log1p']` left by scanpy, xcell's own
+- **what the file records** — `uns['log1p']` left by scanpy, skopia's own
   Normalize Total / Log1p / Smooth history, and whether the `counts` layer was
-  in the original file or inferred by xcell at load time
+  in the original file or inferred by skopia at load time
 - **what the numbers say** — value range, whether they're integers, whether
   every cell sums to the same total (the fingerprint of `normalize_total`), and
   the same check after undoing `log1p`
@@ -353,7 +353,7 @@ evidence first, codes shown), InterPro domains, pathways, the human or mouse
 ortholog, and links to NCBI, Ensembl, MGI/HGNC and UniProt. A mouse gene
 without a summary of its own shows its human ortholog's, labelled as such.
 Annotations are cached on your machine per species
-(`~/.cache/xcell/gene_annotations.sqlite`), so each gene is fetched once;
+(`~/.cache/skopia/gene_annotations.sqlite`), so each gene is fetched once;
 `⋯` → `Fetch gene annotations for all genes…` in the Genes panel header warms
 the cache for the whole dataset in the background.
 
@@ -398,7 +398,7 @@ it.
 - Create gene sets manually in Gene Manager
 - Import gene lists from files
 - Browse and import from MSigDB, Enrichr and STRING with the **Library** button (below)
-- Import the curated bundles shipped with xcell (**Import** in the Genes panel): the developmental
+- Import the curated bundles shipped with skopia (**Import** in the Genes panel): the developmental
   signaling pathways by role, and the developmental GO slim at coarse and fine depth for mouse and
   human. How the slim was derived, term by term, is in `docs/dev-goslim.md`.
 
@@ -422,7 +422,7 @@ source:
   (combined score above the threshold you set).
 
 A library is downloaded once (click **Fetch**) into
-`~/.cache/xcell/gene_set_sources` and searched locally after that, by set
+`~/.cache/skopia/gene_set_sources` and searched locally after that, by set
 name or by a gene it must contain. For every set the table shows how many
 members are present in your dataset and how many of those fall in each
 boolean `.var` column you tick (`highly_variable`, `spatially_variable`, …);
@@ -552,7 +552,7 @@ the Genes panel menu (`Enrichment analysis…`), or from Analyze → Genes →
   p-values are empirical and floor at about 2 / permutations, so raise the
   permutation count when many sets sit at the floor.
 
-Results persist in `uns["xcell_enrichment"]` (so they export with the
+Results persist in `uns["skopia_enrichment"]` (so they export with the
 file), appear in the analysis record and notebook, and can be reopened from
 the *Previous runs* menu. **Add to gene sets** files the overlap or
 leading-edge genes of every row passing the padj filter as a folder under
@@ -620,7 +620,7 @@ Typical workflow for "find DEGs by expression state in a region": lasso a region
 
 ### Text labels on an embedding
 
-**Add → Text**, then click the plot to place a label. Click a label to edit it: text (Shift+Enter for a new line), size in screen pixels, color, bold, italic, alignment, rotation, and an optional box behind it with its own color and opacity. Drag a label to move it; **Delete** in the editor removes it, **Revert** undoes the edits made since it was opened. A label is pinned to its place in the embedding's coordinates, so it stays on its cells when you pan, zoom, rotate or flip (Adjust), and it is shown only on the embedding and the two columns it was placed on. Labels are saved with the dataset in `uns['xcell_text_annotations_json']` and come back when an exported h5ad is reopened. The next label starts with the style of the last one.
+**Add → Text**, then click the plot to place a label. Click a label to edit it: text (Shift+Enter for a new line), size in screen pixels, color, bold, italic, alignment, rotation, and an optional box behind it with its own color and opacity. Drag a label to move it; **Delete** in the editor removes it, **Revert** undoes the edits made since it was opened. A label is pinned to its place in the embedding's coordinates, so it stays on its cells when you pan, zoom, rotate or flip (Adjust), and it is shown only on the embedding and the two columns it was placed on. Labels are saved with the dataset in `uns['skopia_text_annotations_json']` and come back when an exported h5ad is reopened. The next label starts with the style of the last one.
 
 ### 10. Trajectory Analysis
 
@@ -710,7 +710,7 @@ Re-running under a different prefix keeps both results side by side.
 *Singular* means exactly one cell type scored above its threshold, *None* means
 none did (thresholds are self-calibrated per class, as in PySingleCellNet's
 `comp_ct_thresh`). PySingleCellNet further splits the multi-type case into
-*Intermediate* and *Hybrid* using a graph of cell-type relatedness; xcell has no
+*Intermediate* and *Hybrid* using a graph of cell-type relatedness; skopia has no
 such graph, so it reports those cells as **Ambiguous** rather than guessing.
 
 **Train** builds a classifier from a categorical `.obs` column — balancing cells
@@ -845,14 +845,14 @@ To compare samples in one view (timepoints of a tissue, replicates, or any cross
 - The combined dataset behaves like any other — color by `sample`, run Compare Cells across samples, etc.
 
 What happens depends on the inputs:
-- **All spatial** (each file has `spatial` or `X_spatial` coordinates, or names its array in `uns['xcell_spatial_key']`): sections are placed left-to-right along the spatial x-axis with the configured gap, and the result keeps only `X_spatial`.
+- **All spatial** (each file has `spatial` or `X_spatial` coordinates, or names its array in `uns['skopia_spatial_key']`): sections are placed left-to-right along the spatial x-axis with the configured gap, and the result keeps only `X_spatial`.
 - **Anything else**: rows are concatenated with no geometry invented. `.obsm` arrays present in *every* input (a shared `X_pca`, say) are kept, so the combined dataset opens with a usable view; one-sided arrays are dropped.
 
 Notes:
 - Genes = intersection of the input files' var indices. Use **Gene IDs** swap in the Gene Panel beforehand if your files use different identifier columns.
 - `.h5ad` only. For `.rds` / 10x files, load them once via single-file Load and export as h5ad first.
 - In spatial mode per-file UMAPs/PCAs are dropped — re-run PCA/UMAP via the Scanpy modal on the combined data.
-- The result records what was done in `uns['xcell_combine']` (`mode: "spatial" | "concat"` plus the labels).
+- The result records what was done in `uns['skopia_combine']` (`mode: "spatial" | "concat"` plus the labels).
 
 ### 13. Load a Second Dataset
 
@@ -870,7 +870,7 @@ Notes:
 
 ## Customizing default parameters
 
-xcell ships with hardcoded defaults for every form in the Scanpy modal, the Line Association dialog, and the Display Settings panel (e.g. `filter_cells` → min genes = 25, point size = 3). To change these without touching code, drop a YAML (or JSON) file at **`~/.xcell/config.yaml`** — or set `XCELL_CONFIG_PATH` to point somewhere else. A sample is included at `docs/config.example.yaml`.
+skopia ships with hardcoded defaults for every form in the Scanpy modal, the Line Association dialog, and the Display Settings panel (e.g. `filter_cells` → min genes = 25, point size = 3). To change these without touching code, drop a YAML (or JSON) file at **`~/.skopia/config.yaml`** — or set `SKOPIA_CONFIG_PATH` to point somewhere else. A sample is included at `docs/config.example.yaml`.
 
 Shape is a nested mapping matching the form namespace — only include keys you want to override, everything else falls back to the built-in default:
 
@@ -905,7 +905,7 @@ Most changes you make in a session survive on the backend process: deleted cells
 `Analyze → Spatial → Localize` predicts spatial coordinates for an scRNA-seq
 dataset using a spatial dataset loaded in the other slot as the map. Each cell
 is placed by its *k* nearest transcriptional neighbours among the spatial cells,
-and the result is a new embedding — so everything xcell can already do with an
+and the result is a new embedding — so everything skopia can already do with an
 embedding then works on data that never had coordinates.
 
 The reason the tool leads with confidence rather than parameters: averaging the
@@ -1004,14 +1004,14 @@ every query cell of the type there. The panel then names the sets at risk while
 the parameters are still being chosen, rather than leaving the map to be
 believed first and doubted later.
 
-A benchmark pair with exact ground truth ships with xcell
+A benchmark pair with exact ground truth ships with skopia
 (`toy_localize_spatial.h5ad` and `toy_localize_scrna.h5ad`), deliberately
 containing populations the method cannot place, so the confidence scores can be
 seen doing their job.
 
-## Reproducing a session outside xcell
+## Reproducing a session outside skopia
 
-Clicking through a GUI leaves no methods section. xcell records every mutating
+Clicking through a GUI leaves no methods section. skopia records every mutating
 operation as you go — no need to arm anything first — and **File → Analysis
 record…** turns that into a notebook that re-runs the analysis, or Markdown you
 can paste into a paper.
@@ -1021,13 +1021,13 @@ The panel lists what happened, lets you annotate any step and attach figures
 Export writes into a folder you pick, next to your data.
 
 Every step is labelled with its fidelity, and the exported document leads with
-the tally — *"11 steps. 11 re-run as written; 0 need the xcell Python API; 0 are
+the tally — *"11 steps. 11 re-run as written; 0 need the skopia Python API; 0 are
 manual"* — because a methods supplement describing an analysis nobody ran is
 worse than none at all. Steps that ran on a cell selection rather than the whole
 dataset are flagged individually; the emitted code runs on everything, and the
 selection itself is written alongside the notebook so you can restore it.
 
-The record is stored in `uns['xcell_analysis_record']`, so an exported `.h5ad`
+The record is stored in `uns['skopia_analysis_record']`, so an exported `.h5ad`
 carries its own provenance and re-opening it continues the history.
 
 ## Features
@@ -1037,7 +1037,7 @@ carries its own provenance and re-opening it continues the history.
 - **Gene Manager** — search genes, create gene sets, import gene lists
 - **Scanpy integration** — run preprocessing, cell analysis (PCA, Neighbors, UMAP, Leiden), gene analysis, spatial analysis (contourize), and differential expression directly in the browser. Long-running operations (gene neighbors, spatial neighbors, spatial autocorrelation, contourize, line gene association) can be cancelled mid-run without corrupting session data.
 - **Cell type classification** — annotate cells with [PySingleCellNet](https://github.com/CahanLab/PySingleCellNet) (optional dependency; `pixi install -e pyscn`). Apply a trained classifier, or train one from a labelled `.obs` column. Gene coverage against the classifier is checked *before* the run, since unmatched genes are silently zero-filled and would otherwise yield confident-looking nonsense. Results land as a colored cell-type call, a per-cell confidence, an optional Singular/Ambiguous/None/Rand quality call, and a full cells × types score matrix you can color by or plot as an embedding.
-- **Expression scale detection** — every matrix (`.X` and each layer) is classified from its own values as raw counts, normalized, log-normalized, log-transformed, z-scored, or binary, so you always know what scale you're looking at. The verdict shows inline in the Source dropdown; an **ⓘ** opens the evidence and any provenance recorded by scanpy or by xcell's own preprocessing history.
+- **Expression scale detection** — every matrix (`.X` and each layer) is classified from its own values as raw counts, normalized, log-normalized, log-transformed, z-scored, or binary, so you always know what scale you're looking at. The verdict shows inline in the Source dropdown; an **ⓘ** opens the evidence and any provenance recorded by scanpy or by skopia's own preprocessing history.
 - **Trajectory analysis** — draw lines and associate genes with spatial trajectories
 - **Quilt mode** — lasso and rearrange tissue pieces: drag to translate, shift+drag to rotate, flip to reflect selected cell subsets
 - **Display settings** — adjust point size, opacity, colormaps, bivariate coloring, and an optional coordinate grid behind the plot (with data-coordinate tick labels along the bottom/left axes for visual reference and troubleshooting)
@@ -1045,15 +1045,15 @@ carries its own provenance and re-opening it continues the history.
 - **Figure builder** — compose multi-panel publication figures from a cell selection (or the full dataset). Each panel renders the same cells colored independently (single gene, gene set, bivariate — each axis a gene or a gene set — or metadata column), with its own color scale and title. Per-figure point size, opacity, background, and optional N×N grid overlay are shared so panels stay visually consistent. Per-panel "show highlight layers" toggle blends the dataset's current Highlight overlays into the panel. Shared pan/zoom keeps panels aligned. Export to PNG at 1×–4× DPI from the new **Figure** tab.
 - **Multi-dataset support** — load two datasets (h5ad, h5, rds, 10x matrix folders, or prefixed 10x file trios from GEO), switch between them, or view side by side in split mode
 - **Localize** — predict where dissociated cells came from. Load a spatial dataset alongside an scRNA-seq one and each scRNA-seq cell is placed by its nearest transcriptional neighbours among the spatial cells, producing a new embedding you can then explore like any other. Two confidence scores say which placements to believe — whether the cell resembles the reference at all, and whether its neighbours agree on a location — because a dispersed cell type produces a smooth, convincing map of nowhere. A built-in hold-out check reports accuracy against random and centroid baselines before you trust it. **Analyze → Spatial → Localize**
-- **Analysis record** — every operation you run is recorded (parameters, result, and the cell selection it ran on), and exports as a **Jupyter notebook you can execute** or a Markdown methods supplement, with your own notes and figures captured from the plot. Each step is labelled with how faithfully it reproduces — `exact` (the emitted line is the scanpy call xcell really made), `xcell` (needs xcell's Python API), or `manual` — and the document opens by stating that split in numbers, so nobody has to trust it blindly. **File → Analysis record…**
+- **Analysis record** — every operation you run is recorded (parameters, result, and the cell selection it ran on), and exports as a **Jupyter notebook you can execute** or a Markdown methods supplement, with your own notes and figures captured from the plot. Each step is labelled with how faithfully it reproduces — `exact` (the emitted line is the scanpy call skopia really made), `skopia` (needs skopia's Python API), or `manual` — and the document opens by stating that split in numbers, so nobody has to trust it blindly. **File → Analysis record…**
 - **Export** — download annotations and analysis results
 
 ## Project Structure
 
 ```
-xcell/
+skopia/
 ├── backend/
-│   ├── xcell/
+│   ├── skopia/
 │   │   ├── main.py          # FastAPI app entry point
 │   │   ├── adaptor.py       # DataAdaptor class (wraps AnnData)
 │   │   ├── diffexp.py       # Differential expression

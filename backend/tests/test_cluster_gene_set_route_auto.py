@@ -4,8 +4,8 @@ import anndata
 from scipy.sparse import csr_matrix
 from fastapi.testclient import TestClient
 
-from xcell.main import app
-from xcell.api import routes
+from skopia.main import app
+from skopia.api import routes
 
 
 def _adata():
@@ -26,7 +26,7 @@ def _adata():
 
 
 def test_route_auto_method(monkeypatch):
-    from xcell.adaptor import DataAdaptor
+    from skopia.adaptor import DataAdaptor
     ad, names = _adata()
     adaptor = DataAdaptor("x.h5ad", adata=ad)
     monkeypatch.setattr(routes, "get_adaptor", lambda dataset=None: adaptor)
@@ -54,7 +54,7 @@ def test_route_auto_method(monkeypatch):
 
 def test_route_forwards_auto_params(monkeypatch):
     """The auto knobs in the request body must reach the report call."""
-    from xcell.adaptor import DataAdaptor
+    from skopia.adaptor import DataAdaptor
     ad, names = _adata()
     adaptor = DataAdaptor("x.h5ad", adata=ad)
     monkeypatch.setattr(routes, "get_adaptor", lambda dataset=None: adaptor)
@@ -91,7 +91,7 @@ def test_route_forwards_auto_params(monkeypatch):
 
 def test_route_non_auto_unchanged(monkeypatch):
     """Non-auto methods keep the plain {clusters} response (no unassigned)."""
-    from xcell.adaptor import DataAdaptor
+    from skopia.adaptor import DataAdaptor
     ad, names = _adata()
     adaptor = DataAdaptor("x.h5ad", adata=ad)
     monkeypatch.setattr(routes, "get_adaptor", lambda dataset=None: adaptor)

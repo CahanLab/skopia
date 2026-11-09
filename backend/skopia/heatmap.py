@@ -1,0 +1,494 @@
+"""Heatmap data computation for Skopia.
+
+Standalone module for computing expression heatmap matrices with cell ordering,
+binning, gene grouping, and normalization.
+
+Rollback: delete this file and remove the /api/heatmap route from routes.py.
+"""
+
+import numpy as np
+from typing import Any, TYPE_CHECKING
+
+CELL_ORDERINGS = (
+    "none",
+    "category",
+    "line_position",
+    "line_distance",
+    "category_then_position",
+    "similarity",
+    "category_then_similarity",
+)
+
+# Average linkage needs the full condensed distance matrix (n²/2 doubles:
+# 100 MB at 5k cells, 40 GB at 100k), so above this many cells the cells
+# are first collapsed to k-means centroids and the centroids are clustered.
+SIMILARITY_EXACT_MAX_CELLS = 5000
+SIMILARITY_CENTROIDS = 500
+
+if TYPE_CHECKING:
+    from skopia.adaptor import DataAdaptor
+
+
+def compute_heatmap_data(
+    adaptor: "DataAdaptor",
+    genes: list[str],
+    gene_set_groups: list[dict[str, Any]] | None = None,
+    aggregate_gene_sets: bool = False,
+    cell_ordering: str = "none",
+    obs_column: str | None = None,
+    line_name: str | None = None,
+    gene_ordering: str = "as_provided",
+    n_bins: int = 0,
+    transform: str | None = None,
+    cell_indices: list[int] | None = None,
+) -> dict[str, Any]:
+    """Compute expression heatmap matrix.
+
+    Args:
+        adaptor: DataAdaptor instance
+        genes: List of gene names to include
+        gene_set_groups: Gene set grouping: [{"name": "set1", "genes": ["g1", "g2"]}, ...]
+        aggregate_gene_sets: If True, each row is a gene set mean instead of per-gene
+        cell_ordering: "none", "category", "line_position", "line_distance",
+            "category_then_position", "similarity" (average-linkage clustering
+            of the cells on the selected genes, in dendrogram leaf order) or
+            "category_then_similarity" (the same inside each category block)
+                       or "category_then_position"
+        obs_column: Obs column name for category-based ordering
+        line_name: Line name for position/distance-based ordering
+        gene_ordering: "as_provided", "peak_position" (where each row's
+            normalised profile peaks) or "similarity" (average-linkage
+            clustering of the normalised profiles, in dendrogram leaf
+            order); both stay within gene-set groups when rows are grouped
+        n_bins: Number of bins to average cells into (0 = no binning)
+        transform: Optional "log1p" transformation
+        cell_indices: Optional subset of cell indices
+
+    Returns:
+        Dictionary with matrix, row_labels, row_groups, column_groups, n_bins,
+        n_cells, and n_genes_hidden (how many requested genes the active .var
+        gene mask removed).
+    """
+    adata = adaptor.adata
+
+    if cell_ordering not in CELL_ORDERINGS:
+        raise ValueError(
+            f"cell_ordering must be one of {', '.join(CELL_ORDERINGS)}, got {cell_ordering!r}"
+        )
+    if gene_ordering not in ("as_provided", "peak_position", "similarity"):
+        raise ValueError(
+            f"gene_ordering must be 'as_provided', 'peak_position' or 'similarity', got {gene_ordering!r}"
+        )
+
+    # Filter to valid genes, then to the ones the active .var gene mask
+    # leaves visible — the heatmap draws what the Gene Panel shows, so a
+    # masked gene must not appear as a row.
+    valid_genes = [g for g in genes if g in adata.var.index]
+    valid_genes, n_genes_hidden = adaptor._filter_to_visible(valid_genes)
+    if not valid_genes:
+        return {
+            "matrix": [],
+            "row_labels": [],
+            "row_groups": [],
+            "column_groups": [],
+            "n_bins": 0,
+            "n_cells": 0,
+            "n_genes_hidden": n_genes_hidden,
+            "cell_ordering_method": None,
+        }
+
+    # Data source
+    adata_src = adaptor.normalized_adata if transform == "log1p" else adata
+
+    # Cell subset
+    if cell_indices is not None:
+        cell_idx = np.array(cell_indices, dtype=int)
+    else:
+        cell_idx = np.arange(adata.n_obs)
+
+    # Cell ordering
+    ordered_idx, col_groups = _order_cells(
+        adaptor, cell_idx, cell_ordering, obs_column, line_name
+    )
+
+    # Extract expression matrix (ordered_cells x genes)
+    gene_col_indices = [adata_src.var.index.get_loc(g) for g in valid_genes]
+    X = adata_src.X
+    if hasattr(X, "toarray"):
+        expr = X[ordered_idx][:, gene_col_indices].toarray().astype(np.float64)
+    else:
+        expr = np.array(X[ordered_idx][:, gene_col_indices], dtype=np.float64)
+
+    n_cells = expr.shape[0]
+
+    # Cell similarity: a permutation of the cells on the matrix as drawn,
+    # before binning so each bin averages cells that resemble each other.
+    # The category variant moves cells only within their block, like the
+    # gene orderings within gene-set groups.
+    cell_ordering_method = None
+    if cell_ordering == "similarity" or (cell_ordering == "category_then_similarity" and col_groups):
+        perm, cell_ordering_method = _similarity_order_cells(expr, col_groups)
+        expr = expr[perm]
+        ordered_idx = ordered_idx[perm]
+
+    # Gene set aggregation
+    if aggregate_gene_sets and gene_set_groups:
+        expr, row_labels, row_groups = _aggregate_gene_sets(
+            expr, valid_genes, gene_set_groups
+        )
+    else:
+        row_labels = list(valid_genes)
+        row_groups = _label_genes_by_set(valid_genes, gene_set_groups)
+
+    # Bin cells
+    effective_bins = n_cells
+    if n_bins > 0 and n_cells > n_bins:
+        expr, col_groups = _bin_cells(expr, n_bins, col_groups, n_cells)
+        effective_bins = n_bins
+
+    # Transpose to (genes x bins)
+    mat = expr.T
+
+    # Handle empty matrix
+    if mat.size == 0:
+        return {
+            "matrix": [],
+            "row_labels": row_labels,
+            "row_groups": row_groups,
+            "column_groups": col_groups,
+            "n_bins": effective_bins,
+            "n_cells": n_cells,
+            "n_genes_hidden": n_genes_hidden,
+            "cell_ordering_method": None,
+        }
+
+    # Per-row min-max normalization
+    rmin = np.nanmin(mat, axis=1, keepdims=True)
+    rmax = np.nanmax(mat, axis=1, keepdims=True)
+    rng = rmax - rmin
+    rng[rng == 0] = 1
+    mat = (mat - rmin) / rng
+
+    # Gene ordering. Both orderings respect gene-set groups when the rows
+    # are grouped (and not aggregated into one row per set): a gene never
+    # leaves its set, it only moves within it.
+    if gene_ordering != "as_provided" and mat.shape[1] > 0 and mat.shape[0] > 1:
+        if gene_ordering == "peak_position":
+            peaks = np.argmax(mat, axis=1)
+            order_fn = lambda idx: np.argsort(peaks[idx], kind="stable")  # noqa: E731
+        else:
+            order_fn = lambda idx: _similarity_order(mat[idx])  # noqa: E731
+        if (
+            row_groups
+            and any(g is not None for g in row_groups)
+            and not aggregate_gene_sets
+        ):
+            order = _order_within_groups(order_fn, row_groups)
+        else:
+            order = np.asarray(order_fn(np.arange(mat.shape[0])), dtype=int)
+        mat = mat[order]
+        row_labels = [row_labels[i] for i in order]
+        if row_groups:
+            row_groups = [row_groups[i] for i in order]
+
+    # Serialize
+    matrix_out = []
+    for row in mat:
+        matrix_out.append(
+            [round(float(v), 4) if not np.isnan(v) else 0.0 for v in row]
+        )
+
+    return {
+        "matrix": matrix_out,
+        "row_labels": row_labels,
+        "row_groups": row_groups,
+        "column_groups": col_groups,
+        "n_bins": effective_bins,
+        "n_cells": n_cells,
+        "n_genes_hidden": n_genes_hidden,
+        "cell_ordering_method": cell_ordering_method,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Cell ordering helpers
+# ---------------------------------------------------------------------------
+
+
+def _order_cells(
+    adaptor: "DataAdaptor",
+    cell_idx: np.ndarray,
+    ordering: str,
+    obs_column: str | None,
+    line_name: str | None,
+) -> tuple[np.ndarray, list[dict]]:
+    """Compute cell ordering and return (ordered_indices, column_groups)."""
+    if ordering == "none":
+        return cell_idx, []
+
+    if ordering in ("category", "category_then_similarity") and obs_column:
+        return _order_by_category(adaptor.adata, cell_idx, obs_column)
+
+    if ordering in ("line_position", "line_distance") and line_name:
+        return _order_by_line(
+            adaptor, cell_idx, line_name, use_distance=(ordering == "line_distance")
+        )
+
+    if ordering == "category_then_position" and obs_column and line_name:
+        return _order_category_then_position(
+            adaptor, cell_idx, obs_column, line_name
+        )
+
+    return cell_idx, []
+
+
+def _order_by_category(adata, cell_idx, obs_column):
+    if obs_column not in adata.obs.columns:
+        return cell_idx, []
+
+    vals = adata.obs[obs_column].values[cell_idx]
+    if hasattr(vals, "cat"):
+        cats = vals.cat.categories.tolist()
+        codes = vals.cat.codes.values.copy()
+    else:
+        cats = sorted(set(str(v) for v in vals))
+        cmap = {c: i for i, c in enumerate(cats)}
+        codes = np.array([cmap.get(str(v), -1) for v in vals])
+
+    order = np.argsort(codes, kind="stable")
+    ordered = cell_idx[order]
+    sorted_codes = codes[order]
+
+    groups = []
+    pos = 0
+    for ci, cn in enumerate(cats):
+        cnt = int(np.sum(sorted_codes == ci))
+        if cnt > 0:
+            groups.append({"name": str(cn), "start": pos, "size": cnt})
+            pos += cnt
+
+    return ordered, groups
+
+
+def _project(adaptor, line):
+    """(positions, distances) for every cell, against this line's own axes.
+
+    The adaptor projects onto the two .obsm columns the line was drawn
+    against, which is not necessarily columns 0/1.
+    """
+    pts = line.get("smoothedPoints") or line.get("points") or []
+    coords = adaptor._line_view_coords(line)
+    return adaptor._project_cells_onto_line(pts, coords)
+
+
+def _order_by_line(adaptor, cell_idx, line_name, use_distance):
+    line = _find_line(adaptor, line_name)
+    if line is None:
+        return cell_idx, []
+
+    positions, distances = _project(adaptor, line)
+    all_vals = distances if use_distance else positions
+    order = np.argsort(all_vals[cell_idx], kind="stable")
+    return cell_idx[order], []
+
+
+def _order_category_then_position(adaptor, cell_idx, obs_column, line_name):
+    adata = adaptor.adata
+    if obs_column not in adata.obs.columns:
+        return cell_idx, []
+
+    vals = adata.obs[obs_column].values[cell_idx]
+    if hasattr(vals, "cat"):
+        cats = vals.cat.categories.tolist()
+        codes = vals.cat.codes.values.copy()
+    else:
+        cats = sorted(set(str(v) for v in vals))
+        cmap = {c: i for i, c in enumerate(cats)}
+        codes = np.array([cmap.get(str(v), -1) for v in vals])
+
+    line = _find_line(adaptor, line_name)
+    if line is None:
+        return _order_by_category(adata, cell_idx, obs_column)
+
+    positions, _ = _project(adaptor, line)
+    subset_pos = positions[cell_idx]
+
+    order = np.lexsort((subset_pos, codes))
+    ordered = cell_idx[order]
+    sorted_codes = codes[order]
+
+    groups = []
+    pos = 0
+    for ci, cn in enumerate(cats):
+        cnt = int(np.sum(sorted_codes == ci))
+        if cnt > 0:
+            groups.append({"name": str(cn), "start": pos, "size": cnt})
+            pos += cnt
+
+    return ordered, groups
+
+
+def _find_line(adaptor, line_name):
+    for dl in adaptor.get_lines():
+        if dl.get("name") == line_name:
+            return dl
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Gene grouping helpers
+# ---------------------------------------------------------------------------
+
+
+def _aggregate_gene_sets(expr, gene_names, gene_set_groups):
+    """Aggregate expression by gene set mean. expr is (cells, genes)."""
+    name_to_idx = {g: i for i, g in enumerate(gene_names)}
+    rows, labels, groups = [], [], []
+
+    for gs in gene_set_groups:
+        idxs = [name_to_idx[g] for g in gs["genes"] if g in name_to_idx]
+        if not idxs:
+            continue
+        rows.append(np.nanmean(expr[:, idxs], axis=1))
+        labels.append(gs["name"])
+        groups.append(gs["name"])
+
+    if not rows:
+        return np.zeros((expr.shape[0], 0)), [], []
+    return np.column_stack(rows), labels, groups
+
+
+def _label_genes_by_set(gene_names, gene_set_groups):
+    """Map each gene to its gene set name (first match)."""
+    if not gene_set_groups:
+        return [None] * len(gene_names)
+    g2s: dict[str, str] = {}
+    for gs in gene_set_groups:
+        for g in gs["genes"]:
+            if g not in g2s:
+                g2s[g] = gs["name"]
+    return [g2s.get(g) for g in gene_names]
+
+
+# ---------------------------------------------------------------------------
+# Binning
+# ---------------------------------------------------------------------------
+
+
+def _bin_cells(expr, n_bins, col_groups, n_cells):
+    """Bin cells by averaging. expr is (cells, genes)."""
+    edges = np.linspace(0, n_cells, n_bins + 1, dtype=int)
+    binned = np.zeros((n_bins, expr.shape[1]))
+    for i in range(n_bins):
+        s, e = edges[i], edges[i + 1]
+        if e > s:
+            binned[i] = np.nanmean(expr[s:e], axis=0)
+
+    if col_groups:
+        adj = []
+        for g in col_groups:
+            bs = int(g["start"] / n_cells * n_bins)
+            be = int((g["start"] + g["size"]) / n_cells * n_bins)
+            adj.append({"name": g["name"], "start": bs, "size": max(1, be - bs)})
+        return binned, adj
+
+    return binned, col_groups
+
+
+# ---------------------------------------------------------------------------
+# Gene sorting
+# ---------------------------------------------------------------------------
+
+
+def _similarity_order(rows: np.ndarray) -> np.ndarray:
+    """Dendrogram leaf order of the rows (average linkage, euclidean).
+
+    The rows are already min-max normalised per gene, so euclidean distance
+    compares profile *shape* rather than expression level; NaN (a gene with
+    no expression in any bin) is treated as 0. Fewer than three rows have
+    nothing to cluster and keep their order.
+    """
+    n = rows.shape[0]
+    if n < 3:
+        return np.arange(n)
+    from scipy.cluster.hierarchy import leaves_list, linkage  # noqa: PLC0415
+
+    clean = np.nan_to_num(np.asarray(rows, dtype=np.float64), nan=0.0)
+    return np.asarray(leaves_list(linkage(clean, method="average", metric="euclidean")), dtype=int)
+
+
+def _scale_per_gene(expr: np.ndarray) -> np.ndarray:
+    """Each gene to its own 0–1 range over the cells, so a highly expressed
+    gene does not dominate the distance; NaN as 0."""
+    x = np.nan_to_num(np.asarray(expr, dtype=np.float64), nan=0.0)
+    lo = x.min(axis=0, keepdims=True)
+    rng = x.max(axis=0, keepdims=True) - lo
+    rng[rng == 0] = 1
+    return (x - lo) / rng
+
+
+def _similarity_order_cells(expr: np.ndarray, col_groups: list[dict]) -> tuple[np.ndarray, str]:
+    """Permutation of the rows of ``expr`` (cells × genes) by similarity,
+    within each column group when there are any; with the method used
+    (``exact`` leaf order, or ``centroids`` when a block is over the cap)."""
+    feats = _scale_per_gene(expr)
+    blocks = [(g["start"], g["start"] + g["size"]) for g in col_groups] or [(0, feats.shape[0])]
+    perm = np.arange(feats.shape[0])
+    method = "exact"
+    for s, e in blocks:
+        local, m = _similarity_order_block(feats[s:e])
+        perm[s:e] = s + local
+        if m == "centroids":
+            method = m
+    return perm, method
+
+
+def _similarity_order_block(feats: np.ndarray) -> tuple[np.ndarray, str]:
+    n = feats.shape[0]
+    if n <= SIMILARITY_EXACT_MAX_CELLS:
+        return _similarity_order(feats), "exact"
+
+    # scikit-learn (a scanpy dependency) rather than scipy's kmeans2: its
+    # k-means++ init is vectorised (scipy's took a minute at 60k cells) and
+    # it never leaves a centroid empty.
+    from sklearn.cluster import KMeans  # noqa: PLC0415
+
+    k = min(SIMILARITY_CENTROIDS, n)
+    km = KMeans(n_clusters=k, n_init=1, random_state=0).fit(feats)
+    centroids, labels = km.cluster_centers_, km.labels_
+    present = np.flatnonzero(np.bincount(labels, minlength=k) > 0)
+    leaf = present[_similarity_order(centroids[present])]
+    out: list[np.ndarray] = []
+    for pos, c in enumerate(leaf):
+        members = np.flatnonzero(labels == c)
+        # Order a block's cells along the axis towards the next block (the
+        # last block continues the axis from the previous one) so the join
+        # between neighbouring blocks is between their nearest cells.
+        if pos + 1 < len(leaf):
+            axis = centroids[leaf[pos + 1]] - centroids[c]
+        elif pos > 0:
+            axis = centroids[c] - centroids[leaf[pos - 1]]
+        else:
+            axis = None
+        if axis is not None and members.size > 1 and np.any(axis):
+            members = members[np.argsort(feats[members] @ axis, kind="stable")]
+        out.append(members)
+    return np.concatenate(out), "centroids"
+
+
+def _order_within_groups(order_fn, row_groups):
+    """Apply ``order_fn`` (positions → permutation of them) inside each gene
+    set group, keeping the groups in first-appearance order."""
+    seen: set[str | None] = set()
+    group_order: list[str | None] = []
+    for g in row_groups:
+        if g not in seen:
+            seen.add(g)
+            group_order.append(g)
+
+    result: list[int] = []
+    for gname in group_order:
+        group_indices = np.array([i for i, g in enumerate(row_groups) if g == gname], dtype=int)
+        result.extend(int(i) for i in group_indices[np.asarray(order_fn(group_indices), dtype=int)])
+
+    return np.array(result, dtype=int)

@@ -1,4 +1,4 @@
-"""Which xcell produced a result.
+"""Which skopia produced a result.
 
 0.1.0 covered eight months of main, so a version alone says little between
 releases: a checkout adds its commit and whether it had uncommitted changes.
@@ -15,11 +15,11 @@ import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
 
-import xcell
-from xcell import provenance
-from xcell.adaptor import DataAdaptor
-from xcell.analysis_record import AnalysisRecord, Step
-from xcell.notebook_export import to_markdown, to_notebook
+import skopia
+from skopia import provenance
+from skopia.adaptor import DataAdaptor
+from skopia.analysis_record import AnalysisRecord, Step
+from skopia.notebook_export import to_markdown, to_notebook
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -62,19 +62,19 @@ def test_a_checkout_reports_its_commit():
     info = provenance.build_info()
     head = subprocess.run(['git', 'rev-parse', '--short=7', 'HEAD'], cwd=REPO,
                           capture_output=True, text=True).stdout.strip()
-    assert info['version'] == xcell.__version__
+    assert info['version'] == skopia.__version__
     assert info['commit'] == head
     assert isinstance(info['dirty'], bool)
-    assert provenance.build_label().startswith(xcell.__version__)
+    assert provenance.build_label().startswith(skopia.__version__)
 
 
 def test_no_git_means_the_version_alone(monkeypatch):
     def missing(*a, **k):
         raise FileNotFoundError('git')
     monkeypatch.setattr(provenance.subprocess, 'run', missing)
-    assert provenance.build_info() == {'version': xcell.__version__, 'commit': None,
+    assert provenance.build_info() == {'version': skopia.__version__, 'commit': None,
                                        'dirty': None, 'tag': None}
-    assert provenance.build_label() == xcell.__version__
+    assert provenance.build_label() == skopia.__version__
 
 
 def test_an_installed_copy_does_not_report_some_other_repository(monkeypatch, tmp_path):
@@ -89,14 +89,14 @@ def test_each_step_records_the_build_that_ran_it(monkeypatch):
     monkeypatch.setattr(provenance, 'build_label', lambda info=None: '0.2.0+gabc1234')
     r = AnalysisRecord()
     step = r.add_step('log1p', {}, {'status': 'completed'})
-    assert step.xcell == '0.2.0+gabc1234'
+    assert step.skopia == '0.2.0+gabc1234'
     again = AnalysisRecord.from_dict(r.to_dict())
-    assert again.steps[0].xcell == '0.2.0+gabc1234'
+    assert again.steps[0].skopia == '0.2.0+gabc1234'
 
 
 def test_a_step_from_before_the_stamp_reads_as_unknown():
     old = {'index': 0, 'action': 'log1p', 'params': {}, 'result': {}, 'timestamp': ''}
-    assert Step.from_dict(old).xcell is None
+    assert Step.from_dict(old).skopia is None
 
 
 # --- exports ----------------------------------------------------------------
@@ -112,32 +112,32 @@ def _adaptor():
 def test_an_exported_h5ad_says_which_build_wrote_it(tmp_path):
     a = _adaptor()
     out = a.prepare_export_with_lines()
-    stamp = out.uns['xcell_provenance']
-    assert stamp['version'] == xcell.__version__
+    stamp = out.uns['skopia_provenance']
+    assert stamp['version'] == skopia.__version__
     assert stamp['build'] == provenance.build_label()
     assert stamp['exported_at']
-    assert 'xcell_provenance' not in a.adata.uns  # the live data is untouched
+    assert 'skopia_provenance' not in a.adata.uns  # the live data is untouched
     # h5ad cannot store None, so a missing commit must be left out, not written.
     path = tmp_path / 'out.h5ad'
     out.write_h5ad(path)
     with h5py.File(path) as f:
-        assert f['uns']['xcell_provenance']['version'][()].decode() == xcell.__version__
+        assert f['uns']['skopia_provenance']['version'][()].decode() == skopia.__version__
 
 
 def _record(labels):
     r = AnalysisRecord(source={'path': '/data/x.h5ad', 'n_cells': 20, 'n_genes': 10})
     for i, label in enumerate(labels):
         step = r.add_step('leiden', {'resolution': 1.0, 'key_added': f'leiden{i}'}, {'n_clusters': 3})
-        step.xcell = label
+        step.skopia = label
     return r
 
 
 def test_the_notebook_names_the_build_that_recorded_its_steps():
     nb = to_notebook(_record(['0.2.0', '0.2.0']))
     header = ''.join(nb['cells'][0]['source'])
-    assert 'xcell](https://github.com/CahanLab/xcell) 0.2.0 on' in header
-    assert nb['metadata']['xcell']['version'] == xcell.__version__
-    assert nb['metadata']['xcell']['build'] == provenance.build_label()
+    assert 'skopia](https://github.com/CahanLab/skopia) 0.2.0 on' in header
+    assert nb['metadata']['skopia']['version'] == skopia.__version__
+    assert nb['metadata']['skopia']['build'] == provenance.build_label()
 
 
 def test_a_record_that_spans_builds_says_which_steps_each_ran():
@@ -149,19 +149,19 @@ def test_a_record_that_spans_builds_says_which_steps_each_ran():
 def test_the_backend_reports_its_build():
     from fastapi.testclient import TestClient
 
-    from xcell.main import app
+    from skopia.main import app
     body = TestClient(app).get('/').json()
-    assert body['version'] == xcell.__version__
+    assert body['version'] == skopia.__version__
     assert body['build'] == provenance.build_label()
 
 
 def test_the_record_route_shows_each_steps_build(monkeypatch):
     from fastapi.testclient import TestClient
 
-    from xcell.api import routes
-    from xcell.main import app
+    from skopia.api import routes
+    from skopia.main import app
     a = _adaptor()
     a._log_action('log1p', {}, {'status': 'completed'})
     monkeypatch.setattr(routes, 'get_adaptor', lambda dataset=None: a)
     steps = TestClient(app).get('/api/record').json()['steps']
-    assert steps and all(s['xcell'] == provenance.build_label() for s in steps)
+    assert steps and all(s['skopia'] == provenance.build_label() for s in steps)

@@ -9,7 +9,7 @@ const SHORTCUTS = [
 
 // The path this was written for, from a real session: 11 segments, 140 chars.
 const DEEP =
-  '/Users/pcahan/CahanLab Dropbox/Patrick Cahan/PC/PC/projects/SJD/data/spatial/xcell/h5ad_empty_removed/best_per_stage'
+  '/Users/pcahan/CahanLab Dropbox/Patrick Cahan/PC/PC/projects/SJD/data/spatial/skopia/h5ad_empty_removed/best_per_stage'
 
 const labels = (t: { crumbs: { label: string }[] }) => t.crumbs.map((c) => c.label)
 

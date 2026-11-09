@@ -29,12 +29,12 @@
 
 ### Task 1: Backend `figure_data` for the two kinds
 
-**Files:** `backend/xcell/adaptor.py` (figures section), `backend/tests/test_figures_adaptor.py`.
+**Files:** `backend/skopia/adaptor.py` (figures section), `backend/tests/test_figures_adaptor.py`.
 
 **Interfaces:** `figure_data` returns for `composition_barplot`: the `crosstab` dict (`a_categories, b_categories, counts, b_colors?, n_cells, n_total`) plus `{'params': {...}}`; for `expression_heatmap`: `compute_heatmap_data`'s dict (`matrix, row_labels, row_groups, column_groups, n_bins, n_cells, n_genes_hidden`). `_validate_figure_inputs('expression_heatmap', …)` accepts `cell_indices: list[int] | None` and validates `line_name` against `self._drawn_lines` (or however lines are looked up — `grep -n "def .*line" adaptor.py`); `composition_barplot` accepts `cell_indices` too.
 
 - [ ] **Step 1: Failing tests** (append): barplot data equals `a.crosstab('grp','batch')`; with `inputs.cell_subset='half'` the counts cover 40 cells (`n_cells == 40`) and with `cell_indices=[0..9]` 10; heatmap data with two gene sets returns `matrix` with `len(row_labels) == 6` and `column_groups` for `obs_column='grp'`; `aggregate_gene_sets=True` gives 2 rows; unknown `line_name` → `ValueError` mentioning the name; `create_figure('expression_heatmap', inputs={'gene_sets': []})` → 400-style `ValueError`.
-- [ ] **Step 2: RED. Step 3: implement** the two `figure_data` branches: resolve `cell_indices` = `get_cell_subset_indices(cell_subset)` if `cell_subset` else `inputs.get('cell_indices')`; barplot → `self.crosstab(a, b, active_cell_indices=cell_indices)`; heatmap → `from xcell.heatmap import compute_heatmap_data`; `genes` = concatenation of the sets' genes (de-duplicated, order kept), `gene_set_groups = [{'name': s['name'], 'genes': s['genes']}]` (check the shape `HeatmapView` sends in its POST — mirror it exactly), `aggregate_gene_sets`, `cell_ordering`, `obs_column`, `line_name`, `gene_ordering`, `n_bins`, `cell_indices`. Line validation: look up how `/api/heatmap/data` validates `line_name` and reuse.
+- [ ] **Step 2: RED. Step 3: implement** the two `figure_data` branches: resolve `cell_indices` = `get_cell_subset_indices(cell_subset)` if `cell_subset` else `inputs.get('cell_indices')`; barplot → `self.crosstab(a, b, active_cell_indices=cell_indices)`; heatmap → `from skopia.heatmap import compute_heatmap_data`; `genes` = concatenation of the sets' genes (de-duplicated, order kept), `gene_set_groups = [{'name': s['name'], 'genes': s['genes']}]` (check the shape `HeatmapView` sends in its POST — mirror it exactly), `aggregate_gene_sets`, `cell_ordering`, `obs_column`, `line_name`, `gene_ordering`, `n_bins`, `cell_indices`. Line validation: look up how `/api/heatmap/data` validates `line_name` and reuse.
 - [ ] **Step 4: GREEN. Step 5: Commit** `feat(figures): barplot and expression heatmap figure data`.
 
 ---

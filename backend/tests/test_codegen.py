@@ -8,16 +8,16 @@ taught the registry about must degrade to prose rather than vanish.
 import re
 from pathlib import Path
 
-from xcell.analysis_record import AnalysisRecord
-from xcell.codegen import (
+from skopia.analysis_record import AnalysisRecord
+from skopia.codegen import (
     EXACT,
     MANUAL,
-    XCELL,
+    SKOPIA,
     registered_actions,
     translate,
 )
 
-ADAPTOR_SRC = Path(__file__).resolve().parents[1] / 'xcell' / 'adaptor.py'
+ADAPTOR_SRC = Path(__file__).resolve().parents[1] / 'skopia' / 'adaptor.py'
 
 
 def _step(action, params=None, result=None, **kw):
@@ -94,7 +94,7 @@ def test_pca_without_a_gene_subset_is_a_one_liner():
 
 
 def test_pca_on_a_var_column_subsets_the_genes_first():
-    """xcell copies out the gene subset, runs PCA there, and copies X_pca back."""
+    """skopia copies out the gene subset, runs PCA there, and copies X_pca back."""
     t = translate(_step('pca', {'n_comps': 30, 'svd_solver': 'arpack',
                                 'gene_subset': 'highly_variable'}, {}))
     body = '\n'.join(t.code)
@@ -104,10 +104,10 @@ def test_pca_on_a_var_column_subsets_the_genes_first():
     assert t.fidelity == EXACT
 
 
-def test_pca_on_an_explicit_gene_list_falls_back_to_the_xcell_api():
+def test_pca_on_an_explicit_gene_list_falls_back_to_the_skopia_api():
     t = translate(_step('pca', {'n_comps': 30, 'svd_solver': 'arpack',
                                 'gene_subset': ['A', 'B']}, {}))
-    assert t.fidelity == XCELL
+    assert t.fidelity == SKOPIA
 
 
 def test_filter_cells_emits_one_scanpy_call_per_threshold():
@@ -138,10 +138,10 @@ def test_highly_variable_genes_emits_every_logged_parameter():
 def test_qc_metrics_keeps_an_explicit_percent_top_none():
     """Dropping this None silently changes the call.
 
-    xcell passes percent_top=None, meaning "no top-N columns". scanpy's own
+    skopia passes percent_top=None, meaning "no top-N columns". scanpy's own
     default is (50, 100, 200, 500), which raises IndexError on any dataset with
     fewer than 500 genes — so omitting the argument produces a notebook that
-    crashes where xcell did not.
+    crashes where skopia did not.
     """
     t = translate(_step('calculate_qc_metrics',
                         {'qc_vars': [], 'percent_top': None, 'log1p': True}, {}))
@@ -163,7 +163,7 @@ def test_spatial_neighbors_emits_the_squidpy_call():
 
 
 def test_a_section_aware_spatial_graph_warns_that_the_call_is_incomplete():
-    """xcell drops cross-section edges after squidpy returns; the call alone
+    """skopia drops cross-section edges after squidpy returns; the call alone
     would not reproduce that."""
     t = translate(_step('spatial_neighbors', {
         'n_neighs': 6, 'coord_type': 'generic', 'spatial_key': 'spatial',
@@ -172,13 +172,13 @@ def test_a_section_aware_spatial_graph_warns_that_the_call_is_incomplete():
     assert any('section' in w.lower() for w in t.warnings)
 
 
-# --- the xcell tier -------------------------------------------------------
+# --- the skopia tier -------------------------------------------------------
 
-def test_an_xcell_only_operation_uses_the_xcell_api():
+def test_an_skopia_only_operation_uses_the_skopia_api():
     t = translate(_step('ligrec', {'interactions': ['a|b'], 'write_significance': True}, {}))
-    assert t.fidelity == XCELL
+    assert t.fidelity == SKOPIA
     assert any('xa.finalize_ligrec(' in line for line in t.code)
-    assert 'from xcell.adaptor import DataAdaptor' in t.imports
+    assert 'from skopia.adaptor import DataAdaptor' in t.imports
 
 
 def test_two_phase_operations_are_driven_to_completion():
@@ -187,8 +187,8 @@ def test_two_phase_operations_are_driven_to_completion():
         'genes': ['Col1a1'], 'contour_levels': 6, 'log_transform': True,
         'smooth_sigma': 2.0, 'grid_res': 200, 'annotation_key': 'contour_1',
     }, {}))
-    assert t.fidelity == XCELL
-    assert any('_xcell_run(' in line and 'prepare_contourize' in line for line in t.code)
+    assert t.fidelity == SKOPIA
+    assert any('_skopia_run(' in line and 'prepare_contourize' in line for line in t.code)
 
 
 # --- the manual tier ------------------------------------------------------
@@ -348,8 +348,8 @@ def test_label_cells_needs_its_selection_to_be_reproducible():
 def test_codegen_and_adaptor_agree_on_the_uns_key():
     """codegen must not import the adaptor (it promises no AnnData, no adaptor),
     so the key is spelled twice. This is what keeps the two spellings equal."""
-    from xcell.adaptor import _GRAPH_META_KEY as adaptor_key
-    from xcell.codegen import _GRAPH_META_KEY as codegen_key
+    from skopia.adaptor import _GRAPH_META_KEY as adaptor_key
+    from skopia.codegen import _GRAPH_META_KEY as codegen_key
 
     assert adaptor_key == codegen_key
 
@@ -378,13 +378,13 @@ def test_umap_on_a_named_graph_emits_the_neighbors_entry_it_needs():
     code = '\n'.join(t.code)
     # Emitting only the call would fail in the notebook: the entry it names
     # does not exist there.
-    assert "adata.uns['_xcell_graph']" in code
+    assert "adata.uns['_skopia_graph']" in code
     assert "'connectivities_key': 'spatial_connectivities'" in code
     assert "'method': 'umap'" in code
     assert "'distances_key'" in code
-    assert "neighbors_key='_xcell_graph'" in code
+    assert "neighbors_key='_skopia_graph'" in code
     assert "key_added='X_umap_spatial'" in code
-    # graph_key is xcell's own parameter name; scanpy has no such argument.
+    # graph_key is skopia's own parameter name; scanpy has no such argument.
     assert 'graph_key=' not in code
 
 

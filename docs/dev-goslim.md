@@ -1,6 +1,6 @@
 # The developmental GO slim: what it is and how it was derived
 
-xcell ships a Gene Ontology (GO) slim for developmental biology as four
+skopia ships a Gene Ontology (GO) slim for developmental biology as four
 curated gene-set bundles (Genes → Sets → Import):
 
 | Bundle file | Sets | Layout |
@@ -15,9 +15,9 @@ state their provenance. The files that produced them are in the repository:
 
 | File | Role |
 |---|---|
-| `backend/xcell/data/dev_goslim.tsv` | the slim itself: every term, its depth, its parent, and a flag for cross-links |
-| `backend/xcell/data/build_dev_goslim.py` | validates the table against GO and writes the four bundles |
-| `backend/xcell/data/carve_dev_goslim_candidates.py` | the mechanical first pass that proposed fine-term candidates |
+| `backend/skopia/data/dev_goslim.tsv` | the slim itself: every term, its depth, its parent, and a flag for cross-links |
+| `backend/skopia/data/build_dev_goslim.py` | validates the table against GO and writes the four bundles |
+| `backend/skopia/data/carve_dev_goslim_candidates.py` | the mechanical first pass that proposed fine-term candidates |
 | `backend/tests/test_build_dev_goslim.py`, `test_dev_goslim_bundles.py` | the contract: validation faults, closure, bundle shape, spot checks |
 | `docs/superpowers/specs/2026-10-08-dev-goslim-design.md` | the design note with each decision and its reason |
 
@@ -26,7 +26,7 @@ state their provenance. The files that produced them are in the repository:
 Every set is one GO biological-process term, and its genes are the term's
 **closed annotation**: every gene annotated to the term or to any descendant
 reached along `is_a` and `part_of` relationships. This is the closure GO's own
-tools (`map2slim`) compute and the one xcell's GO library uses, so a slim set
+tools (`map2slim`) compute and the one skopia's GO library uses, so a slim set
 and the matching GO-library set are identical.
 
 Two consequences to keep in mind:
@@ -46,7 +46,7 @@ Two consequences to keep in mind:
   genes.
 
 Annotations of every evidence code are used, including IEA, and rows with a
-`NOT` qualifier are skipped, as in xcell's GO library.
+`NOT` qualifier are skipped, as in skopia's GO library.
 
 ## Source files and versions
 
@@ -229,21 +229,21 @@ GO, not independent evidence.
 From `backend/`:
 
 ```
-pixi run -e dev python xcell/data/build_dev_goslim.py
+pixi run -e dev python skopia/data/build_dev_goslim.py
 ```
 
-The script downloads go-basic.obo and both GAFs into xcell's gene-set-source
+The script downloads go-basic.obo and both GAFs into skopia's gene-set-source
 cache if they are not there (about 60 MB), validates the table, writes the
 bundles and prints the report. Edit `dev_goslim.tsv`, never the JSON. To
 propose candidates for a new or changed folder:
 
 ```
-pixi run -e dev python xcell/data/carve_dev_goslim_candidates.py --root 'limb development' --min 20
+pixi run -e dev python skopia/data/carve_dev_goslim_candidates.py --root 'limb development' --min 20
 ```
 
 ## Citing
 
-The term lists are xcell's; the memberships are the Gene Ontology
+The term lists are skopia's; the memberships are the Gene Ontology
 Consortium's annotations. Cite GO (Ashburner et al. 2000; The Gene Ontology
 Consortium 2023) and state the release and GAF dates above, and MGI for the
 mouse annotations (Baldarelli et al. 2024).

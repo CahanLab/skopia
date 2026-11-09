@@ -1,6 +1,6 @@
 """The developmental GO slim build: table validation, closure, bundle shape.
 
-``xcell/data/build_dev_goslim.py`` turns ``dev_goslim.tsv`` (coarse terms and
+``skopia/data/build_dev_goslim.py`` turns ``dev_goslim.tsv`` (coarse terms and
 the fine terms nested under them) into four gene-set bundles. A wrong GO id,
 an obsolete one, or a fine term quietly placed under a coarse term it does
 not descend from would ship as a plausible-looking set, so the validator is
@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from xcell import gene_set_library
-from xcell import go_semantic as gos
+from skopia import gene_set_library
+from skopia import go_semantic as gos
 
 _SPEC = importlib.util.spec_from_file_location(
     'build_dev_goslim', Path(gene_set_library.LIBRARY_DIR).parent / 'build_dev_goslim.py')

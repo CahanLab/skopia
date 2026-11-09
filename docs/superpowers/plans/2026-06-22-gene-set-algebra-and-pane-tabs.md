@@ -15,12 +15,12 @@
 - Frontend checks: `cd frontend && npx tsc --noEmit && npm run build`
 - Commit trailer: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`
 - Isolated smoke stack (never touch the user's :8000/:5173): backend
-  `XCELL_DATA_PATH=<abs>/backend/xcell/data/toy_spatial_ligrec.h5ad pixi run -e dev uvicorn xcell.main:app --host 127.0.0.1 --port 8001`
-  + frontend `XCELL_BACKEND=http://127.0.0.1:8001 npx vite --port 5180 --strictPort`. Clean up servers + screenshots after.
+  `SKOPIA_DATA_PATH=<abs>/backend/skopia/data/toy_spatial_ligrec.h5ad pixi run -e dev uvicorn skopia.main:app --host 127.0.0.1 --port 8001`
+  + frontend `SKOPIA_BACKEND=http://127.0.0.1:8001 npx vite --port 5180 --strictPort`. Clean up servers + screenshots after.
 
 ## File map
-- `backend/xcell/adaptor.py` — add `column_to_gene_names` (near `get_var_boolean_columns`, ~:3287).
-- `backend/xcell/api/routes.py` — add `GET /var/column_genes` (near the other `/var/*` routes, ~:2037).
+- `backend/skopia/adaptor.py` — add `column_to_gene_names` (near `get_var_boolean_columns`, ~:3287).
+- `backend/skopia/api/routes.py` — add `GET /var/column_genes` (near the other `/var/*` routes, ~:2037).
 - `backend/tests/test_var_column_genes.py` — new.
 - `frontend/src/hooks/useData.ts` — add `fetchVarBooleanColumns`, `fetchVarColumnGenes`.
 - `frontend/src/lib/geneSetOps.ts` — new pure set-op util.
@@ -226,7 +226,7 @@ git commit -m "$(printf 'frontend: Genes pane Sets | Color tabs (de-crowd Bivari
 ### Task 3: Backend `/var/column_genes`
 
 **Files:**
-- Modify `backend/xcell/adaptor.py`, `backend/xcell/api/routes.py`
+- Modify `backend/skopia/adaptor.py`, `backend/skopia/api/routes.py`
 - Create `backend/tests/test_var_column_genes.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -241,9 +241,9 @@ import pytest
 from scipy.sparse import csr_matrix
 from fastapi.testclient import TestClient
 
-from xcell.adaptor import DataAdaptor
-from xcell.main import app
-from xcell.api import routes
+from skopia.adaptor import DataAdaptor
+from skopia.main import app
+from skopia.api import routes
 
 
 def _adata():
@@ -296,7 +296,7 @@ Expected: FAIL (`DataAdaptor` has no attribute `column_to_gene_names`).
 
 - [ ] **Step 3: Implement the adaptor method**
 
-In `backend/xcell/adaptor.py`, immediately after `get_var_boolean_columns` (ends ~:3314) add:
+In `backend/skopia/adaptor.py`, immediately after `get_var_boolean_columns` (ends ~:3314) add:
 
 ```python
     def column_to_gene_names(self, column: str) -> list[str]:
@@ -316,7 +316,7 @@ In `backend/xcell/adaptor.py`, immediately after `get_var_boolean_columns` (ends
 
 - [ ] **Step 4: Implement the route**
 
-In `backend/xcell/api/routes.py`, after the `get_var_boolean_column_values` route (~:2074) add:
+In `backend/skopia/api/routes.py`, after the `get_var_boolean_column_values` route (~:2074) add:
 
 ```python
 @router.get("/var/column_genes")
@@ -340,7 +340,7 @@ Expected: PASS (5 tests).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/xcell/api/routes.py backend/tests/test_var_column_genes.py
+git add backend/skopia/adaptor.py backend/skopia/api/routes.py backend/tests/test_var_column_genes.py
 git commit -m "$(printf 'backend: GET /var/column_genes resolves a boolean .var column to gene names\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>')"
 ```
 

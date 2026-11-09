@@ -66,7 +66,7 @@ same binary-buffer fast path.
 
 ## 3. Backend + data model
 
-### 3.1 `adaptor.get_embedding` (`backend/xcell/adaptor.py`)
+### 3.1 `adaptor.get_embedding` (`backend/skopia/adaptor.py`)
 
 Add an optional `dim_z`:
 
@@ -95,7 +95,7 @@ def get_embedding(self, name, dim_x=0, dim_y=1, dim_z=None) -> dict[str, Any]:
   `adaptor.py:507`). The frontend uses `schema.embedding_dims[name]` to decide
   whether 3D is available (≥ 3) and to populate the Z dropdown's options.
 
-### 3.2 REST route (`backend/xcell/api/routes.py`)
+### 3.2 REST route (`backend/skopia/api/routes.py`)
 
 ```python
 def get_embedding(name, dim_x=Query(0), dim_y=Query(1),
@@ -231,8 +231,8 @@ compute each category's **3D centroid** once, then project centroids to screen o
 
 | File | Change |
 |------|--------|
-| `backend/xcell/adaptor.py` | `get_embedding` gains `dim_z`; add `_clamp_one_dim` (schema already reports `embedding_dims`) |
-| `backend/xcell/api/routes.py` | `get_embedding` route gains `dim_z` query param |
+| `backend/skopia/adaptor.py` | `get_embedding` gains `dim_z`; add `_clamp_one_dim` (schema already reports `embedding_dims`) |
+| `backend/skopia/api/routes.py` | `get_embedding` route gains `dim_z` query param |
 | `backend/tests/…` | new tests for `dim_z` behavior |
 | `frontend/src/store.ts` | `EmbeddingData.z`/`dim_z`; `embeddingDims[].z`; `viewMode` state |
 | `frontend/src/hooks/useData.ts` | `useEmbedding` sends `dim_z` in 3D |

@@ -3,7 +3,7 @@
  *
  * Expression relative to reference cells, clipped, smoothed in windows along
  * each chromosome, centred per cell, then clustered into clones. The backend
- * (xcell/cnv.py) does the work; this modal chooses where gene positions come
+ * (skopia/cnv.py) does the work; this modal chooses where gene positions come
  * from, which cells are the normal reference, and how clones are called. It
  * writes X_<key>, <key>_score and <key>_clone, and can save a CNV heatmap
  * figure of the result.

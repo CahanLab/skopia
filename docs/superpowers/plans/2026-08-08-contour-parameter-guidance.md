@@ -23,7 +23,7 @@
 
 **Reference implementation.** `frontend/src/components/LocalizeModal.tsx` already does all three parts of this: `adviseParameters` (~line 99), the advice renderer (~line 457), and `ParameterGuide` (~line 579). Read it before starting. Match its voice — concrete, quantitative, willing to say a setting is wrong.
 
-**The two facts the guidance exists to convey**, both verified in `backend/xcell/adaptor.py:_interp_smooth_subset` and `backend/xcell/multicontour.py`:
+**The two facts the guidance exists to convey**, both verified in `backend/skopia/adaptor.py:_interp_smooth_subset` and `backend/skopia/multicontour.py`:
 
 1. **Sigma is in grid pixels.** One pixel is `extent / grid_res` in data units, so the physical smoothing radius is `smooth_sigma × extent / grid_res`. Raising the grid resolution alone *shrinks the actual smoothing by the same factor*. `suggest_smooth_sigma` solves for a radius of ~2 spot spacings; edit the grid and that silently no longer holds.
 2. **Bands are equal-width, not equal-count.** `thresholds = linspace(0, vmax, levels + 2)[1:-1]` over the smoothed field. On a skewed field — the normal case — the top band holds few spots, and the natural reading ("my gene set barely expresses") is wrong.
@@ -35,8 +35,8 @@
 `suggest_smooth_sigma` already computes the median nearest-neighbour spacing and the extent, then throws both away. Return them.
 
 **Files:**
-- Modify: `backend/xcell/multicontour.py` — `suggest_smooth_sigma` (~line 169)
-- Modify: `backend/xcell/adaptor.py` — `suggest_contour_params` (~line 7509)
+- Modify: `backend/skopia/multicontour.py` — `suggest_smooth_sigma` (~line 169)
+- Modify: `backend/skopia/adaptor.py` — `suggest_contour_params` (~line 7509)
 - Test: `backend/tests/test_contour_suggest.py` (create)
 
 **Interfaces:**
@@ -62,8 +62,8 @@ import anndata
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.multicontour import spot_geometry
+from skopia.adaptor import DataAdaptor
+from skopia.multicontour import spot_geometry
 
 
 def _adata(step=2.0, n_side=10):
@@ -124,7 +124,7 @@ Expected: `ImportError: cannot import name 'spot_geometry'`.
 
 - [ ] **Step 3: Extract the geometry**
 
-In `backend/xcell/multicontour.py`, add above `suggest_smooth_sigma`:
+In `backend/skopia/multicontour.py`, add above `suggest_smooth_sigma`:
 
 ```python
 def spot_geometry(coords):
@@ -198,7 +198,7 @@ Expected: new file passes; no regressions (the existing multicontour tests exerc
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/multicontour.py backend/xcell/adaptor.py backend/tests/test_contour_suggest.py
+git add backend/skopia/multicontour.py backend/skopia/adaptor.py backend/tests/test_contour_suggest.py
 git commit -m "feat(contour): report spot spacing and extent alongside the suggestions"
 ```
 
@@ -997,7 +997,7 @@ pixi run backend
 pixi run dev
 ```
 
-Stop them with `pkill -f "uvicorn xcell.main:app"; pkill -f "vite"` — `lsof -ti :8000 | xargs kill` leaves a reloader that re-binds and serves stale data.
+Stop them with `pkill -f "uvicorn skopia.main:app"; pkill -f "vite"` — `lsof -ti :8000 | xargs kill` leaves a reloader that re-binds and serves stale data.
 
 - [ ] **Step 2: Check each live rule actually fires**
 

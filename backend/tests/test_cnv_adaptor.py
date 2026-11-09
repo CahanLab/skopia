@@ -15,11 +15,11 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell import codegen
-from xcell import cnv
-from xcell.adaptor import DataAdaptor, FigureInputMissing
-from xcell.api import routes
-from xcell.main import app
+from skopia import codegen
+from skopia import cnv
+from skopia.adaptor import DataAdaptor, FigureInputMissing
+from skopia.api import routes
+from skopia.main import app
 
 N_CHROM, GENES_PER_CHROM = 6, 120
 GROUPS = {'normal': 100, 'A': 60, 'B': 60, 'C': 60}
@@ -149,7 +149,7 @@ def test_run_writes_matrix_scores_clones_and_record():
     assert 'X_cnv' in ad.obsm and ad.obsm['X_cnv'].shape == (N_CELLS, r['n_windows'])
     assert ad.obsm['X_cnv'].dtype == np.float32 and np.isfinite(ad.obsm['X_cnv']).all()
     assert ad.obsm['X_cnv_chrom'].shape == (N_CELLS, N_CHROM)
-    assert ad.uns['xcell_score_matrices']['X_cnv_chrom']['columns'] == [f'chr{i}' for i in range(1, 7)]
+    assert ad.uns['skopia_score_matrices']['X_cnv_chrom']['columns'] == [f'chr{i}' for i in range(1, 7)]
     assert r['score_column'] == 'cnv_score' and 'cnv_score' in ad.obs
     assert r['clone_column'] == 'cnv_clone'
     clones = ad.obs['cnv_clone']
@@ -160,7 +160,7 @@ def test_run_writes_matrix_scores_clones_and_record():
     from sklearn.metrics import adjusted_rand_score
     assert adjusted_rand_score(ad.obs['group'], clones) > 0.9
     assert (ad.obs['group'][clones == 'clone_1'] == 'normal').mean() > 0.9
-    rec = json.loads(ad.uns['xcell_cnv']['cnv'])
+    rec = json.loads(ad.uns['skopia_cnv']['cnv'])
     assert rec['key'] == 'cnv' and len(rec['windows']) == r['n_windows']
     assert [c['name'] for c in rec['chromosomes']] == [f'chr{i}' for i in range(1, 7)]
     assert rec['params']['window'] == 30
@@ -209,7 +209,7 @@ def test_no_reference_uses_all_cells_and_still_separates():
 def test_two_reference_categories_apply_the_bounds_rule():
     a = _adaptor()
     r = _run(a, reference_categories=['normal', 'B'])     # B's chr4 loss is now "normal range"
-    rec = json.loads(a.adata.uns['xcell_cnv']['cnv'])
+    rec = json.loads(a.adata.uns['skopia_cnv']['cnv'])
     assert rec['reference']['categories'] == ['normal', 'B']
     chrom = a.adata.obsm['X_cnv_chrom']
     j = [c['name'] for c in rec['chromosomes']].index('chr4')
@@ -353,7 +353,7 @@ def test_small_reference_categories_do_not_set_bounds():
     # no longer hides its own chr4 loss inside the bounds.
     a = _adaptor()
     r = _run(a, reference_categories=['normal', 'B'], min_reference_cells=70)
-    rec = json.loads(a.adata.uns['xcell_cnv']['cnv'])
+    rec = json.loads(a.adata.uns['skopia_cnv']['cnv'])
     assert rec['reference']['categories'] == ['normal', 'B']
     assert rec['reference']['bounds_categories'] == ['normal']
     assert rec['reference']['pooled'] is False
@@ -369,7 +369,7 @@ def test_small_reference_categories_do_not_set_bounds():
 def test_all_small_reference_categories_are_pooled():
     a = _adaptor()
     r = _run(a, reference_categories=['normal', 'B'], min_reference_cells=500)
-    rec = json.loads(a.adata.uns['xcell_cnv']['cnv'])
+    rec = json.loads(a.adata.uns['skopia_cnv']['cnv'])
     assert rec['reference']['bounds_categories'] == []
     assert rec['reference']['pooled'] is True
     assert any('pooled' in w.lower() for w in r['warnings'])

@@ -1,7 +1,7 @@
 """The release script: one version in five files, a changelog that rolls, notes
 that fit on a GitHub release.
 
-The script lives in scripts/ (repo tooling, not part of the xcell package) and
+The script lives in scripts/ (repo tooling, not part of the skopia package) and
 uses only the standard library, so the release workflow can run it on a bare
 runner. These tests run it against copies of the real manifests, so a format
 change in any of them shows up here rather than half-way through a release.
@@ -18,7 +18,7 @@ _spec = importlib.util.spec_from_file_location('release', REPO / 'scripts' / 're
 release = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(release)
 
-URL = 'https://github.com/CahanLab/xcell'
+URL = 'https://github.com/CahanLab/skopia'
 
 
 def _repo(tmp_path, version=None):
@@ -101,7 +101,7 @@ def test_check_tag(tmp_path):
 
 CHANGELOG = """# Changelog
 
-All notable changes to xcell are documented in this file.
+All notable changes to skopia are documented in this file.
 
 ## [Unreleased]
 

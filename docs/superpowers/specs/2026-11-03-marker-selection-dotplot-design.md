@@ -54,7 +54,7 @@ config, which freezes the selection.
 
 ### Backend: stored marker runs
 
-- `uns['xcell_marker_genes'][key]` is a JSON string (h5ad cannot write nested
+- `uns['skopia_marker_genes'][key]` is a JSON string (h5ad cannot write nested
   object arrays; same reason as enrichment). Record fields:
   `key`, `uid`, `label`, `created_at`, `obs_column`, `groups` (list of the
   tested groups, in category order), `params` (gene_subset, groups requested,

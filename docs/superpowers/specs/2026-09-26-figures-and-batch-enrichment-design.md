@@ -113,7 +113,7 @@ Routes: `POST /enrichment/gsea_batch` (202), `POST /enrichment/ora_batch`
 union type.
 
 Codegen: `enrichment_gsea_batch` (two-phase `prepare_gsea_batch`) and
-`enrichment_ora_batch` (direct), XCELL tier.
+`enrichment_ora_batch` (direct), SKOPIA tier.
 
 ### Frontend
 
@@ -144,7 +144,7 @@ Codegen: `enrichment_gsea_batch` (two-phase `prepare_gsea_batch`) and
 ### Figure record
 
 ```
-uns['xcell_figures'][id] = json.dumps({
+uns['skopia_figures'][id] = json.dumps({
   id: 'fig_<n>',                 # allocated by the adaptor, never reused
   kind: 'enrichment_heatmap' | 'enrichment_network' | 'composition_barplot' | 'expression_heatmap',
   title, caption,
@@ -159,7 +159,7 @@ uns['xcell_figures'][id] = json.dumps({
 })
 ```
 
-JSON strings, as for enrichment results. `xcell_figures_seq` in `uns`
+JSON strings, as for enrichment results. `skopia_figures_seq` in `uns`
 holds the id counter so ids survive deletion.
 
 ### Kinds (this spec)
@@ -213,7 +213,7 @@ display fields. Data = `heatmap.compute_heatmap_data`.
 
 ### Backend
 
-`backend/xcell/enrichment_figures.py` (pure): `assemble_matrix(results_by_col,
+`backend/skopia/enrichment_figures.py` (pure): `assemble_matrix(results_by_col,
 *, value, padj_max, top_n, direction, collapse_jaccard, row_order,
 col_order, universe_sets)` → the heatmap data; `assemble_network(...)` →
 nodes/edges; `force_layout(n_nodes, edges, weights, seed, iterations)`;
@@ -221,7 +221,7 @@ nodes/edges; `force_layout(n_nodes, edges, weights, seed, iterations)`;
 with a floor at 300 so `-log10(0)` never becomes inf.
 
 Adaptor (`figures` section):
-- `FIGURES_UNS_KEY = 'xcell_figures'`, `create_figure(kind, *, title=None,
+- `FIGURES_UNS_KEY = 'skopia_figures'`, `create_figure(kind, *, title=None,
   inputs, params=None) -> dict` (validates `kind` against
   `FIGURE_KINDS`, validates inputs exist — enrichment keys, obs columns,
   subset names — fills param defaults from `config.yaml figures.<kind>`,

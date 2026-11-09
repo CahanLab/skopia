@@ -5,8 +5,8 @@ import anndata
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell import gene_symbols as gs
+from skopia.adaptor import DataAdaptor
+from skopia import gene_symbols as gs
 
 
 def _adata():

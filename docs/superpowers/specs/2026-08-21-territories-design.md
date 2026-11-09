@@ -96,8 +96,8 @@ Cells with no coordinate get NaN.
 
 ## Data model
 
-`adata.uns['xcell_territories_json']` — a JSON string, following the
-`xcell_lines_json` and `xcell_analysis_record` precedent, because ragged vertex
+`adata.uns['skopia_territories_json']` — a JSON string, following the
+`skopia_lines_json` and `skopia_analysis_record` precedent, because ragged vertex
 lists do not survive an h5ad round trip as nested `uns` structures.
 
 ```jsonc
@@ -129,7 +129,7 @@ predicted embedding key, so the faces draw correctly over localized cells.
 
 ## Components
 
-### `backend/xcell/territories.py` — pure geometry
+### `backend/skopia/territories.py` — pure geometry
 
 Arrays in, dicts out. Never imports the adaptor, never mutates state, following
 the house rule for analysis modules.
@@ -150,7 +150,7 @@ squidpy's dependency graph holding still.
 ### Adaptor surface
 
 - `save_territories(type_name, payload)` / `get_territories()` /
-  `delete_territories(type_name)` — read and write `uns['xcell_territories_json']`.
+  `delete_territories(type_name)` — read and write `uns['skopia_territories_json']`.
 - `assign_territories(types, combine, embedding=None)` — resolves each cell's
   section, derives faces per section, assigns, writes `territory_<type>` columns
   plus the optional combined column, logs via `_log_action`.
