@@ -533,7 +533,7 @@ export default function PyscnModal() {
                       Per-class threshold, as in PySCN&apos;s <code>comp_ct_thresh</code>.
                       Cells over exactly one threshold are Singular; over several,
                       Ambiguous — PySCN splits those into Intermediate and Hybrid
-                      using a cell-type graph xcell does not have.
+                      using a cell-type graph skopia does not have.
                     </div>
                   </div>
                 )}

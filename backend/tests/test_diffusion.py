@@ -16,7 +16,7 @@ import scanpy as sc
 from scipy import sparse
 from scipy.sparse import csr_matrix
 
-from xcell import diffusion as dm
+from skopia import diffusion as dm
 
 
 def _knn(n=120, two_blobs=False, seed=0):

@@ -4,7 +4,7 @@ Date: 2026-09-28 · Branch: `feat/gene-set-manager`
 
 ## What was asked
 
-1. Show xcell's version in small type under the "xcell" title.
+1. Show skopia's version in small type under the "skopia" title.
 2. **File → reset to a fresh state**: no old AnnData left, ready for a new analysis.
    **Clear all gene sets** so the Gene pane is fresh. Both confirm before wiping.
    Consider reaching them from the top of their panes.
@@ -19,15 +19,15 @@ mine. This note records them.
 
 ## 1. Version label
 
-- `vite.config.ts` defines `__XCELL_VERSION__` (from `package.json`) and
-  `__XCELL_COMMIT__` (`git rev-parse --short HEAD` at dev-server start, `''` when
+- `vite.config.ts` defines `__SKOPIA_VERSION__` (from `package.json`) and
+  `__SKOPIA_COMMIT__` (`git rev-parse --short HEAD` at dev-server start, `''` when
   git is unavailable). No fetch, so it is there on first paint even when the
   backend is down.
 - The header shows `v0.1.0` in 10 px muted type under the title. The tooltip adds
   the commit. The commit is kept out of the label because it is read once when
   Vite starts and can go stale in a long-running dev server.
 - The version is written in five places: `pixi.toml`, `backend/pyproject.toml`,
-  `xcell/__init__.py`, `frontend/package.json`, and two literals in `main.py`.
+  `skopia/__init__.py`, `frontend/package.json`, and two literals in `main.py`.
   `main.py` now reads `__version__`, and a backend test checks that the rest
   agree, so bumping one without the others fails CI.
 
@@ -49,7 +49,7 @@ that shows:
 - a checkbox *Also delete all gene sets (N)*, off by default. Gene sets are
   cross-dataset by design, and a new analysis often reuses them.
 
-On confirm it POSTs, forgets the stored workspace arrangement (`xcell_workspace`)
+On confirm it POSTs, forgets the stored workspace arrangement (`skopia_workspace`)
 and reloads the page. A reload is the only honest "fresh". Global modals never
 unmount ([[global-modals-never-unmount]]), and many components keep local state
 and refs (`hydratedGeneSetsRef`, `restoreStartedRef`, …), so any in-place store

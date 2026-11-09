@@ -4,7 +4,7 @@
 
 **Goal:** Overlap (hypergeometric) enrichment and preranked GSEA of the user's gene lists / contrasts against cached gene-set libraries, with results stored in `uns`, an analysis-record entry, a results modal with a running-score plot, and "add to gene sets".
 
-**Architecture:** A pure `enrichment.py` (numpy/scipy) does the statistics. The adaptor builds the universe from the gene mask, resolves libraries via `gene_set_sources.find_library`, builds the GSEA ranking (scanpy DE on a snapshot, PCA loadings, or client scores), and persists JSON results under `uns['xcell_enrichment']`. Thin routes; a task for GSEA. One global `EnrichmentModal` with Overlap/GSEA tabs, pure helpers in `lib/enrichment.ts`.
+**Architecture:** A pure `enrichment.py` (numpy/scipy) does the statistics. The adaptor builds the universe from the gene mask, resolves libraries via `gene_set_sources.find_library`, builds the GSEA ranking (scanpy DE on a snapshot, PCA loadings, or client scores), and persists JSON results under `uns['skopia_enrichment']`. Thin routes; a task for GSEA. One global `EnrichmentModal` with Overlap/GSEA tabs, pure helpers in `lib/enrichment.ts`.
 
 **Tech Stack:** Python 3 / numpy / scipy.stats / scanpy (already deps); React + inline SVG (no chart lib); vitest; pytest.
 
@@ -16,10 +16,10 @@
 - Only cached libraries are used; an uncached one is `ValueError` → 400 with the hint "fetch it from the Gene set library first".
 - `enrichment.py` never imports the adaptor and never mutates live state.
 - Everything crossing the API is JSON-safe: no `inf`, no `NaN` (use `None` or corrected values).
-- Results persist as `uns['xcell_enrichment'][key] = json.dumps(result)`; keys never overwrite (numeric suffix).
+- Results persist as `uns['skopia_enrichment'][key] = json.dumps(result)`; keys never overwrite (numeric suffix).
 - Request models type `gene_subset` as `str | list[str] | GeneSubsetSpec | None`.
 - Frontend styling inline; palette panel `#16213e`, border `#0f3460`, inset `#0f1625`, accent `#4ecdc4`, alert `#e94560`, warning `#e9a23b`, muted `#aaa`/`#888`.
-- Work happens in the worktree `/private/tmp/claude-501/xcell-wt` (branch `feat/enrichment`); run pytest with `cd /private/tmp/claude-501/xcell-wt/backend && "/Users/pcahan/Dropbox (Personal)/Code/xcell/.pixi/envs/dev/bin/python" -m pytest ...`; run vitest/tsc from `/private/tmp/claude-501/xcell-wt/frontend` after clonefile-copying `node_modules`.
+- Work happens in the worktree `/private/tmp/claude-501/skopia-wt` (branch `feat/enrichment`); run pytest with `cd /private/tmp/claude-501/skopia-wt/backend && "/Users/pcahan/Dropbox (Personal)/Code/skopia/.pixi/envs/dev/bin/python" -m pytest ...`; run vitest/tsc from `/private/tmp/claude-501/skopia-wt/frontend` after clonefile-copying `node_modules`.
 
 ## Review Focus
 
@@ -34,7 +34,7 @@
 ### Task 1: `enrichment.py` — BH, set resolution, overlap test
 
 **Files:**
-- Create: `backend/xcell/enrichment.py`
+- Create: `backend/skopia/enrichment.py`
 - Test: `backend/tests/test_enrichment.py`
 
 **Interfaces:**
@@ -48,12 +48,12 @@
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-"""Pure tests for xcell.enrichment: BH, symbol resolution, overlap test."""
+"""Pure tests for skopia.enrichment: BH, symbol resolution, overlap test."""
 import numpy as np
 import pytest
 from scipy.stats import fisher_exact, hypergeom
 
-from xcell import enrichment as en
+from skopia import enrichment as en
 
 
 def test_bh_adjust_matches_known_values():
@@ -115,8 +115,8 @@ def test_overlap_enrichment_matches_scipy_and_is_finite():
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `cd /private/tmp/claude-501/xcell-wt/backend && "/Users/pcahan/Dropbox (Personal)/Code/xcell/.pixi/envs/dev/bin/python" -m pytest tests/test_enrichment.py -q`
-Expected: ImportError / ModuleNotFoundError for `xcell.enrichment`.
+Run: `cd /private/tmp/claude-501/skopia-wt/backend && "/Users/pcahan/Dropbox (Personal)/Code/skopia/.pixi/envs/dev/bin/python" -m pytest tests/test_enrichment.py -q`
+Expected: ImportError / ModuleNotFoundError for `skopia.enrichment`.
 
 - [ ] **Step 3: Implement**
 
@@ -284,7 +284,7 @@ def overlap_enrichment(query_indices: list[int], resolved_sets: list[ResolvedSet
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /private/tmp/claude-501/xcell-wt && git add backend/xcell/enrichment.py backend/tests/test_enrichment.py && git commit -m "feat(enrichment): BH, symbol resolution and hypergeometric overlap test"
+cd /private/tmp/claude-501/skopia-wt && git add backend/skopia/enrichment.py backend/tests/test_enrichment.py && git commit -m "feat(enrichment): BH, symbol resolution and hypergeometric overlap test"
 ```
 
 ---
@@ -292,7 +292,7 @@ cd /private/tmp/claude-501/xcell-wt && git add backend/xcell/enrichment.py backe
 ### Task 2: `enrichment.py` — preranked GSEA
 
 **Files:**
-- Modify: `backend/xcell/enrichment.py`
+- Modify: `backend/skopia/enrichment.py`
 - Test: `backend/tests/test_enrichment.py`
 
 **Interfaces:**
@@ -521,7 +521,7 @@ Note for the `'all'` edge test: with `k == n`, `n_miss == 0` and `p_miss` is all
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/enrichment.py backend/tests/test_enrichment.py && git commit -m "feat(enrichment): vectorised preranked GSEA with gene-permutation null"
+git add backend/skopia/enrichment.py backend/tests/test_enrichment.py && git commit -m "feat(enrichment): vectorised preranked GSEA with gene-permutation null"
 ```
 
 ---
@@ -529,13 +529,13 @@ git add backend/xcell/enrichment.py backend/tests/test_enrichment.py && git comm
 ### Task 3: Adaptor — libraries, universe, overlap run, storage
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (add a section after `gene_set_overlap`, ~line 5946)
+- Modify: `backend/skopia/adaptor.py` (add a section after `gene_set_overlap`, ~line 5946)
 - Test: `backend/tests/test_enrichment_adaptor.py`
 
 **Interfaces:**
 - Consumes: Task 1 functions; `gene_set_sources.find_library`, `self._resolve_gene_mask`, `self._sanitize_subset_name`, `self._log_action`.
 - Produces on `DataAdaptor`:
-  - `ENRICHMENT_UNS_KEY = 'xcell_enrichment'`
+  - `ENRICHMENT_UNS_KEY = 'skopia_enrichment'`
   - `_enrichment_sets(libraries, sets) -> list[dict]` (each `{name, genes, genes_down, library, description, url}`)
   - `_enrichment_universe(gene_subset) -> (universe: list[str], subset_type: str, meta: dict)`
   - `_store_enrichment(key_hint: str, result: dict) -> str` (returns the final key)
@@ -554,8 +554,8 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell import gene_set_sources as gss
-from xcell.adaptor import DataAdaptor
+from skopia import gene_set_sources as gss
+from skopia.adaptor import DataAdaptor
 
 GENES = ['Col1a1', 'Col1a2', 'Col3a1', 'Sox9', 'Acan', 'Actb', 'Gapdh', 'Ptprc', 'Cd3e', 'Cd19',
          'Hoxd13', 'Meis1'] + [f'G{i}' for i in range(20)]
@@ -602,7 +602,7 @@ def test_overlap_run_resolves_case_and_stores_json():
     top = res['results'][0]
     assert top['name'] == 'COLLAGEN' and top['library'] == 'Toy library'
     assert top['genes'] == ['Col1a1', 'Col1a2', 'Col3a1'] and top['n_overlap'] == 3
-    stored = json.loads(a.adata.uns['xcell_enrichment']['ora_my_set'])
+    stored = json.loads(a.adata.uns['skopia_enrichment']['ora_my_set'])
     assert stored['results'][0]['name'] == 'COLLAGEN'
     assert a.get_enrichment_result('ora_my_set')['key'] == 'ora_my_set'
     assert [s['key'] for s in a.get_enrichment_results()] == ['ora_my_set']
@@ -656,12 +656,12 @@ def test_overlap_inline_sets_and_errors():
     # ------------------------------------------------------------------
     # Gene-set enrichment (overlap + preranked GSEA)
     # ------------------------------------------------------------------
-    ENRICHMENT_UNS_KEY = 'xcell_enrichment'
+    ENRICHMENT_UNS_KEY = 'skopia_enrichment'
 
     def _enrichment_sets(self, libraries: list[dict[str, Any]] | None,
                          sets: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
         """Cached libraries plus inline sets, each tagged with a library label."""
-        from xcell import gene_set_sources as gss  # noqa: PLC0415
+        from skopia import gene_set_sources as gss  # noqa: PLC0415
         out: list[dict[str, Any]] = []
         for ref in libraries or []:
             source = str(ref.get('source') or '')
@@ -749,7 +749,7 @@ def test_overlap_inline_sets_and_errors():
                                key: str | None = None) -> dict[str, Any]:
         """Hypergeometric over-representation of ``genes`` in each library set."""
         from datetime import datetime, timezone  # noqa: PLC0415
-        from xcell import enrichment as en  # noqa: PLC0415
+        from skopia import enrichment as en  # noqa: PLC0415
         if min_set_size < 1 or max_set_size < min_set_size:
             raise ValueError('Set size range must satisfy 1 <= min <= max')
         raw_sets = self._enrichment_sets(libraries, sets)
@@ -788,14 +788,14 @@ def test_overlap_inline_sets_and_errors():
         return result
 ```
 
-(`self.MAX_REPORTED_OVERLAP_MISSING` already exists for `gene_set_overlap`; if the name differs, use the existing constant.) The `_analysis_record` assertion in the first test should be adjusted to however `_log_action` exposes the record — check `grep -n "def _log_action" -A 12 backend/xcell/adaptor.py` and assert on the real structure (e.g. `a.get_analysis_record()['actions'][-1]['action']`).
+(`self.MAX_REPORTED_OVERLAP_MISSING` already exists for `gene_set_overlap`; if the name differs, use the existing constant.) The `_analysis_record` assertion in the first test should be adjusted to however `_log_action` exposes the record — check `grep -n "def _log_action" -A 12 backend/skopia/adaptor.py` and assert on the real structure (e.g. `a.get_analysis_record()['actions'][-1]['action']`).
 
 - [ ] **Step 4: Run tests** — expected PASS (4 tests). Also run `tests/test_gene_set_overlap*.py` if present to confirm nothing moved.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_enrichment_adaptor.py && git commit -m "feat(enrichment): adaptor overlap run, universe from gene mask, JSON results in uns"
+git add backend/skopia/adaptor.py backend/tests/test_enrichment_adaptor.py && git commit -m "feat(enrichment): adaptor overlap run, universe from gene mask, JSON results in uns"
 ```
 
 ---
@@ -803,7 +803,7 @@ git add backend/xcell/adaptor.py backend/tests/test_enrichment_adaptor.py && git
 ### Task 4: Adaptor — `prepare_gsea` with diffexp / PCA / scores rankings
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (same section)
+- Modify: `backend/skopia/adaptor.py` (same section)
 - Test: `backend/tests/test_enrichment_adaptor.py`
 
 **Interfaces:**
@@ -828,7 +828,7 @@ def _adata_de():
     ad.var_names = GENES
     ad.obs['grp'] = pd.Categorical(grp)
     ad.obs['subset_half'] = [True] * 40 + [False] * 20
-    ad.uns['xcell_cell_subsets'] = {'half': {'n_cells': 40, 'created_at': 't', 'origin': 'test'}}
+    ad.uns['skopia_cell_subsets'] = {'half': {'n_cells': 40, 'created_at': 't', 'origin': 'test'}}
     pcs = np.zeros((len(GENES), 2))
     pcs[GENES.index('Hoxd13'), 0] = 0.9
     pcs[GENES.index('Meis1'), 0] = -0.9
@@ -851,7 +851,7 @@ def test_gsea_diffexp_ranking_vs_rest_and_vs_group():
     by = {r['name']: r for r in res['results']}
     assert by['COLLAGEN']['nes'] > 0 and by['IMMUNE']['nes'] < 0
     assert set(by['COLLAGEN']['leading_edge']) >= {'Col1a1', 'Col1a2', 'Col3a1'}
-    assert json.loads(a.adata.uns['xcell_enrichment']['gsea_grp_a_vs_rest'])['kind'] == 'gsea'
+    assert json.loads(a.adata.uns['skopia_enrichment']['gsea_grp_a_vs_rest'])['kind'] == 'gsea'
     res2 = _run(a, {'kind': 'diffexp', 'obs_column': 'grp', 'group': 'b', 'reference': 'a', 'metric': 'log2fc'})
     assert res2['key'] == 'gsea_grp_b_vs_a'
     assert {r['name']: r for r in res2['results']}['IMMUNE']['nes'] > 0
@@ -971,7 +971,7 @@ def test_gsea_pca_and_scores_rankings():
             return clean, (lambda: loading), f'gsea_pca{comp + 1}' + (f'_{cell_subset}' if cell_subset else '')
 
         if kind == 'scores':
-            from xcell import enrichment as en  # noqa: PLC0415
+            from skopia import enrichment as en  # noqa: PLC0415
             genes = list(ranking.get('genes') or [])
             scores = list(ranking.get('scores') or [])
             if len(genes) != len(scores) or not genes:
@@ -999,7 +999,7 @@ def test_gsea_pca_and_scores_rankings():
                      weight: float = 1.0, seed: int = 0, key: str | None = None):
         """Preranked GSEA as a background task: (compute_fn(report), apply_fn(result))."""
         from datetime import datetime, timezone  # noqa: PLC0415
-        from xcell import enrichment as en  # noqa: PLC0415
+        from skopia import enrichment as en  # noqa: PLC0415
         if n_perm < 10:
             raise ValueError('n_perm must be at least 10')
         if min_set_size < 1 or max_set_size < min_set_size:
@@ -1066,7 +1066,7 @@ Add `from typing import Callable` to the adaptor's imports if not already presen
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_enrichment_adaptor.py && git commit -m "feat(enrichment): prepare_gsea with diffexp, PCA-loading and custom-score rankings"
+git add backend/skopia/adaptor.py backend/tests/test_enrichment_adaptor.py && git commit -m "feat(enrichment): prepare_gsea with diffexp, PCA-loading and custom-score rankings"
 ```
 
 ---
@@ -1074,8 +1074,8 @@ git add backend/xcell/adaptor.py backend/tests/test_enrichment_adaptor.py && git
 ### Task 5: Routes + config
 
 **Files:**
-- Modify: `backend/xcell/api/routes.py` (add after the `/gene_sets/species_guess` route, ~line 1130)
-- Modify: `backend/xcell/config.yaml` (add an `enrichment:` section after `diff_exp:`)
+- Modify: `backend/skopia/api/routes.py` (add after the `/gene_sets/species_guess` route, ~line 1130)
+- Modify: `backend/skopia/config.yaml` (add an `enrichment:` section after `diff_exp:`)
 - Test: `backend/tests/test_enrichment_routes.py`
 
 **Interfaces:**
@@ -1094,10 +1094,10 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell import gene_set_sources as gss
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.main import app
+from skopia import gene_set_sources as gss
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.main import app
 
 GENES = ['Col1a1', 'Col1a2', 'Col3a1', 'Ptprc', 'Cd3e', 'Cd19'] + [f'G{i}' for i in range(14)]
 
@@ -1331,7 +1331,7 @@ enrichment:
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/api/routes.py backend/xcell/config.yaml backend/tests/test_enrichment_routes.py && git commit -m "feat(enrichment): /api/enrichment routes and config defaults"
+git add backend/skopia/api/routes.py backend/skopia/config.yaml backend/tests/test_enrichment_routes.py && git commit -m "feat(enrichment): /api/enrichment routes and config defaults"
 ```
 
 ---
@@ -1456,7 +1456,7 @@ describe('libraryGroups + rowsToTsv + metricStripBins', () => {
 })
 ```
 
-- [ ] **Step 2: Run** `cd /private/tmp/claude-501/xcell-wt/frontend && npx vitest run src/lib/enrichment.test.ts` — expected: module not found.
+- [ ] **Step 2: Run** `cd /private/tmp/claude-501/skopia-wt/frontend && npx vitest run src/lib/enrichment.test.ts` — expected: module not found.
 
 - [ ] **Step 3: Implement `lib/enrichment.ts`**
 
@@ -1766,7 +1766,7 @@ git add frontend/src/components/EnrichmentModal.tsx frontend/src/App.tsx fronten
 **Files:**
 - Modify: `CHANGELOG.md` (new entry at top), `README.md` (one paragraph under the analysis features list, if such a list exists), `CLAUDE.md` in the *main repo* is local-only — add a line to its analysis-module list (`enrichment.py`) at merge time.
 
-- [ ] **Step 1: Stack.** Follow the isolated recipe: from the worktree, `cp -Rc "<main>/frontend/node_modules" frontend/node_modules` (done in Task 6 if not earlier); backend `cd backend && "<main>/.pixi/envs/default/bin/python" -m uvicorn xcell.main:app --port 8100` with `XDG_CACHE_HOME` left as-is so the real cached libraries (`~/.cache/xcell/gene_set_sources`, mouse Hallmark, GO, …) are visible; frontend `XCELL_BACKEND=http://127.0.0.1:8100 npx vite --port 5273 --strictPort`. Load the bundled toy data (`POST /api/load` with the toy path used by `xcell.main` on startup — check `grep -n toy backend/xcell/main.py`). If the toy genes are not mouse symbols, use the dev fallback: seed an inline "My gene sets" folder instead of a library, or point `config.yaml gene_set_sources.cache_dir` at a scratch cache with a synthetic library built from the toy's own genes (`PUT /api/gene_sets` for the query set; a small `sets` JSON via `gss.save_library`).
+- [ ] **Step 1: Stack.** Follow the isolated recipe: from the worktree, `cp -Rc "<main>/frontend/node_modules" frontend/node_modules` (done in Task 6 if not earlier); backend `cd backend && "<main>/.pixi/envs/default/bin/python" -m uvicorn skopia.main:app --port 8100` with `XDG_CACHE_HOME` left as-is so the real cached libraries (`~/.cache/skopia/gene_set_sources`, mouse Hallmark, GO, …) are visible; frontend `SKOPIA_BACKEND=http://127.0.0.1:8100 npx vite --port 5273 --strictPort`. Load the bundled toy data (`POST /api/load` with the toy path used by `skopia.main` on startup — check `grep -n toy backend/skopia/main.py`). If the toy genes are not mouse symbols, use the dev fallback: seed an inline "My gene sets" folder instead of a library, or point `config.yaml gene_set_sources.cache_dir` at a scratch cache with a synthetic library built from the toy's own genes (`PUT /api/gene_sets` for the query set; a small `sets` JSON via `gss.save_library`).
 
 - [ ] **Step 2: Drive.** In the browser (Playwright MCP or CDP): open Genes ▸ menu ▸ "Enrichment analysis…"; tick a library; pick a query set; Run; assert the table has rows and `padj` sorted ascending; click a row → gene chips visible; "Add to gene sets" → Gene Panel shows an **Enrichment** category with a folder named after the key. Switch to GSEA; pick a Leiden column/group; Run; watch the progress bar; expand the top row → `svg[data-gsea-curve]` exists with a `path`; "Download SVG" produces a file. Open the analysis record and confirm `enrichment_ora` / `enrichment_gsea` entries. Patch `window.fetch` to capture the GSEA body and confirm `gene_subset` and `cell_subset` are what the controls show. Reload the page, reopen the modal, choose the run from "Previous runs" — the table returns.
 

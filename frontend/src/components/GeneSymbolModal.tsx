@@ -143,7 +143,7 @@ export default function GeneSymbolModal() {
           </button>
         </div>
         <div style={{ fontSize: 11, color: dark.faint, marginTop: 2, marginBottom: 12 }}>
-          Map Ensembl gene ids to official symbols, from tables shipped with xcell
+          Map Ensembl gene ids to official symbols, from tables shipped with skopia
         </div>
 
         {loading && <div style={value}>Checking this dataset…</div>}

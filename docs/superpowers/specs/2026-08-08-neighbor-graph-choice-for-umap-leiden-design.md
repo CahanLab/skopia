@@ -5,7 +5,7 @@
 
 ## Problem
 
-xcell can build several cell-cell connectivity graphs over the same dataset:
+skopia can build several cell-cell connectivity graphs over the same dataset:
 
 | graph | `obsp` key | built by |
 |---|---|---|
@@ -42,7 +42,7 @@ graph so several can coexist.
 
 scanpy exposes `neighbors_key`, which names a key in `uns` holding
 `{connectivities_key, distances_key, params}`. Two things break when you point
-it at the graphs xcell actually has (verified against scanpy 1.11.5, squidpy):
+it at the graphs skopia actually has (verified against scanpy 1.11.5, squidpy):
 
 1. **`uns['spatial_neighbors']` → `KeyError: 'method'`.** scanpy's `tl.umap`
    evaluates `neighbors["params"]["method"] != "umap"` to decide whether to
@@ -58,7 +58,7 @@ it at the graphs xcell actually has (verified against scanpy 1.11.5, squidpy):
 So `run_umap` synthesizes a complete entry, uses it, and removes it:
 
 ```python
-_GRAPH_META_KEY = '_xcell_graph'   # module-level constant, shared with codegen
+_GRAPH_META_KEY = '_skopia_graph'   # module-level constant, shared with codegen
 
 self.adata.uns[_GRAPH_META_KEY] = self._umap_neighbors_meta(graph_key)
 try:
@@ -158,13 +158,13 @@ be emitted on its own — the temp entry does not exist there. The `umap`
 ActionSpec emits the synthesis as real lines ahead of the call:
 
 ```python
-adata.uns['_xcell_graph'] = {
+adata.uns['_skopia_graph'] = {
     'connectivities_key': 'spatial_connectivities',
     'distances_key': 'spatial_distances',
     'params': {'method': 'umap', 'n_neighbors': 8},
 }
 sc.tl.umap(adata, min_dist=0.5, spread=1.0, n_components=2,
-           neighbors_key='_xcell_graph', key_added='X_umap_spatial')
+           neighbors_key='_skopia_graph', key_added='X_umap_spatial')
 ```
 
 That is what the adaptor really does, so fidelity stays `exact`. With no

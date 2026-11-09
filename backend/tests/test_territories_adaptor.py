@@ -11,7 +11,7 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 def _adata(n=60, n_genes=8, seed=0, sections=True):

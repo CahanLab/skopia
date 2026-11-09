@@ -31,7 +31,7 @@
 ### Task 1: Combine suggests `merge` for same-named columns with shared labels
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (`_suggest_obs_policy`, `describe_combine_columns`, `_resolve_policy`)
+- Modify: `backend/skopia/adaptor.py` (`_suggest_obs_policy`, `describe_combine_columns`, `_resolve_policy`)
 - Test: `backend/tests/test_combine_columns.py`
 
 **Interfaces:**
@@ -45,11 +45,11 @@
 ### Task 2: `obs_merge_into` pools differently named columns
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (`describe_combine_columns`, `combine_datasets`), `backend/xcell/api/routes.py` (`CombineSpatialRequest.obs_merge_into: dict[str, str] = {}`)
+- Modify: `backend/skopia/adaptor.py` (`describe_combine_columns`, `combine_datasets`), `backend/skopia/api/routes.py` (`CombineSpatialRequest.obs_merge_into: dict[str, str] = {}`)
 - Test: `backend/tests/test_combine_columns.py`
 
 **Interfaces:**
-- Produces: `combine_datasets(..., obs_merge_into: dict[str, str] | None = None)`; describe entries gain `same_as: list[{name, shared, union}]`; `uns['xcell_combine']['obs_merge_into']`.
+- Produces: `combine_datasets(..., obs_merge_into: dict[str, str] | None = None)`; describe entries gain `same_as: list[{name, shared, union}]`; `uns['skopia_combine']['obs_merge_into']`.
 
 - [ ] Step 1: Tests (RED): `test_merge_into_pools_two_names_into_the_target` (`celltype` in A, `cell_type` in B → one `cell_type` column, every cell valued, categories union in order, uns records the mapping, resolved policy for both is `merge`); `test_merge_into_overrides_a_drop_on_the_source`; `test_merge_into_refuses_unknown_self_chain_and_shared_holders` (four `pytest.raises(ValueError)` with message fragments); `test_describe_names_a_same_as_candidate` (`same_as[0]['name'] == 'cell_type'`, reason mentions `looks like`); `test_same_as_skips_numeric_vocabularies`; `test_combine_route_accepts_obs_merge_into` and a 400 for a chain.
 - [ ] Step 2: Run → FAIL (unexpected kwarg / KeyError).
@@ -82,7 +82,7 @@
 ### Task 5: `merge_obs_columns` on the adaptor, route, codegen
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (after `duplicate_obs_column`), `backend/xcell/api/routes.py` (after duplicate route), `backend/xcell/codegen.py`
+- Modify: `backend/skopia/adaptor.py` (after `duplicate_obs_column`), `backend/skopia/api/routes.py` (after duplicate route), `backend/skopia/codegen.py`
 - Test: `backend/tests/test_obs_merge_columns.py` (new, self-contained)
 
 **Interfaces:**

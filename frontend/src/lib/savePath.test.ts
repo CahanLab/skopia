@@ -76,7 +76,7 @@ describe('splitSavePath', () => {
   })
 
   it('round-trips for any extension, not just pickles', () => {
-    const path = '/data/E11.5_best_102424_xcell.h5ad'
+    const path = '/data/E11.5_best_102424_skopia.h5ad'
     const { dir, name } = splitSavePath(path)
     expect(composeSavePath(dir, name, '.h5ad')).toBe(path)
   })

@@ -5,11 +5,11 @@
 
 ## Problem
 
-xcell loads 10x `.h5` files via `scanpy.read_10x_h5`, which expects a standard
+skopia loads 10x `.h5` files via `scanpy.read_10x_h5`, which expects a standard
 feature-barcode matrix (`/matrix/...`). 10x's public Visium HD downloads ship a
 compact all-in-one **`*_feature_slice.h5`** instead (root attr
 `filetype == "feature_slice"`, produced by `spaceranger`). This file is not a
-feature-barcode matrix and `read_10x_h5` rejects it, so xcell cannot open it.
+feature-barcode matrix and `read_10x_h5` rejects it, so skopia cannot open it.
 
 A real example (`Visium_HD_Mouse_Embryo_feature_slice.h5`, 700 MB) ships with
 only an images-only `spatial/` folder — no `binned_outputs/`, no
@@ -37,7 +37,7 @@ where `factor = bin_size // 2`.
 
 ## Approach
 
-New module `backend/xcell/visium_hd.py` (keeps `adaptor.py`, already ~4k lines,
+New module `backend/skopia/visium_hd.py` (keeps `adaptor.py`, already ~4k lines,
 from growing; converter is independently testable). The adaptor's existing `.h5`
 branch peeks at the root `filetype` attr and routes feature-slice files here.
 
@@ -93,12 +93,12 @@ When `import_clusters`, for each
 `secondary_analysis/clustering/square_{bin}um_*`: read `(row,col,label)`, map to
 obs index, fill an int array (missing → `"NA"`), store as an **ordered
 categorical** obs column named by the method (`graphclust`, `kmeans_2`..
-`kmeans_10`). Immediately colorable in xcell without re-running Leiden.
+`kmeans_10`). Immediately colorable in skopia without re-running Leiden.
 
 ### Caching
 
 `load_feature_slice_cached`:
-- Cache path `<source_stem>.xcell.square_{bin:03d}um.h5ad` next to the source.
+- Cache path `<source_stem>.skopia.square_{bin:03d}um.h5ad` next to the source.
 - If cache exists and `cache.mtime >= source.mtime` → `read_h5ad` and return.
 - Else convert, `write_h5ad`, return. If source dir not writable, fall back to a
   temp-dir cache (log a warning).

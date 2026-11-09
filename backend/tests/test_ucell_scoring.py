@@ -5,9 +5,9 @@ import pytest
 import scipy.sparse as sp
 from fastapi.testclient import TestClient
 
-from xcell.adaptor import DataAdaptor
-from xcell.main import app
-from xcell.api import routes
+from skopia.adaptor import DataAdaptor
+from skopia.main import app
+from skopia.api import routes
 
 
 def _adata():

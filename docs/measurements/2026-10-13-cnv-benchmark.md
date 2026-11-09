@@ -6,7 +6,7 @@ the harness writes `results.tsv`; every number below comes from it.
 
 ## Question
 
-Does `xcell.cnv` (inferCNV-style, shipped 2026-10-13) recover the copy-number
+Does `skopia.cnv` (inferCNV-style, shipped 2026-10-13) recover the copy-number
 profile and the sub-clones of real tumor data, and which of its defaults
 should change?
 

@@ -9,7 +9,7 @@ import math
 
 import pytest
 
-from xcell.analysis_record import (
+from skopia.analysis_record import (
     SELECTION_CAP,
     AnalysisRecord,
     Figure,

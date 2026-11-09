@@ -13,8 +13,8 @@
 **Conventions:** backend `cd backend && pixi run -e dev python -m pytest tests/ -q`; frontend `cd frontend && npx tsc --noEmit && npm run build`; commit trailer `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`; isolated smoke stack on :8001/:5180 (never the user's :8000/:5173).
 
 ## File map
-- `backend/xcell/adaptor.py` — `_match_var_names`, `add_var_boolean_column`, `run_calculate_qc_metrics`; refactor `sum_counts_by_pattern`.
-- `backend/xcell/api/routes.py` — two `POST /scanpy/*` routes + models.
+- `backend/skopia/adaptor.py` — `_match_var_names`, `add_var_boolean_column`, `run_calculate_qc_metrics`; refactor `sum_counts_by_pattern`.
+- `backend/skopia/api/routes.py` — two `POST /scanpy/*` routes + models.
 - `backend/tests/test_var_boolean_qc.py` — new.
 - `frontend/src/components/ScanpyModal.tsx` — `var_bool_multiselect` type + render + send; 2 registry entries; post-run wiring.
 
@@ -22,7 +22,7 @@
 
 ### Task 1: Backend — `_match_var_names` + `add_var_boolean_column`
 
-**Files:** Modify `backend/xcell/adaptor.py`, `backend/xcell/api/routes.py`; create `backend/tests/test_var_boolean_qc.py`.
+**Files:** Modify `backend/skopia/adaptor.py`, `backend/skopia/api/routes.py`; create `backend/tests/test_var_boolean_qc.py`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -36,9 +36,9 @@ import pytest
 from scipy.sparse import csr_matrix
 from fastapi.testclient import TestClient
 
-from xcell.adaptor import DataAdaptor
-from xcell.main import app
-from xcell.api import routes
+from skopia.adaptor import DataAdaptor
+from skopia.main import app
+from skopia.api import routes
 
 
 def _adata():
@@ -100,7 +100,7 @@ Expected: FAIL (`add_var_boolean_column` missing).
 
 - [ ] **Step 3: Refactor the matcher + implement the method**
 
-In `backend/xcell/adaptor.py`, replace the matching block inside
+In `backend/skopia/adaptor.py`, replace the matching block inside
 `sum_counts_by_pattern` (the `if not pattern … mask = …` lines, currently
 `adaptor.py:571-585`'s match portion) so it delegates to a shared helper. First
 add the helper immediately above `sum_counts_by_pattern`:
@@ -175,7 +175,7 @@ Now add `add_var_boolean_column` after `sum_counts_by_pattern`:
 
 - [ ] **Step 4: Implement the route**
 
-In `backend/xcell/api/routes.py`, near the other species routes (after
+In `backend/skopia/api/routes.py`, near the other species routes (after
 `scanpy_assign_species`) add:
 
 ```python
@@ -207,7 +207,7 @@ Expected: PASS (new + the refactored `sum_counts_by_pattern` still green).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/xcell/api/routes.py backend/tests/test_var_boolean_qc.py
+git add backend/skopia/adaptor.py backend/skopia/api/routes.py backend/tests/test_var_boolean_qc.py
 git commit -m "$(printf 'backend: add_var_boolean_column (+ shared _match_var_names helper)\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>')"
 ```
 
@@ -215,7 +215,7 @@ git commit -m "$(printf 'backend: add_var_boolean_column (+ shared _match_var_na
 
 ### Task 2: Backend — `run_calculate_qc_metrics`
 
-**Files:** Modify `backend/xcell/adaptor.py`, `backend/xcell/api/routes.py`; extend `backend/tests/test_var_boolean_qc.py`.
+**Files:** Modify `backend/skopia/adaptor.py`, `backend/skopia/api/routes.py`; extend `backend/tests/test_var_boolean_qc.py`.
 
 - [ ] **Step 1: Add failing tests**
 
@@ -277,7 +277,7 @@ Expected: FAIL (`run_calculate_qc_metrics` missing).
 
 - [ ] **Step 3: Implement the adaptor method**
 
-In `backend/xcell/adaptor.py`, after `add_var_boolean_column` add:
+In `backend/skopia/adaptor.py`, after `add_var_boolean_column` add:
 
 ```python
     def run_calculate_qc_metrics(
@@ -314,7 +314,7 @@ In `backend/xcell/adaptor.py`, after `add_var_boolean_column` add:
 
 - [ ] **Step 4: Implement the route**
 
-In `backend/xcell/api/routes.py`, after `scanpy_add_var_boolean` add:
+In `backend/skopia/api/routes.py`, after `scanpy_add_var_boolean` add:
 
 ```python
 class CalculateQcMetricsRequest(BaseModel):
@@ -346,7 +346,7 @@ Expected: all pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/xcell/api/routes.py backend/tests/test_var_boolean_qc.py
+git add backend/skopia/adaptor.py backend/skopia/api/routes.py backend/tests/test_var_boolean_qc.py
 git commit -m "$(printf 'backend: run_calculate_qc_metrics route (qc_vars from boolean .var columns)\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>')"
 ```
 

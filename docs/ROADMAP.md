@@ -20,7 +20,7 @@ existing diffexp / marker-gene plumbing.
 - **Intermediate vs Hybrid.** `pySingleCellNet.tl.categorize_classification`
   splits cells that clear more than one class threshold into *Intermediate*
   (the classes are close in a cell-type relatedness graph) and *Hybrid* (they
-  are not). xcell has no such graph, so it reports those cells as **Ambiguous**.
+  are not). skopia has no such graph, so it reports those cells as **Ambiguous**.
   To do this properly we'd need the training-time graph — PySCN builds it with
   `paga_connectivities_to_igraph` on the reference — persisted alongside the
   classifier. Worth proposing upstream: `train_classifier` could stash the PAGA
@@ -28,7 +28,7 @@ existing diffexp / marker-gene plumbing.
   to any consumer.
 - **Gene symbols containing `_`.** PySCN encodes gene pairs as the string
   `geneA_geneB` and decodes with `split("_")`, so such symbols can't round-trip.
-  xcell currently excludes them at training time and refuses clearly when too
+  skopia currently excludes them at training time and refuses clearly when too
   few remain. A delimiter that can't occur in a symbol (or storing pairs as
   tuples rather than joined strings) would fix this upstream; until then any
   dataset using underscores in gene names — including our own
@@ -45,5 +45,5 @@ existing diffexp / marker-gene plumbing.
 
 ## Ligand-Receptor (Analyze → Spatial → Ligand-Receptor)
 
-- **Proper mouse→human ortholog table.** The bundled L-R database (`backend/xcell/data/lr_pairs.csv`) uses human UPPERCASE HGNC symbols. Mouse data currently works via case-insensitive matching (`Pdgfb` → `PDGFB`) in `prepare_ligrec`, mirroring CytoSignal. This is a heuristic and fails for genes whose mouse/human symbols genuinely differ, or 1:many ortholog cases. **We need to add a real ortholog mapping** (e.g. MGI `HOM_MouseHumanSequence`, or Ensembl BioMart orthologs) as an option, selectable by species, so mouse (and other species) genes map to the human database correctly. Until then, document the limitation in the tool.
+- **Proper mouse→human ortholog table.** The bundled L-R database (`backend/skopia/data/lr_pairs.csv`) uses human UPPERCASE HGNC symbols. Mouse data currently works via case-insensitive matching (`Pdgfb` → `PDGFB`) in `prepare_ligrec`, mirroring CytoSignal. This is a heuristic and fails for genes whose mouse/human symbols genuinely differ, or 1:many ortholog cases. **We need to add a real ortholog mapping** (e.g. MGI `HOM_MouseHumanSequence`, or Ensembl BioMart orthologs) as an option, selectable by species, so mouse (and other species) genes map to the human database correctly. Until then, document the limitation in the tool.
 - Possible follow-ups: Ensembl-ID → symbol fallback when `.var_names` are Ensembl IDs; expose `p_thresh` re-thresholding from stored p-values without re-running; per-interaction spatial-variability ranking (SPARK-X / Moran's I).

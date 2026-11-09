@@ -30,7 +30,7 @@ export interface BrowseEntry {
 }
 
 /** Remembered per kind — where you keep classifiers is not where you keep data. */
-const lastDirKey = (kind: BrowseKind) => `xcell_lastBrowseDir_${kind}`
+const lastDirKey = (kind: BrowseKind) => `skopia_lastBrowseDir_${kind}`
 
 export function formatSize(bytes: number): string {
   const KB = 1024, MB = KB * 1024, GB = MB * 1024

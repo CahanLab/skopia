@@ -10,8 +10,8 @@ import anndata
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.multicontour import spot_geometry
+from skopia.adaptor import DataAdaptor
+from skopia.multicontour import spot_geometry
 
 
 def _adata(step=2.0, n_side=10):

@@ -7,7 +7,7 @@ be detected, they are states the representation cannot reach.
 import numpy as np
 import pytest
 
-from xcell import territories as terr
+from skopia import territories as terr
 
 
 SQUARE = [[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]]

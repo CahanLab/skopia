@@ -4,7 +4,7 @@
 // holds those, and the app asks it what is loaded on startup.
 
 const VERSION = 1
-const STORAGE_KEY = 'xcell_workspace'
+const STORAGE_KEY = 'skopia_workspace'
 
 export interface Workspace {
   /** Slot keys in tab order. */

@@ -1,4 +1,4 @@
-"""Tests for xcell.gene_nmf — NMF gene-program discovery (GeneNMF port).
+"""Tests for skopia.gene_nmf — NMF gene-program discovery (GeneNMF port).
 
 The planted factorization gives a known answer: three disjoint blocks of
 genes, each driven by its own cell population, so a rank-3 factorization has
@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 import scipy.sparse as sp
 
-from xcell import gene_nmf
+from skopia import gene_nmf
 
 
 N_CELLS, N_GENES, K = 240, 45, 3

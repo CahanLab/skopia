@@ -7,9 +7,9 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell import enrichment_figures as ef
-from xcell import gene_set_sources as gss
-from xcell.adaptor import DataAdaptor, FigureInputMissing
+from skopia import enrichment_figures as ef
+from skopia import gene_set_sources as gss
+from skopia.adaptor import DataAdaptor, FigureInputMissing
 
 GENES = ['Col1a1', 'Col1a2', 'Col3a1', 'Ptprc', 'Cd3e', 'Cd19', 'Hoxd13', 'Meis1'] + [f'G{i}' for i in range(24)]
 LIB = [{'source': 'msigdb', 'id': 'toy', 'species': 'mouse'}]
@@ -69,8 +69,8 @@ def test_create_validates_kind_and_inputs_and_allocates_ids():
     a.delete_figure('fig_2')
     assert a.create_figure('enrichment_heatmap', inputs={'enrichment_keys': [col['key']]})['id'] == 'fig_3'
     assert [f['id'] for f in a.list_figures()] == ['fig_3', 'fig_1']
-    assert json.loads(a.adata.uns['xcell_figures']['fig_1'])['kind'] == 'enrichment_heatmap'
-    assert 'fig_2' not in a.adata.uns['xcell_figures']
+    assert json.loads(a.adata.uns['skopia_figures']['fig_1'])['kind'] == 'enrichment_heatmap'
+    assert 'fig_2' not in a.adata.uns['skopia_figures']
     with pytest.raises(KeyError):
         a.get_figure('fig_2')
     acts = [h['action'] for h in a._action_history]
@@ -154,7 +154,7 @@ def test_attach_links_record_figure_to_the_figure():
 def _adata_c():
     ad = _adata()
     ad.obs['subset_half'] = [True] * 40 + [False] * 50
-    ad.uns['xcell_cell_subsets'] = {'half': {'n_cells': 40, 'created_at': 't', 'origin': 'test'}}
+    ad.uns['skopia_cell_subsets'] = {'half': {'n_cells': 40, 'created_at': 't', 'origin': 'test'}}
     return ad
 
 
@@ -192,7 +192,7 @@ def test_expression_heatmap_figure_data_and_validation():
 # --- review fix pass -----------------------------------------------------------
 
 def test_codegen_replays_figure_create_update_delete_against_a_real_adaptor():
-    from xcell import codegen
+    from skopia import codegen
     a, col = _with_batch()
     f = a.create_figure('enrichment_heatmap', inputs={'enrichment_keys': [col['key']]})
     a.update_figure(f['id'], title='T', params={'top_n': 2})
@@ -204,7 +204,7 @@ def test_codegen_replays_figure_create_update_delete_against_a_real_adaptor():
     exec('\n'.join(codegen.notebook_preamble()), ns)
     for s in steps:
         t = codegen.translate(s)
-        assert t.fidelity == 'xcell'
+        assert t.fidelity == 'skopia'
         for line in t.code:
             exec(line, ns)                       # a wrong kwarg name raises TypeError here
     assert b.get_enrichment_results() and 'fig_1' not in b._figure_store()
@@ -278,7 +278,7 @@ def test_heatmap_figure_refuses_to_draw_when_its_line_column_or_subset_is_gone()
     with pytest.raises(FigureInputMissing, match='batch'):
         a.figure_data(g['id'])
     h = a.create_figure('expression_heatmap', inputs={'gene_sets': sets, 'cell_subset': 'half'})
-    a.adata.uns['xcell_cell_subsets'] = {}
+    a.adata.uns['skopia_cell_subsets'] = {}
     with pytest.raises(FigureInputMissing, match='half'):
         a.figure_data(h['id'])
     # an ordering that needs a line the inputs do not carry is a 400, on create and on preview
@@ -304,7 +304,7 @@ def test_heatmap_figure_records_the_transform_the_tab_drew_with():
 
 
 def test_cell_indices_are_deduplicated_integers_and_capped_in_the_record():
-    from xcell.analysis_record import SELECTION_CAP
+    from skopia.analysis_record import SELECTION_CAP
     a = DataAdaptor('x.h5ad', adata=_adata_c())
     f = a.create_figure('composition_barplot', inputs={'column_a': 'grp', 'column_b': 'batch', 'cell_indices': [3, 3, 4, 3]})
     assert f['inputs']['cell_indices'] == [3, 4] and a.figure_data(f['id'])['n_cells'] == 2
@@ -314,7 +314,7 @@ def test_cell_indices_are_deduplicated_integers_and_capped_in_the_record():
     assert 'cell_indices' not in summary['inputs'] and summary['inputs']['n_cell_indices'] == 2
     big = list(range(a.n_cells)) * 1                                # small dataset: simulate the cap
     a.SELECTION_CAP_FOR_TESTS = 5
-    import xcell.adaptor as mod
+    import skopia.adaptor as mod
     orig = mod.SELECTION_CAP
     mod.SELECTION_CAP = 5
     try:
@@ -329,7 +329,7 @@ def test_cell_indices_are_deduplicated_integers_and_capped_in_the_record():
 
 
 def test_codegen_replay_binds_figures_by_id_even_when_ids_differ():
-    from xcell import codegen
+    from skopia import codegen
     a, col = _with_batch()
     f = a.create_figure('enrichment_heatmap', inputs={'enrichment_keys': [col['key']]})
     a.update_figure(f['id'], title='T')
@@ -441,7 +441,7 @@ def test_dotplot_figure_requires_a_categorical_column():
 
 
 def test_every_figure_param_has_a_config_default():
-    from xcell import config as user_config
+    from skopia import config as user_config
     cfg = user_config.get_user_config()['figures']
     for kind in DataAdaptor.FIGURE_KINDS:
         assert set(cfg[kind]) == set(DataAdaptor._FIGURE_PARAM_KEYS[kind]), kind

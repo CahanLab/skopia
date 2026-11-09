@@ -1,19 +1,19 @@
-# PySingleCellNet — upstream issues found while integrating with xcell
+# PySingleCellNet — upstream issues found while integrating with skopia
 
 **Audience:** a session working on
 [CahanLab/PySingleCellNet](https://github.com/CahanLab/PySingleCellNet). This
 document is self-contained; you do not need the conversation it came from.
 
-**Found:** 2026-08-06, while building xcell's Cell Typing panel
-(`backend/xcell/pyscn.py` + `PyscnModal.tsx` in CahanLab/xcell).
+**Found:** 2026-08-06, while building skopia's Cell Typing panel
+(`backend/skopia/pyscn.py` + `PyscnModal.tsx` in CahanLab/skopia).
 **Against:** PyPI `pySingleCellNet` **0.1.5**; `master` at `09f8f10cd250`
 (2026-02-25). Re-check line numbers before editing — they are from 0.1.5.
 
 All findings are in `src/pySingleCellNet/tools/classifier.py` unless noted.
 Every one was hit or confirmed by running the code, not by reading alone.
 
-> **Scope note.** xcell already works around #1–#4 on its own side, so nothing
-> here is blocking for xcell. They are listed because they will bite anyone
+> **Scope note.** skopia already works around #1–#4 on its own side, so nothing
+> here is blocking for skopia. They are listed because they will bite anyone
 > else using the library directly, and because the workarounds belong upstream.
 
 ---
@@ -53,8 +53,8 @@ A symbol that itself contains an underscore decodes into fragments that are not
 genes. `Mesen_1` paired with `Ubiq_3` becomes `"Mesen_1_Ubiq_3"`, which splits
 to `Mesen` and `1`.
 
-**Reproduction** — this is not hypothetical: the toy dataset bundled with xcell
-(`backend/xcell/data/toy_spatial.h5ad`) names all 76 of its genes this way, and
+**Reproduction** — this is not hypothetical: the toy dataset bundled with skopia
+(`backend/skopia/data/toy_spatial.h5ad`) names all 76 of its genes this way, and
 training on it fails.
 
 ```python
@@ -83,7 +83,7 @@ the on-disk `topPairs` format, so it needs a version stamp and a migration path
 — see #6. A cheap interim step is to validate in `train_classifier` and raise a
 clear error naming the offending symbols.
 
-**What xcell does meanwhile:** excludes underscore-containing symbols before
+**What skopia does meanwhile:** excludes underscore-containing symbols before
 training and reports how many; refuses with an explanation when too few remain;
 and rejects a classifier whose `tpGeneArray` contains them at load time rather
 than letting it fail mid-prediction.
@@ -115,7 +115,7 @@ distribution", which reads like something a user should be able to set.
 the null distribution separate from the per-cell result (return it, or store it
 in `.uns`) instead of concatenating it into the same frame.
 
-**What xcell does meanwhile:** pins `nrand=0` and does not expose it.
+**What skopia does meanwhile:** pins `nrand=0` and does not expose it.
 
 ---
 
@@ -146,7 +146,7 @@ inspectable after the fact, and raise below some floor. Even a one-line
 `warnings.warn(f"{n_missing}/{n_required} classifier genes absent from the
 query; scores may be unreliable")` would remove the whole failure mode.
 
-**What xcell does meanwhile:** computes coverage before every run and shows it
+**What skopia does meanwhile:** computes coverage before every run and shows it
 banded ok / warn / error with the missing symbols listed, and detects the pure
 `ACTB`/`Actb` case specifically so it can offer a case-insensitive match instead
 of reporting 0% overlap.
@@ -173,7 +173,7 @@ genes (typically a few hundred) are ever used. For a 100k x 30k query that is
 `.toarray()`, then `reindex` to add the genuinely-missing genes as zeros.
 Chunking over cells on top of that bounds peak memory regardless of query size.
 
-**What xcell does meanwhile:** hands PySCN a query AnnData already narrowed to
+**What skopia does meanwhile:** hands PySCN a query AnnData already narrowed to
 exactly `tpGeneArray` in order (zero-filling absent genes itself), so the
 internal `reindex` is a no-op reorder, and chunks prediction over cells.
 
@@ -214,7 +214,7 @@ data and stash it in the returned dict (e.g. `'ctGraph'`), then let
 `categorize_classification` default to `graph=clf['ctGraph']`. That makes the
 full categorization portable to any consumer, which is what the feature is for.
 
-**What xcell does meanwhile:** reports those cells as **Ambiguous** — declining
+**What skopia does meanwhile:** reports those cells as **Ambiguous** — declining
 to guess a distinction it has no information to make — and documents the gap in
 its UI and `docs/ROADMAP.md`.
 
@@ -236,7 +236,7 @@ into one clear message at load time.
 writing a dict with a `'format_version'` key, validating on load, and migrating
 older payloads.
 
-**What xcell does meanwhile:** `xcell/pyscn.py::load_classifier` validates the
+**What skopia does meanwhile:** `skopia/pyscn.py::load_classifier` validates the
 required keys, checks for a fitted estimator with `predict_proba`, and turns a
 `ModuleNotFoundError` during unpickling into an install hint. Reusable as a
 starting point.
@@ -277,9 +277,9 @@ the actual problem, instead of deep in pandas or not at all.
 
 ## Related
 
-- xcell's adapter: `backend/xcell/pyscn.py`, tests in
+- skopia's adapter: `backend/skopia/pyscn.py`, tests in
   `backend/tests/test_pyscn.py` (43 tests; the ones exercising PySCN skip when
   it is not installed). Some may be liftable as upstream regression tests —
   notably the underscore-gene and gene-overlap cases.
-- xcell's own roadmap entry for this integration: `docs/ROADMAP.md`, "Cell
+- skopia's own roadmap entry for this integration: `docs/ROADMAP.md`, "Cell
   typing (PySingleCellNet)".

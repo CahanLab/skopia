@@ -2,7 +2,7 @@
  *
  * Browsers infer the SVG namespace from the DOM; a serialised file has no such
  * context and needs the xmlns declared, or Illustrator and Inkscape refuse it.
- * xcell's figures are drawn for a dark panel, so a transparent background
+ * skopia's figures are drawn for a dark panel, so a transparent background
  * would come out as white-on-white in most viewers — hence the painted rect.
  */
 

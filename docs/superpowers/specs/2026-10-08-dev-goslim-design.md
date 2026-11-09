@@ -12,7 +12,7 @@ revisited; the term table is the part that needs Patrick's eye.
 
 ## The object
 
-One table, `backend/xcell/data/dev_goslim.tsv`, is the source of truth:
+One table, `backend/skopia/data/dev_goslim.tsv`, is the source of truth:
 
 | column | meaning |
 |---|---|
@@ -78,7 +78,7 @@ alone and the bundles stay role-resolved.
 
 ## Build
 
-`backend/xcell/data/build_dev_goslim.py`, beside `build_dev_signaling.py`,
+`backend/skopia/data/build_dev_goslim.py`, beside `build_dev_signaling.py`,
 with the same contract: run it to regenerate the JSON; the table is the truth.
 
 1. Load go-basic.obo and the mouse and human GAFs through `go_semantic`'s
@@ -114,7 +114,7 @@ source library built from the files on disk at fetch time, was not chosen:
 the Library modal imports into one folder, so the nesting would be lost, and
 membership would drift with whatever GAF the user last fetched.
 
-Regenerating the bundles at each xcell release (part of the release
+Regenerating the bundles at each skopia release (part of the release
 checklist, not automated) keeps them within a few months of current GO.
 
 ## Tests

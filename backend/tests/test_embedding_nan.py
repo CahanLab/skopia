@@ -1,6 +1,6 @@
 """Embeddings that contain NaN coordinates.
 
-NaN is a legitimate value in an `.obsm` embedding and xcell writes it in three
+NaN is a legitimate value in an `.obsm` embedding and skopia writes it in three
 places: `run_pca` and `run_umap` on an active cell selection leave inactive
 cells NaN, and Localize leaves unplaceable cells NaN rather than fabricating a
 position. But NaN is not valid JSON, and starlette serializes with the strict
@@ -18,9 +18,9 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.main import app
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.main import app
 
 
 def _adaptor(n=12, n_genes=5):

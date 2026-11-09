@@ -8,10 +8,10 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell import gene_set_sources as gss
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.main import app
+from skopia import gene_set_sources as gss
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.main import app
 
 GENES = ['Col1a1', 'Col1a2', 'Col3a1', 'Ptprc', 'Cd3e', 'Cd19'] + [f'G{i}' for i in range(14)]
 

@@ -4,7 +4,7 @@ import numpy as np
 import anndata
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 def _spatial_adata():

@@ -6,7 +6,7 @@ so `kind` selects the filter and everything else stays shared.
 """
 from fastapi.testclient import TestClient
 
-from xcell.main import app
+from skopia.main import app
 
 
 def _make_tree(tmp_path):

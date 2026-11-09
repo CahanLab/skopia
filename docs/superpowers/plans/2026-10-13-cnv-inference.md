@@ -4,7 +4,7 @@
 
 **Goal:** inferCNV-style copy-number inference with subclone calling, a modal, and a CNV heatmap figure kind.
 
-**Architecture:** pure `backend/xcell/cnv.py` (numpy/scipy/scanpy, no new deps) called from `DataAdaptor.prepare_cnv` as a two-phase background task; results land in `.obsm`/`.obs`/`uns` under one key; a `cnv_heatmap` figure kind reads them back. Frontend: `CnvModal.tsx` + `lib/cnv.ts`, `CnvHeatmapFigure.tsx` canvas renderer.
+**Architecture:** pure `backend/skopia/cnv.py` (numpy/scipy/scanpy, no new deps) called from `DataAdaptor.prepare_cnv` as a two-phase background task; results land in `.obsm`/`.obs`/`uns` under one key; a `cnv_heatmap` figure kind reads them back. Frontend: `CnvModal.tsx` + `lib/cnv.ts`, `CnvHeatmapFigure.tsx` canvas renderer.
 
 **Tech Stack:** FastAPI, numpy, scipy (`cluster.hierarchy`), scanpy (`tl.leiden`), sklearn `NearestNeighbors`, React + canvas.
 
@@ -31,12 +31,12 @@
 
 ## File map
 
-- Create `backend/xcell/cnv.py` — positions, ordering, inference, clustering, summaries, heatmap assembly.
-- Create `backend/xcell/data/gene_positions_{human,mouse}.tsv.gz` — built by `build_gene_positions.py` (committed).
-- Modify `backend/xcell/adaptor.py` — `cnv_status`, `prepare_cnv`, `cnv_results`, figure kind branches.
-- Modify `backend/xcell/api/routes.py` — `/cnv/status`, `/cnv`, `/cnv/results`.
-- Modify `backend/xcell/codegen.py` — `'cnv'` entry.
-- Modify `backend/xcell/config.yaml` — `figures.cnv_heatmap`.
+- Create `backend/skopia/cnv.py` — positions, ordering, inference, clustering, summaries, heatmap assembly.
+- Create `backend/skopia/data/gene_positions_{human,mouse}.tsv.gz` — built by `build_gene_positions.py` (committed).
+- Modify `backend/skopia/adaptor.py` — `cnv_status`, `prepare_cnv`, `cnv_results`, figure kind branches.
+- Modify `backend/skopia/api/routes.py` — `/cnv/status`, `/cnv`, `/cnv/results`.
+- Modify `backend/skopia/codegen.py` — `'cnv'` entry.
+- Modify `backend/skopia/config.yaml` — `figures.cnv_heatmap`.
 - Tests: `backend/tests/test_cnv.py`, `test_cnv_adaptor.py`, `test_cnv_routes.py`.
 - Frontend: create `lib/cnv.ts` (+test), `components/CnvModal.tsx`, `components/figures/CnvHeatmapFigure.tsx`; modify `store.ts`, `App.tsx`, `ScanpyModal.tsx`, `lib/figures.ts`, `lib/figureSchemas.ts` (+test), `components/FiguresView.tsx`, `hooks/useData.ts` (if a fetch helper is needed).
 - Docs: `CHANGELOG.md` Unreleased, `README.md` feature line, CLAUDE.md note.

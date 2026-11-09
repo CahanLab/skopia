@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { FIGURE_SCHEMAS, coerceParams } from './figureSchemas'
 
-// A literal copy of backend/xcell/config.yaml `figures:` — the schema must
+// A literal copy of backend/skopia/config.yaml `figures:` — the schema must
 // name exactly the params the backend accepts, or a form field would 400.
 const BACKEND_DEFAULTS: Record<string, Record<string, unknown>> = {
   enrichment_heatmap: {

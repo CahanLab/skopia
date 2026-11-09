@@ -3,11 +3,11 @@
 ## The problem
 
 All three exports stream a browser download: `handleExportH5ad` sets
-`a.download = 'xcell_export.h5ad'` and lets the browser drop it in Downloads.
+`a.download = 'skopia_export.h5ad'` and lets the browser drop it in Downloads.
 You cannot choose the directory, you cannot choose the name, and every export of
 the same dataset overwrites or duplicates the last one under an identical
-filename. A user who exports three variants ends up with `xcell_export.h5ad`,
-`xcell_export (1).h5ad`, `xcell_export (2).h5ad` and no way to tell them apart.
+filename. A user who exports three variants ends up with `skopia_export.h5ad`,
+`skopia_export (1).h5ad`, `skopia_export (2).h5ad` and no way to tell them apart.
 
 For an h5ad it is also a needless round trip: a multi-gigabyte file is written
 to a temp file on the server, streamed through the browser, and written again —
@@ -69,7 +69,7 @@ removing it would break a URL that works today.
 ### 4. Each format proposes a name, and warns before overwriting
 
 The default filename is derived from the loaded dataset — `E11.5_best_102424`
-becomes `E11.5_best_102424_xcell.h5ad` — rather than a constant, so two exports
+becomes `E11.5_best_102424_skopia.h5ad` — rather than a constant, so two exports
 of different datasets do not collide.
 
 Because `FileBrowser` reports the entries of the directory it is showing, the

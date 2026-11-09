@@ -1,6 +1,6 @@
 # CNV inference benchmark
 
-Scores `xcell.cnv` against orthogonal copy-number truth, following the
+Scores `skopia.cnv` against orthogonal copy-number truth, following the
 evaluation of Schmid et al., *Benchmarking scRNA-seq copy number variation
 callers*, Nat Commun 2025 (doi:10.1038/s41467-025-62359-9). Results and the
 decisions taken from them: `docs/measurements/2026-10-13-cnv-benchmark.md`.

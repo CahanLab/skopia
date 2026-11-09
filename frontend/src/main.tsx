@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import { useStore } from './store'
+import { migrateBrowserStorage } from './lib/legacyStorage'
 
 // Load config defaults BEFORE the first render. Several modals are always mounted
 // (they render null until opened) and read their defaults via cfgDefault(...) in a
@@ -24,6 +25,9 @@ async function preloadConfigDefaults(): Promise<void> {
     /* no config file / backend not ready → hardcoded defaults apply */
   }
 }
+
+// Before the first render: App's initial state reads localStorage.
+migrateBrowserStorage()
 
 preloadConfigDefaults().finally(() => {
   ReactDOM.createRoot(document.getElementById('root')!).render(

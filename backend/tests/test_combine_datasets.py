@@ -12,7 +12,7 @@ import anndata
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import combine_datasets
+from skopia.adaptor import combine_datasets
 
 
 GENES = [f'g{i}' for i in range(20)]
@@ -43,7 +43,7 @@ def test_two_spatial_files_lay_out_side_by_side(tmp_path):
         [_write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)],
         ['s1', 's2'],
     )
-    assert out.uns['xcell_combine']['mode'] == 'spatial'
+    assert out.uns['skopia_combine']['mode'] == 'spatial'
     assert out.n_obs == 70
     assert list(out.obs['sample'].cat.categories) == ['s1', 's2']
     sp = out.obsm['X_spatial']
@@ -63,7 +63,7 @@ def test_the_spatial_convention_key_is_accepted_too(tmp_path):
         [_write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)],
         ['s1', 's2'],
     )
-    assert out.uns['xcell_combine']['mode'] == 'spatial'
+    assert out.uns['skopia_combine']['mode'] == 'spatial'
     assert 'X_spatial' in out.obsm
 
 
@@ -76,7 +76,7 @@ def test_non_spatial_files_concatenate_and_keep_shared_embeddings(tmp_path):
         [_write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)],
         ['d1', 'd2'],
     )
-    assert out.uns['xcell_combine']['mode'] == 'concat'
+    assert out.uns['skopia_combine']['mode'] == 'concat'
     assert out.n_obs == 40
     assert out.obsm['X_pca'].shape == (40, 10)
     assert 'X_spatial' not in out.obsm
@@ -103,7 +103,7 @@ def test_a_mixed_set_concatenates_rather_than_pretending_geometry(tmp_path):
         [_write(tmp_path, 'a.h5ad', spatial), _write(tmp_path, 'b.h5ad', plain)],
         ['s', 'p'],
     )
-    assert out.uns['xcell_combine']['mode'] == 'concat'
+    assert out.uns['skopia_combine']['mode'] == 'concat'
     # The one-sided coordinates cannot cover the result and are dropped.
     assert 'X_spatial' not in out.obsm
 
@@ -165,7 +165,7 @@ def _write_10x_mtx_dir(tmp_path, name: str, n: int, genes=None):
 
 
 def test_load_dataset_file_identifies_each_format(tmp_path):
-    from xcell.adaptor import load_dataset_file
+    from skopia.adaptor import load_dataset_file
     a, kind = load_dataset_file(_write(tmp_path, 'a.h5ad', _base(10, 1)))
     assert kind == 'h5ad' and a.n_obs == 10
 
@@ -179,19 +179,19 @@ def test_load_dataset_file_identifies_each_format(tmp_path):
 
 
 def test_combine_h5ad_with_10x_h5(tmp_path):
-    from xcell.adaptor import combine_datasets
+    from skopia.adaptor import combine_datasets
     out = combine_datasets(
         [_write(tmp_path, 'a.h5ad', _base(10, 1)), _write_10x_h5(tmp_path, 'b.h5', 12)],
         ['plain', 'tenx'],
     )
     assert out.n_obs == 22
-    assert out.uns['xcell_combine']['mode'] == 'concat'
+    assert out.uns['skopia_combine']['mode'] == 'concat'
     assert list(out.obs['sample'].cat.categories) == ['plain', 'tenx']
     assert list(out.var_names) == GENES
 
 
 def test_combine_with_10x_mtx_dir(tmp_path):
-    from xcell.adaptor import combine_datasets
+    from skopia.adaptor import combine_datasets
     out = combine_datasets(
         [_write(tmp_path, 'a.h5ad', _base(10, 1)), _write_10x_mtx_dir(tmp_path, 'tenx', 8)],
         ['plain', 'folder'],
@@ -200,7 +200,7 @@ def test_combine_with_10x_mtx_dir(tmp_path):
 
 
 def test_combine_unloadable_file_names_the_culprit(tmp_path):
-    from xcell.adaptor import combine_datasets
+    from skopia.adaptor import combine_datasets
     junk = tmp_path / 'notes.txt'
     junk.write_text('not a dataset')
     with pytest.raises(ValueError, match='notes.txt'):
@@ -215,7 +215,7 @@ def test_combine_unloadable_file_names_the_culprit(tmp_path):
 # ---------------------------------------------------------------------------
 def _client():
     from fastapi.testclient import TestClient
-    from xcell.main import app
+    from skopia.main import app
     return TestClient(app)
 
 
@@ -256,7 +256,7 @@ def test_combine_route_rejects_unsupported_suffix(tmp_path):
 
 
 def test_combine_route_rds_without_r_is_a_400(tmp_path, monkeypatch):
-    from xcell.api import routes as routes_mod
+    from skopia.api import routes as routes_mod
     monkeypatch.setattr(routes_mod.shutil, 'which', lambda _: None)
     c = _client()
     a = str(_write(tmp_path, 'a.h5ad', _base(10, 1)))

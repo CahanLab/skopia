@@ -14,7 +14,7 @@ import pytest
 from scipy.sparse import csr_matrix
 from fastapi.testclient import TestClient
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 N_CELLS, N_BLOCK_GENES, K = 150, 30, 3
@@ -74,7 +74,7 @@ def test_recovers_planted_populations_and_writes_suffixed_keys():
     assert ad.obsp["blocks_connectivities"].shape == (N_CELLS, N_CELLS)
     assert ad.obsp["blocks_distances"].shape == (N_CELLS, N_CELLS)
     assert ad.uns["blocks"]["connectivities_key"] == "blocks_connectivities"
-    reg = ad.uns["xcell_gene_set_clusterings"]["blocks"]
+    reg = ad.uns["skopia_gene_set_clusterings"]["blocks"]
     assert reg["genes_used"] == GENES and reg["n_cells"] == N_CELLS
     assert reg["params"]["resolution"] == 0.5
     # The dataset's own embedding and clustering were not touched.
@@ -141,8 +141,8 @@ def _poll(client, task_id, timeout=60.0):
 
 
 def test_route_runs_as_task_with_a_selection(monkeypatch):
-    from xcell.main import app
-    from xcell.api import routes
+    from skopia.main import app
+    from skopia.api import routes
     a = _adaptor()
     monkeypatch.setattr(routes, "get_adaptor", lambda dataset=None: a)
     client = TestClient(app)
@@ -159,7 +159,7 @@ def test_route_runs_as_task_with_a_selection(monkeypatch):
 
 
 def test_codegen_emits_the_two_phase_call():
-    from xcell import codegen
+    from skopia import codegen
     spec = codegen.REGISTRY["cluster_cells_by_gene_set"]
     step = types.SimpleNamespace(action="cluster_cells_by_gene_set", params={
         "genes": ["G000", "G001"], "key": "blocks", "n_comps": 10, "n_neighbors": 15,

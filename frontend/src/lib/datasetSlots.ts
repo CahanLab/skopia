@@ -38,7 +38,7 @@ export function nextSlotKey(existing: string[]): string {
   throw new Error('no free dataset slot')
 }
 
-// The extensions xcell loads. Anything else — a 10x matrix directory, say — is
+// The extensions skopia loads. Anything else — a 10x matrix directory, say — is
 // a name in its own right and is left alone.
 const DATA_EXTENSIONS = ['.h5ad', '.h5', '.rds']
 

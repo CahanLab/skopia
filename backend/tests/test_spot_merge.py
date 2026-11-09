@@ -9,7 +9,7 @@ ruled out letting noisy low-count correlations rank the merges.
 import numpy as np
 import pytest
 
-from xcell.spot_merge import estimate_pitch_um, max_spots_for
+from skopia.spot_merge import estimate_pitch_um, max_spots_for
 
 
 def _grid(nx: int, ny: int, pitch: float = 15.0) -> np.ndarray:
@@ -48,7 +48,7 @@ def test_pitch_needs_two_spots():
 
 # --- the grouping itself -----------------------------------------------------
 
-from xcell.spot_merge import MergeParams, merge_spots  # noqa: E402
+from skopia.spot_merge import MergeParams, merge_spots  # noqa: E402
 
 
 def _profiles(n: int, g: int = 8, kind: int = 0, rng=None) -> np.ndarray:
@@ -160,7 +160,7 @@ def test_size_histogram_accounts_for_every_spot():
 
 # --- eligibility -------------------------------------------------------------
 
-from xcell.spot_merge import eligible_mask  # noqa: E402
+from skopia.spot_merge import eligible_mask  # noqa: E402
 
 
 def test_all_is_the_default_and_takes_everything():

@@ -11,7 +11,7 @@ import anndata
 import pandas as pd
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 def _adata():

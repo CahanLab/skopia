@@ -1,4 +1,4 @@
-"""Tests for the multi-sample half of xcell.gene_nmf — meta-programs.
+"""Tests for the multi-sample half of skopia.gene_nmf — meta-programs.
 
 The planted setup is the question meta-programs exist to answer: three gene
 blocks are used by every sample, and a fourth by only one. A correct run
@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 import scipy.sparse as sp
 
-from xcell import gene_nmf
+from skopia import gene_nmf
 
 
 N_SAMPLES, N_CELLS, N_GENES = 3, 400, 60

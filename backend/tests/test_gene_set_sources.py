@@ -8,7 +8,7 @@ import time
 
 import pytest
 
-from xcell import gene_set_sources as gss
+from skopia import gene_set_sources as gss
 
 
 @pytest.fixture(autouse=True)
@@ -241,7 +241,7 @@ def test_string_partners_builds_a_set_and_edges_above_required_score(monkeypatch
     assert out['sets'][0]['name'] == 'STRING partners of Col1a1'
     assert out['sets'][0]['genes'] == ['Col1a1', 'Col3a1', 'Itgb1']  # seed first, Weak (0.30) dropped
     assert out['edges'] == [{'a': 'Col1a1', 'b': 'Col3a1', 'score': 0.999}, {'a': 'Col1a1', 'b': 'Itgb1', 'score': 0.988}]
-    assert any('caller_identity=xcell' in u for u in urls)
+    assert any('caller_identity=skopia' in u for u in urls)
 
 
 def test_string_network_returns_edges_among_the_list(monkeypatch):

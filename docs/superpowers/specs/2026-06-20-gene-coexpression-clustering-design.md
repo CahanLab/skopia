@@ -5,7 +5,7 @@
 **Entry point:** Genes panel → gene set "…" → **Cluster genes** → produces new gene sets.
 **Status:** Implemented 2026-06-20 (plan
 `docs/superpowers/plans/2026-06-20-gene-coexpression-clustering.md`). New
-`backend/xcell/gene_coexpression.py` + `method='auto'` in `cluster_gene_set`,
+`backend/skopia/gene_coexpression.py` + `method='auto'` in `cluster_gene_set`,
 route params, and the modal's "Auto" default. 119 backend tests pass; frontend
 tsc + build clean; verified live end-to-end (UI → API → backend produced module
 gene sets on a real `.h5ad`).
@@ -36,11 +36,11 @@ Desired (from the user):
 
 - `adaptor.cluster_gene_set(gene_names, method, k, cell_indices, eps,
   min_samples, layer, use_gene_mask) -> list[list[str]]`
-  (`backend/xcell/adaptor.py:5443`). Builds `X_genes` = (n_genes, n_cells)
+  (`backend/skopia/adaptor.py:5443`). Builds `X_genes` = (n_genes, n_cells)
   from the normalized matrix (or a chosen layer), clusters by gene profile,
   returns clusters as gene-name lists; DBSCAN noise is a trailing group.
 - Route `POST /cluster_gene_set` + `ClusterGeneSetRequest`
-  (`backend/xcell/api/routes.py:1082`, `:2712`).
+  (`backend/skopia/api/routes.py:1082`, `:2712`).
 - `ClusterGeneSetModal.tsx` → `runClusterGeneSet()` → wraps each returned
   cluster into a new gene set under a `gene_clusters` folder. **Already renders
   a trailing noise/unassigned group**, so an "unassigned" bucket needs no
@@ -150,7 +150,7 @@ point.)
 
 ## 4. Changes by layer
 
-- **`backend/xcell/gene_coexpression.py`** (new): metric transforms (`bicor`/
+- **`backend/skopia/gene_coexpression.py`** (new): metric transforms (`bicor`/
   pearson/spearman → standardized profiles + corr/distance), eigengene,
   coherence, split/merge/prune primitives, and a top-level
   `auto_coexpression_modules(X_genes, gene_names, *, metric, min_genes,

@@ -10,8 +10,8 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.heatmap import compute_heatmap_data
+from skopia.adaptor import DataAdaptor
+from skopia.heatmap import compute_heatmap_data
 
 
 def _adata():

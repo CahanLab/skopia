@@ -4,7 +4,7 @@
 
 **Goal:** Diffusion maps on any `.obsp` connectivity graph and diffusion pseudotime from a chosen root (stemFinder-aware), end to end: pure module, adaptor, routes, codegen, ScanpyModal operation, Pseudotime modal.
 
-**Architecture:** `backend/xcell/diffusion.py` wraps `sc.tl.diffmap` / `sc.tl.dpt` on a throwaway AnnData holding only the graph, adding symmetrisation, isolated-cell masking and inf→NaN. The adaptor mirrors `run_umap` for scope/naming and keeps a registry in `uns['xcell_diffmaps']` so DPT can find each map's graph. Frontend: diffusion map is a generic ScanpyModal op; DPT is a dedicated global modal.
+**Architecture:** `backend/skopia/diffusion.py` wraps `sc.tl.diffmap` / `sc.tl.dpt` on a throwaway AnnData holding only the graph, adding symmetrisation, isolated-cell masking and inf→NaN. The adaptor mirrors `run_umap` for scope/naming and keeps a registry in `uns['skopia_diffmaps']` so DPT can find each map's graph. Frontend: diffusion map is a generic ScanpyModal op; DPT is a dedicated global modal.
 
 **Tech Stack:** Python 3.11, scanpy 1.11.5, scipy sparse, FastAPI/Pydantic; React + TypeScript + Zustand, vitest.
 
@@ -12,8 +12,8 @@
 
 ## Global Constraints
 
-- Work only in the worktree `/private/tmp/claude-501/xcell-wt` (branch `feat/diffmap-dpt`); never edit the main repo mid-session (his `--reload` backend).
-- Backend tests: `cd backend && "/Users/pcahan/Dropbox (Personal)/Code/xcell/.pixi/envs/default/bin/python" -m pytest …` (worktree's `xcell/` shadows the editable install because of cwd).
+- Work only in the worktree `/private/tmp/claude-501/skopia-wt` (branch `feat/diffmap-dpt`); never edit the main repo mid-session (his `--reload` backend).
+- Backend tests: `cd backend && "/Users/pcahan/Dropbox (Personal)/Code/skopia/.pixi/envs/default/bin/python" -m pytest …` (worktree's `skopia/` shadows the editable install because of cwd).
 - Frontend: run `npx tsc --noEmit` / `npx vitest run` from `<wt>/frontend`.
 - No `inf` / `NaN` across the API: NaN → `null` (existing `_nullable` for coordinates; obs columns already serialise NaN as null).
 - No `None` values written into `uns` (h5ad cannot write them) — omit the key instead.
@@ -33,10 +33,10 @@
 
 ---
 
-### Task 1: Pure module `xcell/diffusion.py`
+### Task 1: Pure module `skopia/diffusion.py`
 
 **Files:**
-- Create: `backend/xcell/diffusion.py`
+- Create: `backend/skopia/diffusion.py`
 - Test: `backend/tests/test_diffusion.py` (already written: 22 tests — parity with scanpy, isolated cells, symmetrisation, components, DPT NaN, root_from_cells)
 
 **Interfaces — Produces:**
@@ -76,7 +76,7 @@ from scipy import sparse
 #: scanpy's own cut in ``Neighbors._get_dpt_row``, chosen for float32 precision.
 STATIONARY_EVAL = 0.9994
 
-_NEIGHBORS_KEY = '_xcell_diffusion'
+_NEIGHBORS_KEY = '_skopia_diffusion'
 
 
 @dataclass(frozen=True)
@@ -105,10 +105,10 @@ def prepare_graph(conn) -> PreparedGraph:
 ### Task 2: Adaptor, routes, codegen, subset tree
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (constants near `CELL_SUBSETS_UNS`; `check_prerequisites` prereqs; `_subset_record_step` / `_subset_forget_key` / `_subset_derived_keys` / `_subset_summary` / `delete_cell_subset`; new methods after `run_leiden`: `_default_graph_key`, `_diffmap_registry`, `_diffmap_info`, `run_diffmap`, `list_diffmaps`, `_dpt_root`, `run_dpt`)
-- Modify: `backend/xcell/stemfinder.py` (`potency_columns(columns, dtypes)`)
-- Modify: `backend/xcell/api/routes.py` (`DiffmapRequest`, `DptRequest`, `POST /scanpy/diffmap`, `POST /scanpy/dpt`, `GET /scanpy/diffmaps`)
-- Modify: `backend/xcell/codegen.py` (`diffmap`, `dpt` entries)
+- Modify: `backend/skopia/adaptor.py` (constants near `CELL_SUBSETS_UNS`; `check_prerequisites` prereqs; `_subset_record_step` / `_subset_forget_key` / `_subset_derived_keys` / `_subset_summary` / `delete_cell_subset`; new methods after `run_leiden`: `_default_graph_key`, `_diffmap_registry`, `_diffmap_info`, `run_diffmap`, `list_diffmaps`, `_dpt_root`, `run_dpt`)
+- Modify: `backend/skopia/stemfinder.py` (`potency_columns(columns, dtypes)`)
+- Modify: `backend/skopia/api/routes.py` (`DiffmapRequest`, `DptRequest`, `POST /scanpy/diffmap`, `POST /scanpy/dpt`, `GET /scanpy/diffmaps`)
+- Modify: `backend/skopia/codegen.py` (`diffmap`, `dpt` entries)
 - Test: `backend/tests/test_diffmap_adaptor.py`
 
 **Interfaces — Consumes:** Task 1. **Produces:**
@@ -187,7 +187,7 @@ Behaviour: on open (and dataset change) GET `/api/scanpy/diffmaps`; reset state 
 
 ### Task 6: Verify in the browser, docs
 
-- [ ] Isolated stack: backend :8100 from the worktree, Vite :5273 with `XCELL_BACKEND`.
+- [ ] Isolated stack: backend :8100 from the worktree, Vite :5273 with `SKOPIA_BACKEND`.
 - [ ] Load `ad_Grosswendt_demo.h5ad` (700 cells): normalize → log1p → HVG → PCA → neighbors → Diffusion map → plot shows DC1×DC2 with DC axis labels; stemFinder → DPT with stemFinder root → coloured by `dpt_pseudotime`; Epiblast low pseudotime.
 - [ ] Toy spatial dataset: spatial neighbors → Diffusion map on the spatial graph → `X_diffmap_spatial`, warnings shown, no failed requests (`window.fetch` recorder).
 - [ ] Subset: save a subset, run diffmap → `X_diffmap_<name>`, CoverageNotice visible, DPT → `dpt_pseudotime_<name>`.

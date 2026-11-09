@@ -12,8 +12,8 @@ import pytest
 from scipy.sparse import csr_matrix
 from fastapi.testclient import TestClient
 
-from xcell import gene_annotations as ga
-from xcell.adaptor import DataAdaptor
+from skopia import gene_annotations as ga
+from skopia.adaptor import DataAdaptor
 
 
 COL1A1 = {"query": "Col1a1", "_id": "12842", "symbol": "Col1a1", "taxid": 10090, "entrezgene": 12842,
@@ -156,8 +156,8 @@ def _poll(client, task_id, timeout=30.0):
 
 
 def test_routes(monkeypatch, _isolated):
-    from xcell.main import app
-    from xcell.api import routes
+    from skopia.main import app
+    from skopia.api import routes
     a = _adaptor()
     monkeypatch.setattr(routes, "get_adaptor", lambda dataset=None: a)
     client = TestClient(app)

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from xcell.transport import (
+from skopia.transport import (
     SinkhornResult,
     barycentric_projection,
     normalize_cost,

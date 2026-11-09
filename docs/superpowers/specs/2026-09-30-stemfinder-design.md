@@ -38,7 +38,7 @@ result reports how many were found and which were missing. Zero found is a 400.
 
 **Expression.** stemFinder's `gini` wants *scaled* expression (threshold 0 then
 splits each gene at its mean); `stdev` / `variance`, the cell-cycle mean and the
-TF count want *log-normalized* expression. xcell prepares both from `adata.X`
+TF count want *log-normalized* expression. skopia prepares both from `adata.X`
 (or a chosen layer) for the marker columns only:
 
 - `layer_scale.assess_matrix_scale` says what the matrix is. Raw counts and
@@ -81,7 +81,7 @@ built on, which damps the heterogeneity measured), small neighbourhoods.
 
 ## Shape
 
-- `backend/xcell/stemfinder.py` — pure, the `pyscn.py` pattern: never imports
+- `backend/skopia/stemfinder.py` — pure, the `pyscn.py` pattern: never imports
   `pystemfinder` at module scope, `availability()`, `ValueError` with install
   instructions. `match_genes`, `prepare_expression`, `build_knn`,
   `graph_from_existing`, `compute_scores`, `group_summary`.
@@ -89,7 +89,7 @@ built on, which damps the heterogeneity measured), small neighbourhoods.
   apply_fn)`; apply writes the columns, logs `stemfinder`, returns stats and
   (optionally) the per-group medians of a chosen categorical column, sorted.
 - `GET /api/stemfinder/status`, `POST /api/stemfinder` (202 + task).
-- codegen `stemfinder`: `_xcell_run(xa.prepare_stemfinder(...))`, fidelity xcell.
+- codegen `stemfinder`: `_skopia_run(xa.prepare_stemfinder(...))`, fidelity skopia.
 - `StemFinderModal.tsx`, a global modal launched from Analyze → Cells; pure
   request builder in `lib/stemfinder.ts`. Refreshes schema + obs summaries and
   colours by the first written score.

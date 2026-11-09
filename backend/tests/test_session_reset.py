@@ -15,11 +15,11 @@ import numpy as np
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell import gene_set_store
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.main import app
-from xcell.task_manager import TaskManager
+from skopia import gene_set_store
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.main import app
+from skopia.task_manager import TaskManager
 
 
 def _adata(n_cells=30, n_genes=8):

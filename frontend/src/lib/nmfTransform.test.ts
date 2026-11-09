@@ -11,7 +11,7 @@ describe('defaultTransformFor', () => {
   })
 
   it('leaves already-log data alone', () => {
-    // The trap this exists for: xcell's default log1p on top of a matrix that
+    // The trap this exists for: skopia's default log1p on top of a matrix that
     // is already on a log scale silently factorizes log(1 + log(1 + counts)).
     expect(defaultTransformFor('log_normalized')).toBe('none')
     expect(defaultTransformFor('log_transformed')).toBe('none')
@@ -23,7 +23,7 @@ describe('defaultTransformFor', () => {
 
   it('falls back to log1p when the scale could not be determined', () => {
     // Unknown is the common case for a hand-built layer; log1p matches what
-    // every other xcell gene-expression path does, so it is the safe default.
+    // every other skopia gene-expression path does, so it is the safe default.
     expect(defaultTransformFor('unknown')).toBe('log1p')
     expect(defaultTransformFor(undefined)).toBe('log1p')
   })

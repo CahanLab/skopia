@@ -4,7 +4,7 @@
 
 **Goal:** Make the hierarchy of named cell subsets explicit in the AnnData — parent links, what each step wrote and with which parameters, the embeddings each subset owns and the shapes/territories drawn on them — surface it as a tree in the Cells panel, make PCA Loadings and PC subsets work on a subset, and add a delete button to `.obs` columns.
 
-**Architecture:** `uns['xcell_cell_subsets']` stays a plain dict registry (scanpy-readable) and becomes the record: `parent` (inferred by containment at creation), `origin`, and a `derived` dict each scoped operation writes at run time. Decorations stay keyed by embedding name; the listing resolves them per subset. Shapes/lines persist in `uns['xcell_lines_json']` on every sync (like territories) and hydrate on load. Deleting a subset with its results cascades to its embeddings' decorations and its PC subsets.
+**Architecture:** `uns['skopia_cell_subsets']` stays a plain dict registry (scanpy-readable) and becomes the record: `parent` (inferred by containment at creation), `origin`, and a `derived` dict each scoped operation writes at run time. Decorations stay keyed by embedding name; the listing resolves them per subset. Shapes/lines persist in `uns['skopia_lines_json']` on every sync (like territories) and hydrate on load. Deleting a subset with its results cascades to its embeddings' decorations and its PC subsets.
 
 **Tech Stack:** Python 3.11, numpy, pandas, AnnData 0.12, scanpy, FastAPI, pytest; React 18 + Zustand + inline styles, vitest, tsc.
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- `backend/xcell/adaptor.py` is the only thing that owns AnnData. Routes are thin: resolve adaptor, call it, map exceptions (`ValueError → 400`, `KeyError → 404`, no data → 503; `except HTTPException: raise` before any catch-all).
+- `backend/skopia/adaptor.py` is the only thing that owns AnnData. Routes are thin: resolve adaptor, call it, map exceptions (`ValueError → 400`, `KeyError → 404`, no data → 503; `except HTTPException: raise` before any catch-all).
 - Every data-touching route takes `dataset: str | None = Query(None)` as its **last** parameter.
 - Pydantic request models sit immediately above their route, named `<Thing>Request`, flat snake_case, defaults matching the adaptor signature; never narrower than the adaptor argument.
 - Anything crossing the API is JSON-serializable: no `inf`, no `NaN`, no numpy types.
@@ -21,7 +21,7 @@
 - anndata writes empty lists into uns as `array([], dtype=float64)` — normalise registry values on read.
 - Tests: `backend/tests/`, no `conftest.py`, module-level `_adata()` / `_adaptor()` factories, seeded RNG, `csr_matrix` + `float32`; assert on the AnnData state, not only the returned dict. Route tests `monkeypatch.setattr(routes, "get_adaptor", lambda dataset=None: a)`.
 - Frontend styling is inline. Palette: panel `#16213e`, border `#0f3460`, inset `#0f1625`, accent `#4ecdc4`, alert `#e94560`, warning `#e9a23b`, muted `#aaa`/`#888`. After a backend mutation that touches `.obs`, call both `refreshSchema()` and `refreshObsSummaries()`.
-- Work in `/private/tmp/claude-501/xcell-wt` on `feat/subset-tree`. Backend tests: `cd <wt>/backend && "<main>/.pixi/envs/dev/bin/python" -m pytest tests/test_x.py -q`. Frontend: `cd <wt>/frontend && npx vitest run && npx tsc --noEmit`.
+- Work in `/private/tmp/claude-501/skopia-wt` on `feat/subset-tree`. Backend tests: `cd <wt>/backend && "<main>/.pixi/envs/dev/bin/python" -m pytest tests/test_x.py -q`. Frontend: `cd <wt>/frontend && npx vitest run && npx tsc --noEmit`.
 - Commit after each task. Merge into `main` with `--no-ff` at the end, after checking `:8000` holds nothing.
 
 ---
@@ -34,9 +34,9 @@
 - `frontend/src/lib/subsetTree.ts` + `.test.ts` — pure helpers: drop summary text, chip lists, tree ordering guard.
 
 **Modified:**
-- `backend/xcell/adaptor.py` — `delete_obs_column`; registry helpers (`_subset_registry` normalisation, `_subset_record_step`, `_subset_forget_key`, `_infer_parent`); `create_cell_subset(parent=, origin=)`; `_subset_derived_keys` merged; `_subset_summary` tree fields; `list_cell_subsets` ordering; `delete_cell_subset` cascade + reparent; lines hydrate/persist; `get_pca_loadings` / `create_pca_subset` / `list_pca_subsets` / `delete_pca_subset` subset-aware; `run_pca` clearing loop; `check_prerequisites`.
-- `backend/xcell/api/routes.py` — `DELETE /obs/{column}`; `CellSubsetRequest.parent/origin`; `LineData` fields; `?cell_subset=` on PCA loadings / PC subsets.
-- `backend/xcell/codegen.py` — `delete_obs_column` spec; `create_cell_subset` emits `parent=`; `create_pca_subset` emits `cell_subset=`.
+- `backend/skopia/adaptor.py` — `delete_obs_column`; registry helpers (`_subset_registry` normalisation, `_subset_record_step`, `_subset_forget_key`, `_infer_parent`); `create_cell_subset(parent=, origin=)`; `_subset_derived_keys` merged; `_subset_summary` tree fields; `list_cell_subsets` ordering; `delete_cell_subset` cascade + reparent; lines hydrate/persist; `get_pca_loadings` / `create_pca_subset` / `list_pca_subsets` / `delete_pca_subset` subset-aware; `run_pca` clearing loop; `check_prerequisites`.
+- `backend/skopia/api/routes.py` — `DELETE /obs/{column}`; `CellSubsetRequest.parent/origin`; `LineData` fields; `?cell_subset=` on PCA loadings / PC subsets.
+- `backend/skopia/codegen.py` — `delete_obs_column` spec; `create_cell_subset` emits `parent=`; `create_pca_subset` emits `cell_subset=`.
 - `frontend/src/lib/cellSubsets.ts` (+ test) — `CellSubsetInfo` tree fields; `derivedBadges` → chips.
 - `frontend/src/hooks/useData.ts` — `deleteObsColumn`, `fetchLines`, `usePcaLoadings(cellSubset)`, `fetchPcaSubsets`/`createPcaSubset(cellSubset)`, `createCellSubset(origin)`.
 - `frontend/src/store.ts` (+ `store.test.ts`) — `setDrawnLines`, `linesHydrated`, `forgetObsColumn`, `setSchema` embedding repair.
@@ -52,9 +52,9 @@
 
 **Files:**
 - Create: `backend/tests/test_obs_column_delete.py`
-- Modify: `backend/xcell/adaptor.py` (replace `delete_annotation` ~line 3061)
-- Modify: `backend/xcell/api/routes.py` (new route near `@router.get("/obs/{column}")` ~line 730; keep `DELETE /annotations/{name}` delegating)
-- Modify: `backend/xcell/codegen.py` (new spec near `'create_annotation'` ~line 806)
+- Modify: `backend/skopia/adaptor.py` (replace `delete_annotation` ~line 3061)
+- Modify: `backend/skopia/api/routes.py` (new route near `@router.get("/obs/{column}")` ~line 730; keep `DELETE /annotations/{name}` delegating)
+- Modify: `backend/skopia/codegen.py` (new spec near `'create_annotation'` ~line 806)
 
 **Interfaces:**
 - Produces: `DataAdaptor.delete_obs_column(column: str) -> dict` returning `{'column': str, 'dropped_colors': bool, 'subset_removed': str | None}`; `delete_annotation(name)` kept as an alias. Route `DELETE /api/obs/{column}` → that dict. Action name `delete_obs_column`, params `{'column': ...}`.
@@ -75,10 +75,10 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.codegen import translate
-from xcell.main import app
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.codegen import translate
+from skopia.main import app
 
 
 def _adata(n_cells=30, n_genes=20, seed=0):
@@ -122,7 +122,7 @@ def test_deleting_a_subsets_column_removes_its_registry_entry():
     a.create_cell_subset('chondro', list(range(0, 30, 2)))
     out = a.delete_obs_column('subset_chondro')
     assert out['subset_removed'] == 'chondro'
-    assert 'chondro' not in a.adata.uns['xcell_cell_subsets']
+    assert 'chondro' not in a.adata.uns['skopia_cell_subsets']
     assert a.list_cell_subsets() == []
 
 
@@ -328,9 +328,9 @@ Hidden rows get a `✕` button beside Show that calls `setColumnDeleteConfirm(su
 
 **Files:**
 - Create: `backend/tests/test_subset_tree.py`
-- Modify: `backend/xcell/adaptor.py` (`_subset_registry` ~4716, `create_cell_subset` ~4758, `list_cell_subsets` ~4805, `delete_cell_subset` ~4824, `_subset_summary` ~4746)
-- Modify: `backend/xcell/api/routes.py` (`CellSubsetRequest` ~2260)
-- Modify: `backend/xcell/codegen.py` (`'create_cell_subset'` ~400)
+- Modify: `backend/skopia/adaptor.py` (`_subset_registry` ~4716, `create_cell_subset` ~4758, `list_cell_subsets` ~4805, `delete_cell_subset` ~4824, `_subset_summary` ~4746)
+- Modify: `backend/skopia/api/routes.py` (`CellSubsetRequest` ~2260)
+- Modify: `backend/skopia/codegen.py` (`'create_cell_subset'` ~400)
 - Modify: `backend/tests/test_cell_subsets.py` (listing test expects new fields — use `>=` on the dict or update)
 
 **Interfaces:**
@@ -344,7 +344,7 @@ def test_a_subset_inside_another_gets_it_as_parent():
     a.create_cell_subset('chondro', ACTIVE)                 # 30 even cells
     out = a.create_cell_subset('prolif', [0, 2, 4, 6])
     assert out['parent'] == 'chondro' and out['depth'] == 1
-    assert a.adata.uns['xcell_cell_subsets']['prolif']['parent'] == 'chondro'
+    assert a.adata.uns['skopia_cell_subsets']['prolif']['parent'] == 'chondro'
     chondro = next(s for s in a.list_cell_subsets() if s['name'] == 'chondro')
     assert chondro['children'] == ['prolif'] and chondro['parent'] is None
 
@@ -516,7 +516,7 @@ Codegen: `create_cell_subset` code adds `f", parent={_lit(step.params['parent'])
 ### Task 4: `derived` written at run time; merged detection; embeddings list
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — `run_highly_variable_genes` (subset branch ~6205), `run_pca` (~6558), `run_neighbors` (~6955), `run_umap` (~7440), `run_leiden` (~7560), `_subset_derived_keys` (~4731), `_subset_summary`
+- Modify: `backend/skopia/adaptor.py` — `run_highly_variable_genes` (subset branch ~6205), `run_pca` (~6558), `run_neighbors` (~6955), `run_umap` (~7440), `run_leiden` (~7560), `_subset_derived_keys` (~4731), `_subset_summary`
 - Modify: `backend/tests/test_subset_tree.py`, `backend/tests/test_cell_subsets.py` (listing test: `umap` becomes a list, `pca_subsets` appears)
 - Modify: `frontend/src/lib/cellSubsets.ts` + `.test.ts` (`CellSubsetDerived.umap: string[]`, `pca_subsets: string[]`; `derivedBadges`)
 
@@ -537,7 +537,7 @@ def _chain(a, name):
 def test_each_scoped_step_records_its_key_and_params_in_the_registry():
     a = _adaptor(); _global_pipeline(a)
     a.create_cell_subset('chondro', ACTIVE); _chain(a, 'chondro')
-    d = a.adata.uns['xcell_cell_subsets']['chondro']['derived']
+    d = a.adata.uns['skopia_cell_subsets']['chondro']['derived']
     assert d['hvg']['key'] == 'highly_variable__chondro' and d['hvg']['params']['n_top_genes'] == 10
     assert d['pca']['key'] == 'X_pca_chondro' and d['pca']['params']['n_comps'] == 4
     assert d['graph']['key'] == 'chondro_connectivities' and d['graph']['params']['n_neighbors'] == 5
@@ -565,7 +565,7 @@ def test_a_key_that_vanished_is_not_reported_even_if_recorded():
 def test_a_file_from_before_the_record_is_still_detected_by_name():
     a = _adaptor(); _global_pipeline(a)
     a.create_cell_subset('chondro', ACTIVE); _chain(a, 'chondro')
-    a.adata.uns['xcell_cell_subsets']['chondro'].pop('derived')
+    a.adata.uns['skopia_cell_subsets']['chondro'].pop('derived')
     s = next(s for s in a.list_cell_subsets() if s['name'] == 'chondro')
     assert s['derived']['pca'] == 'X_pca_chondro' and s['derived']['leiden'] == ['leiden_chondro']
     assert s['steps'] == {}
@@ -657,15 +657,15 @@ Frontend `cellSubsets.ts`: `umap: string[]`, `pca_subsets: string[]`; `derivedBa
 
 ---
 
-### Task 5: Shapes and lines persist in `uns['xcell_lines_json']`; decorations in the listing
+### Task 5: Shapes and lines persist in `uns['skopia_lines_json']`; decorations in the listing
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — `__init__` (~816), `set_lines`/`get_lines` (~3562), `prepare_export_with_lines` (~3705–3724), `_subset_summary`
-- Modify: `backend/xcell/api/routes.py` — `LineData` (~1755)
+- Modify: `backend/skopia/adaptor.py` — `__init__` (~816), `set_lines`/`get_lines` (~3562), `prepare_export_with_lines` (~3705–3724), `_subset_summary`
+- Modify: `backend/skopia/api/routes.py` — `LineData` (~1755)
 - Modify: `backend/tests/test_subset_tree.py`
 
 **Interfaces:**
-- Produces: `LINES_UNS = 'xcell_lines_json'`; `set_lines(lines: list[dict]) -> None` writes uns and memory; `get_lines() -> list[dict]`; `_restore_lines() -> list[dict]` (tolerates the old export shape with `embedding` instead of `embeddingName`); `_lines_on(embeddings: set[str]) -> list[dict]`; `_territories_on(embeddings: set[str]) -> list[str]`. Summary gains `decorations: {'lines': [names], 'territories': [types]}`. `LineData` gains `id: str | None = None`, `drawType: str = 'pencil'`, `closed: bool = False`, `visible: bool = True`, `strokeColor: str = '#4ecdc4'`, `strokeWidth: float = 2`, `fillColor: str | None = None`.
+- Produces: `LINES_UNS = 'skopia_lines_json'`; `set_lines(lines: list[dict]) -> None` writes uns and memory; `get_lines() -> list[dict]`; `_restore_lines() -> list[dict]` (tolerates the old export shape with `embedding` instead of `embeddingName`); `_lines_on(embeddings: set[str]) -> list[dict]`; `_territories_on(embeddings: set[str]) -> list[str]`. Summary gains `decorations: {'lines': [names], 'territories': [types]}`. `LineData` gains `id: str | None = None`, `drawType: str = 'pencil'`, `closed: bool = False`, `visible: bool = True`, `strokeColor: str = '#4ecdc4'`, `strokeWidth: float = 2`, `fillColor: str | None = None`.
 
 - [ ] **Step 1: Failing tests**
 
@@ -678,7 +678,7 @@ LINE = {'id': 'line_1', 'name': 'ridge', 'embeddingName': 'X_umap_chondro', 'dim
 def test_lines_are_written_to_uns_and_survive_a_reload(tmp_path):
     a = _adaptor()
     a.set_lines([LINE])
-    assert json.loads(a.adata.uns['xcell_lines_json'])[0]['name'] == 'ridge'
+    assert json.loads(a.adata.uns['skopia_lines_json'])[0]['name'] == 'ridge'
     p = tmp_path / 'x.h5ad'; a.adata.write_h5ad(p)
     b = DataAdaptor(str(p))
     assert b.get_lines() == [LINE]
@@ -686,7 +686,7 @@ def test_lines_are_written_to_uns_and_survive_a_reload(tmp_path):
 
 def test_an_old_export_with_embedding_instead_of_embedding_name_still_loads():
     ad = _adata()
-    ad.uns['xcell_lines_json'] = json.dumps([{'name': 'old', 'embedding': 'X_umap', 'points': [[0, 0], [1, 1]]}])
+    ad.uns['skopia_lines_json'] = json.dumps([{'name': 'old', 'embedding': 'X_umap', 'points': [[0, 0], [1, 1]]}])
     a = DataAdaptor('x.h5ad', adata=ad)
     line = a.get_lines()[0]
     assert line['embeddingName'] == 'X_umap' and line['visible'] is True and line['drawType'] == 'pencil'
@@ -715,7 +715,7 @@ def test_the_lines_route_round_trips_every_field(monkeypatch):
 - [ ] **Step 3: Implement**
 
 ```python
-LINES_UNS = 'xcell_lines_json'
+LINES_UNS = 'skopia_lines_json'
 _LINE_DEFAULTS = {'dimX': 0, 'dimY': 1, 'smoothedPoints': None, 'drawType': 'pencil',
                   'closed': False, 'visible': True, 'strokeColor': '#4ecdc4',
                   'strokeWidth': 2, 'fillColor': None}
@@ -838,7 +838,7 @@ useEffect(() => {
 ### Task 7: Cascade on delete-with-results; repair a vanished primary embedding
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — `delete_cell_subset`
+- Modify: `backend/skopia/adaptor.py` — `delete_cell_subset`
 - Modify: `backend/tests/test_subset_tree.py`
 - Modify: `frontend/src/store.ts` (`setSchema`), `frontend/src/store.test.ts`
 - Modify: `frontend/src/components/CellPanel.tsx` (`handleDeleteSubset` re-hydrates lines)
@@ -920,9 +920,9 @@ setSchema: (schema) =>
 ### Task 8: PCA Loadings and PC subsets on a subset (backend)
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — `get_pca_loadings` (~6639), `create_pca_subset` (~6719), `list_pca_subsets` (~6800), `delete_pca_subset` (~6829), `run_pca` clearing loop (~6600–6626), `check_prerequisites` (`pca_with_loadings`)
-- Modify: `backend/xcell/api/routes.py` — `GET /scanpy/pca_loadings`, `GET/POST /scanpy/pca_subsets`
-- Modify: `backend/xcell/codegen.py` — `'create_pca_subset'` only tuple adds `'cell_subset'`
+- Modify: `backend/skopia/adaptor.py` — `get_pca_loadings` (~6639), `create_pca_subset` (~6719), `list_pca_subsets` (~6800), `delete_pca_subset` (~6829), `run_pca` clearing loop (~6600–6626), `check_prerequisites` (`pca_with_loadings`)
+- Modify: `backend/skopia/api/routes.py` — `GET /scanpy/pca_loadings`, `GET/POST /scanpy/pca_subsets`
+- Modify: `backend/skopia/codegen.py` — `'create_pca_subset'` only tuple adds `'cell_subset'`
 - Modify: `backend/tests/test_subset_tree.py`
 
 **Interfaces:**
@@ -1092,7 +1092,7 @@ it('picks the parent leiden as the refine target, then the dataset leiden', () =
 ### Task 11: CHANGELOG, browser verification, merge
 
 - [ ] **Step 1: CHANGELOG** — one `### Added` entry per feature (subset tree; shapes persist; delete column; PCA on a subset) and `### Fixed` for the PC-subset list bug and the vanished-embedding repair.
-- [ ] **Step 2: Isolated stack** — backend `cd <wt>/backend && "<main>/.pixi/envs/default/bin/python" -m uvicorn xcell.main:app --reload --port 8100`; frontend `cd <wt>/frontend && XCELL_BACKEND=http://127.0.0.1:8100 npx vite --port 5273 --strictPort`. Load the toy dataset. Script via curl: create `chondro` (even cells), run the chain on it, create `prolif` inside it, run PCA on it. In the browser: the Subsets section shows the tree (indent), chips switch embedding / colour; draw a shape on `X_umap_chondro`, reload the tab, the shape is back; PCA Loadings with `chondro` active reads its PCA and creates `X_pca_chondro_noPC1`, which the Neighbors picker lists; delete `chondro` "+ results" — the confirm names the shape, the shape is gone, the embedding picker falls back; Delete on an obs column removes it and the colour-by clears. Check the browser console for failed requests.
+- [ ] **Step 2: Isolated stack** — backend `cd <wt>/backend && "<main>/.pixi/envs/default/bin/python" -m uvicorn skopia.main:app --reload --port 8100`; frontend `cd <wt>/frontend && SKOPIA_BACKEND=http://127.0.0.1:8100 npx vite --port 5273 --strictPort`. Load the toy dataset. Script via curl: create `chondro` (even cells), run the chain on it, create `prolif` inside it, run PCA on it. In the browser: the Subsets section shows the tree (indent), chips switch embedding / colour; draw a shape on `X_umap_chondro`, reload the tab, the shape is back; PCA Loadings with `chondro` active reads its PCA and creates `X_pca_chondro_noPC1`, which the Neighbors picker lists; delete `chondro` "+ results" — the confirm names the shape, the shape is gone, the embedding picker falls back; Delete on an obs column removes it and the colour-by clears. Check the browser console for failed requests.
 - [ ] **Step 3: Full suites** — backend `pytest -q`, frontend `vitest run`, `tsc --noEmit`.
 - [ ] **Step 4: Kill both servers; remove `.playwright-mcp/` and screenshots from the worktree.**
 - [ ] **Step 5: Merge** — `curl -s :8000/api/schema` empty → `git checkout main && git merge --no-ff feat/subset-tree`; `git worktree remove`.

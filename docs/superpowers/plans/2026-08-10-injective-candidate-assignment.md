@@ -15,7 +15,7 @@
 - Branch `feat/injective-candidates` off `main` (already created); merge back with `--no-ff`.
 - TDD: write the failing test, run it, watch it fail, then implement.
 - Backend tests from `backend/`: `pixi run -e dev pytest`. Frontend: `cd frontend && npx tsc --noEmit && npm test`.
-- `backend/xcell/localize.py` is **pure**: arrays in, arrays and plain dicts out. No AnnData, no adaptor import.
+- `backend/skopia/localize.py` is **pure**: arrays in, arrays and plain dicts out. No AnnData, no adaptor import.
 - Heavy imports (`scipy.optimize`, `scipy.sparse`) stay **function-local**.
 - Everything crossing the API must be JSON-serializable: no `inf`, no `NaN`.
 - `backend/tests/` has **no `conftest.py`** — each file is self-contained, seeded `np.random.default_rng(0)`.
@@ -41,9 +41,9 @@ measured while designing this:
 
 | file | responsibility |
 |---|---|
-| `backend/xcell/localize.py` (modify) | `candidate_assignment`, `_feasible_seed`, `_chunk_rows`, the dense/candidate switch in `project_knn`, two new `Projection` fields |
+| `backend/skopia/localize.py` (modify) | `candidate_assignment`, `_feasible_seed`, `_chunk_rows`, the dense/candidate switch in `project_knn`, two new `Projection` fields |
 | `backend/tests/test_localize.py` (modify) | the estimator's behaviour, including the adversarial clones fixture |
-| `backend/xcell/adaptor.py` (modify) | `prepare_localize` reports which path ran |
+| `backend/skopia/adaptor.py` (modify) | `prepare_localize` reports which path ran |
 | `backend/tests/test_localize_adaptor.py` (modify) | that report reaches the run result |
 | `frontend/src/components/LocalizeModal.tsx` (modify) | says so after a run |
 
@@ -70,7 +70,7 @@ and `n_candidates: int | None = None`.
 ### Task 1: `candidate_assignment` — the solver that does not hold the matrix
 
 **Files:**
-- Modify: `backend/xcell/localize.py`
+- Modify: `backend/skopia/localize.py`
 - Modify: `backend/tests/test_localize.py`
 
 **Interfaces:**
@@ -86,7 +86,7 @@ Append to `backend/tests/test_localize.py`, and extend the import at the top of
 the file (line 16) so it reads:
 
 ```python
-from xcell.localize import (
+from skopia.localize import (
     AGGREGATIONS,
     METRICS,
     TRANSFORMS,
@@ -166,7 +166,7 @@ def test_candidate_assignment_stays_solvable_when_every_cell_wants_the_same_spot
 
 def test_the_seed_alone_is_already_a_valid_assignment():
     """It has to be: it is what makes the matching a theorem rather than a hope."""
-    from xcell.localize import _feasible_seed
+    from skopia.localize import _feasible_seed
     S = np.random.default_rng(3).random((30, 45))
     idx, sim = _candidates(S, 4)
     seed = _feasible_seed(idx, sim.max(axis=1), 45)
@@ -204,7 +204,7 @@ Expected: `ImportError: cannot import name 'candidate_assignment'`.
 
 - [ ] **Step 3: Implement**
 
-In `backend/xcell/localize.py`, replace the `_MAX_INJECTIVE_ENTRIES` constant
+In `backend/skopia/localize.py`, replace the `_MAX_INJECTIVE_ENTRIES` constant
 (around line 47) with:
 
 ```python
@@ -374,7 +374,7 @@ exists to catch precisely this.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/localize.py backend/tests/test_localize.py
+git add backend/skopia/localize.py backend/tests/test_localize.py
 git commit -m "feat(localize): assignment over candidate spots instead of the whole matrix"
 ```
 
@@ -383,7 +383,7 @@ git commit -m "feat(localize): assignment over candidate spots instead of the wh
 ### Task 2: Wire it into `project_knn`, and say which path ran
 
 **Files:**
-- Modify: `backend/xcell/localize.py` — `Projection`, `project_knn`
+- Modify: `backend/skopia/localize.py` — `Projection`, `project_knn`
 - Modify: `backend/tests/test_localize.py`
 
 **Interfaces:**
@@ -407,7 +407,7 @@ def test_a_small_problem_still_gets_the_exact_assignment():
 def test_a_large_problem_takes_the_candidate_path(monkeypatch):
     """Forced by lowering the ceiling rather than by building a real matrix that
     would not fit — the point is the branch, not the arithmetic."""
-    import xcell.localize as lz
+    import skopia.localize as lz
     monkeypatch.setattr(lz, '_DENSE_MAX_ENTRIES', 10)
     ref_expr, ref_coords, q_expr, q_coords = _matched()
     p = project_knn(q_expr, ref_expr, ref_coords, k=10, aggregation='injective')
@@ -421,7 +421,7 @@ def test_a_large_problem_takes_the_candidate_path(monkeypatch):
 
 
 def test_the_candidate_path_still_spreads_what_best_match_piles_up(monkeypatch):
-    import xcell.localize as lz
+    import skopia.localize as lz
     monkeypatch.setattr(lz, '_DENSE_MAX_ENTRIES', 10)
     ref_expr, ref_coords, q_expr = _clones()
     p = project_knn(q_expr, ref_expr, ref_coords, k=15,
@@ -441,7 +441,7 @@ def test_both_paths_agree_on_this_problem(monkeypatch):
     problem this size with 128 candidates out of 400 spots it should land on the
     same answer, and a large disagreement means the wiring is wrong rather than
     the approximation biting."""
-    import xcell.localize as lz
+    import skopia.localize as lz
     ref_expr, ref_coords, q_expr, _ = _matched()
     exact = project_knn(q_expr, ref_expr, ref_coords, k=10, aggregation='injective')
     monkeypatch.setattr(lz, '_DENSE_MAX_ENTRIES', 10)
@@ -460,7 +460,7 @@ Expected: `AttributeError: 'Projection' object has no attribute 'assignment'`.
 
 - [ ] **Step 3: Add the two fields to `Projection`**
 
-In `backend/xcell/localize.py`, extend the dataclass (around line 54). Defaults
+In `backend/skopia/localize.py`, extend the dataclass (around line 54). Defaults
 keep every existing construction valid:
 
 ```python
@@ -610,7 +610,7 @@ still covers `injective` on the dense path.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add backend/xcell/localize.py backend/tests/test_localize.py
+git add backend/skopia/localize.py backend/tests/test_localize.py
 git commit -m "feat(localize): take the candidate path when the matrix will not fit"
 ```
 
@@ -624,7 +624,7 @@ git commit -m "feat(localize): take the candidate path when the matrix will not 
 would still block it after Task 2.
 
 **Files:**
-- Modify: `backend/xcell/localize.py`
+- Modify: `backend/skopia/localize.py`
 - Modify: `backend/tests/test_localize.py`
 
 **Interfaces:**
@@ -640,7 +640,7 @@ def test_the_chunk_shrinks_as_the_reference_grows():
     """A fixed 2,048-row chunk is 820 MB of transient block against a
     100,000-spot reference, which blocks every aggregation and not just the
     assigning one."""
-    from xcell.localize import _chunk_rows
+    from skopia.localize import _chunk_rows
     assert _chunk_rows(1_000) == 2048           # small reference: unchanged
     assert _chunk_rows(100_000) == 200
     assert _chunk_rows(50_000_000) == 1         # never zero
@@ -649,7 +649,7 @@ def test_the_chunk_shrinks_as_the_reference_grows():
 def test_chunking_does_not_change_the_answer(monkeypatch):
     """Whatever the chunk, the map is the same — otherwise the loop is carrying
     state it should not."""
-    import xcell.localize as lz
+    import skopia.localize as lz
     ref_expr, ref_coords, q_expr, _ = _matched(n_query=97)
     big = project_knn(q_expr, ref_expr, ref_coords, k=10)
     monkeypatch.setattr(lz, '_MAX_BLOCK_ENTRIES', 400)     # forces a tiny chunk
@@ -668,7 +668,7 @@ Expected: `ImportError: cannot import name '_chunk_rows'`.
 
 - [ ] **Step 3: Implement**
 
-In `backend/xcell/localize.py`, replace the `_CHUNK` constant and its comment:
+In `backend/skopia/localize.py`, replace the `_CHUNK` constant and its comment:
 
 ```python
 # Query cells per chunk. Keeps the similarity block bounded regardless of how
@@ -709,7 +709,7 @@ Expected: all pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/localize.py backend/tests/test_localize.py
+git add backend/skopia/localize.py backend/tests/test_localize.py
 git commit -m "perf(localize): bound the similarity block by reference size too"
 ```
 
@@ -718,7 +718,7 @@ git commit -m "perf(localize): bound the similarity block by reference size too"
 ### Task 4: Report it through the API and the modal
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — `prepare_localize`'s `apply_fn`
+- Modify: `backend/skopia/adaptor.py` — `prepare_localize`'s `apply_fn`
 - Modify: `backend/tests/test_localize_adaptor.py`
 - Modify: `frontend/src/components/LocalizeModal.tsx`
 
@@ -746,7 +746,7 @@ def test_a_non_assigning_aggregation_claims_nothing():
 
 
 def test_the_candidate_path_is_reported_as_such(monkeypatch):
-    import xcell.localize as lz
+    import skopia.localize as lz
     monkeypatch.setattr(lz, '_DENSE_MAX_ENTRIES', 10)
     ref, query, _ = _pair()
     out = _run(query, ref.spatial_reference_bundle(), k=10, aggregation='injective')
@@ -765,7 +765,7 @@ Expected: `KeyError: 'assignment'`.
 
 - [ ] **Step 3: Add the two keys to the result**
 
-In `backend/xcell/adaptor.py`, in `prepare_localize`'s `apply_fn`, extend the
+In `backend/skopia/adaptor.py`, in `prepare_localize`'s `apply_fn`, extend the
 `out` dict — put them next to `n_reference_cells`:
 
 ```python
@@ -838,7 +838,7 @@ Expected: clean typecheck, all tests pass.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_localize_adaptor.py \
+git add backend/skopia/adaptor.py backend/tests/test_localize_adaptor.py \
         frontend/src/components/LocalizeModal.tsx
 git commit -m "feat(localize): report which solver produced the assignment"
 ```
@@ -861,14 +861,14 @@ pixi run backend      # :8000
 pixi run dev          # :5173
 ```
 
-Stop them later with `pkill -f "uvicorn xcell.main:app"; pkill -f vite`. Editing
+Stop them later with `pkill -f "uvicorn skopia.main:app"; pkill -f vite`. Editing
 a backend file restarts the server and drops the loaded datasets, so batch any
 fixes.
 
 - [ ] **Step 2: Load the limb pair**
 
 Reference `E11.5_best_102424.h5ad` (9,773 spots) at
-`~/CahanLab Dropbox/Patrick Cahan/PC/PC/projects/SJD/data/spatial/xcell/h5ad_empty_removed/best_per_stage/`,
+`~/CahanLab Dropbox/Patrick Cahan/PC/PC/projects/SJD/data/spatial/skopia/h5ad_empty_removed/best_per_stage/`,
 query `GSM4227224_E11_112125.h5ad` (2,683 cells) at
 `~/CahanLab Dropbox/Patrick Cahan/PC/PC/projects/SJD/data/scRNAseq/Kelly_Guilak_2020/`.
 

@@ -35,7 +35,7 @@ expresses") is wrong.
 it to `True` (`ContourizeRequest`, `MultiContourPrepareRequest`); the modal
 defaults it to `False` and always sends explicitly, so the effective default in
 the UI is off. The tooltip says "turn on for raw counts" — and the user has no
-way to know whether their `.X` holds raw counts. xcell already knows:
+way to know whether their `.X` holds raw counts. skopia already knows:
 `layer_scale.assess_matrix_scale` runs on every entry from
 `/api/scanpy/layers` and returns a verdict of `raw_counts`, `log_normalized`,
 `z_scored`, and so on.

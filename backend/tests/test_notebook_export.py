@@ -10,8 +10,8 @@ import json
 
 import pytest
 
-from xcell.analysis_record import AnalysisRecord
-from xcell.notebook_export import (
+from skopia.analysis_record import AnalysisRecord
+from skopia.notebook_export import (
     figure_filename,
     figure_payloads,
     selections_payload,
@@ -102,11 +102,11 @@ def test_the_header_states_how_much_of_the_notebook_re_runs():
     r.add_step('some_future_tool', {}, {})       # manual
     r.add_step('smooth', {'graph_key': 'connectivities', 'n_steps': 1,
                           'source_layer': 'X', 'output_layer': 'smoothed',
-                          'self_loop_weight': 1.0}, {})  # xcell
+                          'self_loop_weight': 1.0}, {})  # skopia
     header = _src(to_notebook(r)['cells'][0])
     assert '**5 steps.**' in header
     assert '3 re-run as written' in header
-    assert '1 need the xcell Python API' in header
+    assert '1 need the skopia Python API' in header
     assert '1 are manual' in header
 
 
@@ -156,7 +156,7 @@ def test_the_adaptor_is_only_set_up_when_a_step_needs_it():
     r.add_step('cluster_genes', {'resolution': 0.5, 'key_added': 'gene_cluster'}, {})
     withx = '\n'.join(_src(c) for c in _code_cells(to_notebook(r)))
     assert 'DataAdaptor' in withx
-    assert '_xcell_run' in withx  # the two-phase helper comes with it
+    assert '_skopia_run' in withx  # the two-phase helper comes with it
 
 
 def test_the_selections_sidecar_is_loaded_only_when_there_are_selections():

@@ -73,15 +73,15 @@ describe('nextSlotKey', () => {
 
 describe('datasetLabel', () => {
   it('names a dataset after its file', () => {
-    expect(datasetLabel('secondary', 'E11.5_hindlimbs_xcell_qced.h5ad'))
-      .toBe('E11.5_hindlimbs_xcell_qced')
+    expect(datasetLabel('secondary', 'E11.5_hindlimbs_skopia_qced.h5ad'))
+      .toBe('E11.5_hindlimbs_skopia_qced')
   })
 
   it('drops the directory a file came from', () => {
-    expect(datasetLabel('primary', '/data/spatial/xcell/E11.5.h5ad')).toBe('E11.5')
+    expect(datasetLabel('primary', '/data/spatial/skopia/E11.5.h5ad')).toBe('E11.5')
   })
 
-  it('strips the extensions xcell actually loads', () => {
+  it('strips the extensions skopia actually loads', () => {
     expect(datasetLabel('primary', 'sample.h5')).toBe('sample')
     expect(datasetLabel('primary', 'seurat_obj.rds')).toBe('seurat_obj')
   })

@@ -10,8 +10,8 @@ import math
 import numpy as np
 import pytest
 
-from xcell import gene_set_sources as gss
-from xcell import go_semantic as gos
+from skopia import gene_set_sources as gss
+from skopia import go_semantic as gos
 
 OBO = """format-version: 1.2
 data-version: releases/2026-07-26

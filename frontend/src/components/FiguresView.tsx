@@ -18,7 +18,7 @@ import CnvHeatmapFigure, { cnvHeatmapLegendFor } from './figures/CnvHeatmapFigur
 import ExpressionDotplotFigure from './figures/ExpressionDotplotFigure'
 import NewFigureModal from './figures/NewFigureModal'
 
-/** The Figures tab: a gallery of saved figure records (uns['xcell_figures']),
+/** The Figures tab: a gallery of saved figure records (uns['skopia_figures']),
  *  each rendered from its stored inputs + params, with an editable params
  *  form (live preview, explicit Save), export, and a link back into the
  *  analysis record. A figure is data + a spec; pixels are only an export. */

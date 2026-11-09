@@ -9,7 +9,7 @@ longer than the TTL at real dataset sizes, so it failed this way every time.
 import threading
 import time
 
-from xcell.task_manager import TaskManager
+from skopia.task_manager import TaskManager
 
 
 def _submit_gated(tm: TaskManager):

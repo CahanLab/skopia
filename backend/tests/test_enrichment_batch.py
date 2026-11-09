@@ -7,8 +7,8 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell import gene_set_sources as gss
-from xcell.adaptor import DataAdaptor
+from skopia import gene_set_sources as gss
+from skopia.adaptor import DataAdaptor
 
 GENES = ['Col1a1', 'Col1a2', 'Col3a1', 'Ptprc', 'Cd3e', 'Cd19', 'Hoxd13', 'Meis1'] + [f'G{i}' for i in range(24)]
 LIB = [{'source': 'msigdb', 'id': 'toy', 'species': 'mouse'}]
@@ -54,7 +54,7 @@ def test_gsea_batch_stores_members_and_collection_and_skips_tiny_group():
     assert col['kind'] == 'gsea_batch' and col['key'] == 'gsea_grp_batch'
     assert col['groups'] == ['a', 'b', 'c'] and col['skipped'] == {'d': 'fewer than 2 cells in group'}
     assert col['members'] == {'a': 'gsea_grp_a_vs_rest', 'b': 'gsea_grp_b_vs_rest', 'c': 'gsea_grp_c_vs_rest'}
-    store = a.adata.uns['xcell_enrichment']
+    store = a.adata.uns['skopia_enrichment']
     assert set(col['members'].values()) <= set(store) and 'gsea_grp_batch' in store
     member = json.loads(store['gsea_grp_a_vs_rest'])
     assert member['kind'] == 'gsea' and {r['name']: r for r in member['results']}['COLLAGEN']['nes'] > 0
@@ -112,7 +112,7 @@ def test_batch_return_values_carry_member_results_like_the_get():
     col2 = a.run_overlap_enrichment_batch('grp', top_n=6, libraries=LIB, min_set_size=2, min_overlap=1)
     assert set(col2['member_results']) == set(col2['groups'])
     # the stored JSON stays lean: members by key only
-    stored = json.loads(a.adata.uns['xcell_enrichment'][col['key']])
+    stored = json.loads(a.adata.uns['skopia_enrichment'][col['key']])
     assert 'member_results' not in stored
 
 
@@ -175,12 +175,12 @@ def test_collection_integrity_backrefs_missing_members_and_cascade_delete():
 
 
 def test_codegen_translates_both_batch_steps():
-    from xcell import codegen
-    from xcell.analysis_record import Step
+    from skopia import codegen
+    from skopia.analysis_record import Step
     s = Step(index=0, action='enrichment_gsea_batch', params={'obs_column': 'grp', 'n_perm': 50, 'libraries': []},
              result={'key': 'gsea_grp_batch', 'members': {'a': 'x'}, 'skipped': {}, 'n_significant': 2}, timestamp='t')
     t = codegen.translate(s)
-    assert t.fidelity == 'xcell' and 'prepare_gsea_batch' in t.code[0] and "obs_column='grp'" in t.code[0]
+    assert t.fidelity == 'skopia' and 'prepare_gsea_batch' in t.code[0] and "obs_column='grp'" in t.code[0]
     s2 = Step(index=1, action='enrichment_ora_batch', params={'obs_column': 'grp', 'top_n': 5},
               result={'key': 'ora_grp_batch', 'members': {}, 'skipped': {}, 'n_significant': 0}, timestamp='t')
     t2 = codegen.translate(s2)

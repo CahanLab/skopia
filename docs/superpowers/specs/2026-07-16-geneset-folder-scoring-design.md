@@ -51,7 +51,7 @@ scoring into `.obsm`, embedding from two `.obsm` columns, and color-by-score.
   that had usable genes).
 - Column names + provenance recorded under a registry in `.uns` so unnamed
   `.obsm` columns can be resolved back to set names:
-  - `adata.uns['xcell_score_matrices'][<slot>] = { "columns": [set names],
+  - `adata.uns['skopia_score_matrices'][<slot>] = { "columns": [set names],
     "per_gene_norm": ..., "per_gene_clip": ..., "aggregation": ...,
     "layer": ..., "source_folder": ... }`
 - The matrix participates in the normal embeddings list (any `.obsm` key that is
@@ -67,7 +67,7 @@ scoring into `.obsm`, embedding from two `.obsm` columns, and color-by-score.
    - Score each remaining set via `_aggregate_gene_set_scores(...)` using the
      same source-matrix resolution as coloring (`layer`/`transform` → X /
      normalized / layer). Stack kept sets → `n_cells × K` → `adata.obsm[obsm_name]`.
-   - Record columns + params in `.uns['xcell_score_matrices'][obsm_name]`.
+   - Record columns + params in `.uns['skopia_score_matrices'][obsm_name]`.
    - Collision: if `obsm_name` exists and not `overwrite` → `ValueError` (→ 400);
      with `overwrite` → replace.
    - Returns `{obsm_name, columns, n_cells, n_sets, skipped:[{name,reason}],

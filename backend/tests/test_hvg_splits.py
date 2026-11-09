@@ -15,7 +15,7 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 N_PER_GROUP = 400
@@ -248,8 +248,8 @@ def test_pooled_behavior_is_unchanged_without_split_by():
 # ---------------------------------------------------------------------------
 def test_route_passes_the_split_options_through():
     from fastapi.testclient import TestClient
-    from xcell.api import routes
-    from xcell.main import app
+    from skopia.api import routes
+    from skopia.main import app
 
     routes.set_adaptor(_adaptor(), slot='primary')
     r = TestClient(app).post('/api/scanpy/highly_variable_genes', json={
@@ -265,8 +265,8 @@ def test_route_passes_the_split_options_through():
 
 def test_route_reports_a_bad_split_column_as_400():
     from fastapi.testclient import TestClient
-    from xcell.api import routes
-    from xcell.main import app
+    from skopia.api import routes
+    from skopia.main import app
 
     routes.set_adaptor(_adaptor(), slot='primary')
     r = TestClient(app).post('/api/scanpy/highly_variable_genes', json={
@@ -279,8 +279,8 @@ def test_route_treats_an_empty_split_column_as_no_split():
     """The generic Scanpy panel always sends the field, empty when unset — an
     empty string must mean "pooled", not a column named ''."""
     from fastapi.testclient import TestClient
-    from xcell.api import routes
-    from xcell.main import app
+    from skopia.api import routes
+    from skopia.main import app
 
     routes.set_adaptor(_adaptor(), slot='primary')
     r = TestClient(app).post('/api/scanpy/highly_variable_genes', json={

@@ -32,5 +32,5 @@ jobs:
         run: >-
           gh release create "$GITHUB_REF_NAME"
           --verify-tag
-          --title "xcell ${GITHUB_REF_NAME#v}"
+          --title "skopia ${GITHUB_REF_NAME#v}"
           --notes-file release-notes.md

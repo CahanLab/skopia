@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from xcell import enrichment_figures as ef
+from skopia import enrichment_figures as ef
 
 
 def _row(name, nes, padj, library='L'):

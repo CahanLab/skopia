@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cut an xcell release: one version in five files, a dated changelog, a tag.
+"""Cut an skopia release: one version in five files, a dated changelog, a tag.
 
     pixi run version             # the version, and a check that the files agree
     pixi run release 0.2.0       # check, test, bump, commit and tag -- locally
@@ -26,10 +26,10 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 
-#: Every file that states xcell's version; backend/tests/test_version.py checks
+#: Every file that states skopia's version; backend/tests/test_version.py checks
 #: they agree, and ``bump`` rewrites them together.
 VERSION_FILES = (
-    'backend/xcell/__init__.py',
+    'backend/skopia/__init__.py',
     'backend/pyproject.toml',
     'pixi.toml',
     'frontend/package.json',
@@ -40,7 +40,7 @@ VERSION_FILES = (
 # difference between Python's count and GitHub's.
 GITHUB_NOTES_LIMIT = 120_000
 
-FALLBACK_URL = 'https://github.com/CahanLab/xcell'
+FALLBACK_URL = 'https://github.com/CahanLab/skopia'
 
 _VERSION = re.compile(r'^(\d+)\.(\d+)\.(\d+)$')
 # The first match in each file is the project's own version: both TOML
@@ -273,7 +273,7 @@ def prepare(version: str, *, root: Path = REPO, run_tests: bool = True,
     changelog.write_text(rolled, encoding='utf-8')
     _git(root, 'add', *VERSION_FILES, 'CHANGELOG.md')
     _git(root, 'commit', '-m', f'release: {tag}')
-    _git(root, 'tag', '-a', tag, '-m', f'xcell {version}')
+    _git(root, 'tag', '-a', tag, '-m', f'skopia {version}')
     return tag
 
 

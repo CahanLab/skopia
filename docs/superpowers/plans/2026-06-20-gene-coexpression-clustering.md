@@ -4,7 +4,7 @@
 
 **Goal:** Add a `method='auto'` to the genes-panel "Cluster genes" path that produces purer co-expression modules without the user specifying K, using a robust metric plus a merge/split/prune refinement pass.
 
-**Architecture:** A new dependency-free module `backend/xcell/gene_coexpression.py` holds pure-NumPy primitives (metric standardization → correlation/distance; module eigengene; module coherence; silhouette-cut base clustering; split / merge / prune) and a top-level `auto_coexpression_modules`. `adaptor.cluster_gene_set` gains an `auto` branch that builds the existing `(n_genes, n_cells)` profile matrix and delegates to it. The route and React modal expose the new parameters; the return contract (`list[list[str]]`, trailing unassigned bucket) is unchanged.
+**Architecture:** A new dependency-free module `backend/skopia/gene_coexpression.py` holds pure-NumPy primitives (metric standardization → correlation/distance; module eigengene; module coherence; silhouette-cut base clustering; split / merge / prune) and a top-level `auto_coexpression_modules`. `adaptor.cluster_gene_set` gains an `auto` branch that builds the existing `(n_genes, n_cells)` profile matrix and delegates to it. The route and React modal expose the new parameters; the return contract (`list[list[str]]`, trailing unassigned bucket) is unchanged.
 
 **Tech Stack:** Python (NumPy, SciPy `linkage`/`fcluster`/`squareform`/`rankdata`, sklearn `silhouette_score`, `adjusted_rand_score` in tests), FastAPI/Pydantic, React/TypeScript.
 
@@ -22,7 +22,7 @@
 ### Task 1: Metric standardization → correlation / distance
 
 **Files:**
-- Create: `backend/xcell/gene_coexpression.py`
+- Create: `backend/skopia/gene_coexpression.py`
 - Test: `backend/tests/test_gene_coexpression.py`
 
 - [ ] **Step 1: Write the failing test (and the shared planted-data helper used by later tasks)**
@@ -34,7 +34,7 @@ Create `backend/tests/test_gene_coexpression.py`:
 import numpy as np
 import pytest
 
-from xcell import gene_coexpression as gc
+from skopia import gene_coexpression as gc
 
 
 # ---- shared synthetic helpers (reused by later tasks) ---------------------
@@ -113,11 +113,11 @@ def test_spearman_handles_monotone_nonlinear():
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `cd backend && pixi run -e dev python -m pytest tests/test_gene_coexpression.py -q`
-Expected: FAIL with `AttributeError: module 'xcell.gene_coexpression' has no attribute ...` (or `ModuleNotFoundError`).
+Expected: FAIL with `AttributeError: module 'skopia.gene_coexpression' has no attribute ...` (or `ModuleNotFoundError`).
 
 - [ ] **Step 3: Write the minimal implementation**
 
-Create `backend/xcell/gene_coexpression.py`:
+Create `backend/skopia/gene_coexpression.py`:
 
 ```python
 """Robust gene co-expression module detection.
@@ -204,7 +204,7 @@ Expected: PASS (5 tests).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/gene_coexpression.py backend/tests/test_gene_coexpression.py
+git add backend/skopia/gene_coexpression.py backend/tests/test_gene_coexpression.py
 git commit -m "$(printf 'gene_coexpression: robust metric standardization (bicor/pearson/spearman)\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>')"
 ```
 
@@ -213,7 +213,7 @@ git commit -m "$(printf 'gene_coexpression: robust metric standardization (bicor
 ### Task 2: Module eigengene and coherence (PVE)
 
 **Files:**
-- Modify: `backend/xcell/gene_coexpression.py`
+- Modify: `backend/skopia/gene_coexpression.py`
 - Test: `backend/tests/test_gene_coexpression.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -262,7 +262,7 @@ Expected: FAIL (`module ... has no attribute '_module_coherence'`).
 
 - [ ] **Step 3: Write the implementation**
 
-Append to `backend/xcell/gene_coexpression.py`:
+Append to `backend/skopia/gene_coexpression.py`:
 
 ```python
 def _module_coherence(profiles: np.ndarray) -> float:
@@ -307,7 +307,7 @@ Expected: PASS (9 tests).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/gene_coexpression.py backend/tests/test_gene_coexpression.py
+git add backend/skopia/gene_coexpression.py backend/tests/test_gene_coexpression.py
 git commit -m "$(printf 'gene_coexpression: module eigengene and coherence (PVE)\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>')"
 ```
 
@@ -316,7 +316,7 @@ git commit -m "$(printf 'gene_coexpression: module eigengene and coherence (PVE)
 ### Task 3: Silhouette-cut base clustering (auto K)
 
 **Files:**
-- Modify: `backend/xcell/gene_coexpression.py`
+- Modify: `backend/skopia/gene_coexpression.py`
 - Test: `backend/tests/test_gene_coexpression.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -356,7 +356,7 @@ Expected: FAIL (`no attribute '_auto_cut_hierarchical'`).
 
 - [ ] **Step 3: Write the implementation**
 
-Add the imports at the top of `backend/xcell/gene_coexpression.py` (below the existing `from scipy.stats import rankdata`):
+Add the imports at the top of `backend/skopia/gene_coexpression.py` (below the existing `from scipy.stats import rankdata`):
 
 ```python
 from scipy.cluster.hierarchy import linkage, fcluster
@@ -364,7 +364,7 @@ from scipy.spatial.distance import squareform
 from sklearn.metrics import silhouette_score
 ```
 
-Append to `backend/xcell/gene_coexpression.py`:
+Append to `backend/skopia/gene_coexpression.py`:
 
 ```python
 def _auto_cut_hierarchical(D: np.ndarray, k_max: int = 20) -> np.ndarray:
@@ -399,7 +399,7 @@ Expected: PASS (11 tests).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/gene_coexpression.py backend/tests/test_gene_coexpression.py
+git add backend/skopia/gene_coexpression.py backend/tests/test_gene_coexpression.py
 git commit -m "$(printf 'gene_coexpression: silhouette-cut average-linkage base clustering\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>')"
 ```
 
@@ -408,7 +408,7 @@ git commit -m "$(printf 'gene_coexpression: silhouette-cut average-linkage base 
 ### Task 4: Split impure modules
 
 **Files:**
-- Modify: `backend/xcell/gene_coexpression.py`
+- Modify: `backend/skopia/gene_coexpression.py`
 - Test: `backend/tests/test_gene_coexpression.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -452,7 +452,7 @@ Expected: FAIL (`no attribute 'split_impure_modules'`).
 
 - [ ] **Step 3: Write the implementation**
 
-Append to `backend/xcell/gene_coexpression.py`:
+Append to `backend/skopia/gene_coexpression.py`:
 
 ```python
 def _two_way_split(idx: np.ndarray, Z: np.ndarray, min_genes: int):
@@ -509,7 +509,7 @@ Expected: PASS (13 tests).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/gene_coexpression.py backend/tests/test_gene_coexpression.py
+git add backend/skopia/gene_coexpression.py backend/tests/test_gene_coexpression.py
 git commit -m "$(printf 'gene_coexpression: split impure modules by eigengene PVE\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>')"
 ```
 
@@ -518,7 +518,7 @@ git commit -m "$(printf 'gene_coexpression: split impure modules by eigengene PV
 ### Task 5: Merge similar modules
 
 **Files:**
-- Modify: `backend/xcell/gene_coexpression.py`
+- Modify: `backend/skopia/gene_coexpression.py`
 - Test: `backend/tests/test_gene_coexpression.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -557,7 +557,7 @@ Expected: FAIL (`no attribute 'merge_similar_modules'`).
 
 - [ ] **Step 3: Write the implementation**
 
-Append to `backend/xcell/gene_coexpression.py`:
+Append to `backend/skopia/gene_coexpression.py`:
 
 ```python
 def merge_similar_modules(modules, Z, *, merge_threshold):
@@ -588,7 +588,7 @@ Expected: PASS (15 tests).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/gene_coexpression.py backend/tests/test_gene_coexpression.py
+git add backend/skopia/gene_coexpression.py backend/tests/test_gene_coexpression.py
 git commit -m "$(printf 'gene_coexpression: merge near-duplicate modules by eigengene correlation\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>')"
 ```
 
@@ -597,7 +597,7 @@ git commit -m "$(printf 'gene_coexpression: merge near-duplicate modules by eige
 ### Task 6: Prune small modules (reassign or set aside)
 
 **Files:**
-- Modify: `backend/xcell/gene_coexpression.py`
+- Modify: `backend/skopia/gene_coexpression.py`
 - Test: `backend/tests/test_gene_coexpression.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -653,7 +653,7 @@ Expected: FAIL (`no attribute 'prune_small_modules'`).
 
 - [ ] **Step 3: Write the implementation**
 
-Append to `backend/xcell/gene_coexpression.py`:
+Append to `backend/skopia/gene_coexpression.py`:
 
 ```python
 def _unit(vec: np.ndarray) -> np.ndarray:
@@ -697,7 +697,7 @@ Expected: PASS (18 tests).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/gene_coexpression.py backend/tests/test_gene_coexpression.py
+git add backend/skopia/gene_coexpression.py backend/tests/test_gene_coexpression.py
 git commit -m "$(printf 'gene_coexpression: prune small modules with eigengene reassignment\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>')"
 ```
 
@@ -706,7 +706,7 @@ git commit -m "$(printf 'gene_coexpression: prune small modules with eigengene r
 ### Task 7: Top-level `auto_coexpression_modules`
 
 **Files:**
-- Modify: `backend/xcell/gene_coexpression.py`
+- Modify: `backend/skopia/gene_coexpression.py`
 - Test: `backend/tests/test_gene_coexpression.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -806,7 +806,7 @@ Expected: FAIL (`no attribute 'auto_coexpression_modules'`).
 
 - [ ] **Step 3: Write the implementation**
 
-Append to `backend/xcell/gene_coexpression.py`:
+Append to `backend/skopia/gene_coexpression.py`:
 
 ```python
 def auto_coexpression_modules(
@@ -877,7 +877,7 @@ Expected: PASS (22 tests). If `test_auto_bicor_robust_to_outliers` is flaky, wid
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/gene_coexpression.py backend/tests/test_gene_coexpression.py
+git add backend/skopia/gene_coexpression.py backend/tests/test_gene_coexpression.py
 git commit -m "$(printf 'gene_coexpression: top-level auto_coexpression_modules pipeline\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>')"
 ```
 
@@ -886,7 +886,7 @@ git commit -m "$(printf 'gene_coexpression: top-level auto_coexpression_modules 
 ### Task 8: Wire `method='auto'` into `cluster_gene_set`
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (`cluster_gene_set`, ~`:5443`)
+- Modify: `backend/skopia/adaptor.py` (`cluster_gene_set`, ~`:5443`)
 - Test: `backend/tests/test_cluster_gene_set_auto.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -899,7 +899,7 @@ import numpy as np
 import anndata
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 def _adata_with_modules(seed=0):
@@ -966,7 +966,7 @@ Expected: FAIL — `cluster_gene_set` raises `Unknown method: 'auto'`.
 
 - [ ] **Step 3: Implement the `auto` branch**
 
-In `backend/xcell/adaptor.py`, update `cluster_gene_set`'s signature to add the
+In `backend/skopia/adaptor.py`, update `cluster_gene_set`'s signature to add the
 new keyword params (place them after `use_gene_mask`):
 
 ```python
@@ -1052,7 +1052,7 @@ Expected: PASS (new auto tests + existing mask tests still green).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_cluster_gene_set_auto.py
+git add backend/skopia/adaptor.py backend/tests/test_cluster_gene_set_auto.py
 git commit -m "$(printf 'adaptor: cluster_gene_set gains auto co-expression module method\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>')"
 ```
 
@@ -1061,7 +1061,7 @@ git commit -m "$(printf 'adaptor: cluster_gene_set gains auto co-expression modu
 ### Task 9: Expose new params on the route
 
 **Files:**
-- Modify: `backend/xcell/api/routes.py` (`ClusterGeneSetRequest` ~`:1082`, `cluster_gene_set_route` ~`:2712`)
+- Modify: `backend/skopia/api/routes.py` (`ClusterGeneSetRequest` ~`:1082`, `cluster_gene_set_route` ~`:2712`)
 - Test: `backend/tests/test_cluster_gene_set_route_auto.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -1075,8 +1075,8 @@ import anndata
 from scipy.sparse import csr_matrix
 from fastapi.testclient import TestClient
 
-from xcell.main import app
-from xcell.api import routes
+from skopia.main import app
+from skopia.api import routes
 
 
 def _adata():
@@ -1097,7 +1097,7 @@ def _adata():
 
 
 def test_route_auto_method(monkeypatch):
-    from xcell.adaptor import DataAdaptor
+    from skopia.adaptor import DataAdaptor
     ad, names = _adata()
     adaptor = DataAdaptor("x.h5ad", adata=ad)
     monkeypatch.setattr(routes, "get_adaptor", lambda dataset=None: adaptor)
@@ -1121,7 +1121,7 @@ def test_route_auto_method(monkeypatch):
 
 Note: confirm the route prefix. If `app` mounts the router under `/api`, the
 path is `/api/cluster_gene_set` (as above). If not, drop the `/api` prefix.
-Check with: `grep -n "include_router" backend/xcell/main.py`.
+Check with: `grep -n "include_router" backend/skopia/main.py`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -1130,7 +1130,7 @@ Expected: FAIL — `auto` params not forwarded (extra fields ignored → method 
 
 - [ ] **Step 3: Add fields to the request model and forward them**
 
-In `backend/xcell/api/routes.py`, extend `ClusterGeneSetRequest` (after
+In `backend/skopia/api/routes.py`, extend `ClusterGeneSetRequest` (after
 `use_gene_mask`):
 
 ```python
@@ -1175,7 +1175,7 @@ Expected: all pass (previous 92 + the new tests).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/api/routes.py backend/tests/test_cluster_gene_set_route_auto.py
+git add backend/skopia/api/routes.py backend/tests/test_cluster_gene_set_route_auto.py
 git commit -m "$(printf 'routes: forward auto co-expression params to cluster_gene_set\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>')"
 ```
 
@@ -1378,9 +1378,9 @@ Expected: clean.
 Start an isolated backend + frontend (do NOT touch the user's :8000/:5173):
 
 ```bash
-cd backend && XCELL_DATA_PATH="$(pwd)/xcell/data/toy_spatial_ligrec.h5ad" \
-  pixi run -e dev uvicorn xcell.main:app --host 127.0.0.1 --port 8001 &
-cd frontend && XCELL_BACKEND=http://127.0.0.1:8001 npx vite --port 5180 --strictPort &
+cd backend && SKOPIA_DATA_PATH="$(pwd)/skopia/data/toy_spatial_ligrec.h5ad" \
+  pixi run -e dev uvicorn skopia.main:app --host 127.0.0.1 --port 8001 &
+cd frontend && SKOPIA_BACKEND=http://127.0.0.1:8001 npx vite --port 5180 --strictPort &
 ```
 
 Drive with Playwright MCP at `http://127.0.0.1:5180`:

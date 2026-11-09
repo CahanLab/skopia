@@ -14,8 +14,8 @@ import pytest
 from scipy.sparse import csr_matrix
 from fastapi.testclient import TestClient
 
-from xcell import gene_similarity as gs
-from xcell.adaptor import DataAdaptor
+from skopia import gene_similarity as gs
+from skopia.adaptor import DataAdaptor
 
 
 N_CELLS, N_GENES, K = 150, 30, 3
@@ -139,8 +139,8 @@ def test_adaptor_expression_only_map_is_stored_and_readable():
     out = _run(a, genes=GENES, layer="raw", expression_metric="pearson", annotation_weight=0.0, n_neighbors=8, embedding="mds")
     assert out["key"] == "map" and out["n_genes"] == N_GENES and out["genes_missing"] == []
     assert out["channel_weights"] == {"expression": 1.0}
-    assert adjusted_rand_score(BLOCK_OF, a.adata.uns["xcell_gene_maps"]["map"]["modules"]) >= 0.9
-    rec = a.adata.uns["xcell_gene_maps"]["map"]
+    assert adjusted_rand_score(BLOCK_OF, a.adata.uns["skopia_gene_maps"]["map"]["modules"]) >= 0.9
+    rec = a.adata.uns["skopia_gene_maps"]["map"]
     assert rec["coords"].shape == (N_GENES, 2) and rec["similarity"].shape == (N_GENES, N_GENES)
     assert a._action_history[-1]["action"] == "gene_map"
     runs = a.list_gene_maps()
@@ -156,7 +156,7 @@ def test_adaptor_expression_only_map_is_stored_and_readable():
 
 
 def test_adaptor_gene_subset_and_annotation_channel(monkeypatch):
-    from xcell import gene_set_sources as gss
+    from skopia import gene_set_sources as gss
     fake_lib = {"source": "msigdb", "id": "m2.cgp", "species": "mouse", "name": "Curated",
                 "sets": [{"name": "block0", "genes": GENES[:10]}, {"name": "block1", "genes": GENES[10:20]}]}
     monkeypatch.setattr(gss, "find_library", lambda source, library_id, species=None: fake_lib if library_id == "m2.cgp" else None)
@@ -175,7 +175,7 @@ def test_adaptor_gene_subset_and_annotation_channel(monkeypatch):
 
 
 def test_adaptor_string_channel_uses_fetched_edges(monkeypatch):
-    from xcell import gene_set_sources as gss
+    from skopia import gene_set_sources as gss
     calls = {}
 
     def fake_network(genes, species, *, required_score=400):
@@ -203,8 +203,8 @@ def _poll(client, task_id, timeout=90.0):
 
 
 def test_routes(monkeypatch):
-    from xcell.main import app
-    from xcell.api import routes
+    from skopia.main import app
+    from skopia.api import routes
     a = _adaptor()
     monkeypatch.setattr(routes, "get_adaptor", lambda dataset=None: a)
     client = TestClient(app)
@@ -233,7 +233,7 @@ def test_routes(monkeypatch):
 
 
 def test_codegen_entry():
-    from xcell import codegen
+    from skopia import codegen
     spec = codegen.REGISTRY["gene_map"]
     step = types.SimpleNamespace(action="gene_map", params={"genes": GENES[:5], "key": "map", "expression_weight": 1.0,
                                                              "annotation_weight": 1.0, "string_weight": 0.0, "n_neighbors": 15,

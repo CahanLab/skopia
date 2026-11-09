@@ -1,5 +1,5 @@
 /**
- * Centralized UI messages for xcell frontend.
+ * Centralized UI messages for skopia frontend.
  * Edit strings here instead of hunting through component files.
  */
 

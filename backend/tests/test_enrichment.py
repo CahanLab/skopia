@@ -1,9 +1,9 @@
-"""Pure tests for xcell.enrichment: BH, symbol resolution, overlap test, GSEA."""
+"""Pure tests for skopia.enrichment: BH, symbol resolution, overlap test, GSEA."""
 import numpy as np
 import pytest
 from scipy.stats import fisher_exact, hypergeom
 
-from xcell import enrichment as en
+from skopia import enrichment as en
 
 
 def test_bh_adjust_matches_known_values():

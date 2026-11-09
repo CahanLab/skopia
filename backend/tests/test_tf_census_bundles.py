@@ -1,7 +1,7 @@
-"""The transcription-factor census bundles shipped with xcell.
+"""The transcription-factor census bundles shipped with skopia.
 
-``xcell/data/build_tf_census.py`` turns the two tables under
-``xcell/data/tf_census/`` (the Codebook update of the Lambert human census,
+``skopia/data/build_tf_census.py`` turns the two tables under
+``skopia/data/tf_census/`` (the Codebook update of the Lambert human census,
 and the mouse list derived from it plus CIS-BP) into
 ``gene_sets/tf_census_{human,mouse}.json``: one *All TFs* set per species
 and folders that split it by DNA-binding domain, by motif evidence (human)
@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from xcell import gene_set_library, gene_symbols
+from skopia import gene_set_library, gene_symbols
 
 _SPEC = importlib.util.spec_from_file_location(
     'build_tf_census', Path(gene_set_library.LIBRARY_DIR).parent / 'build_tf_census.py')

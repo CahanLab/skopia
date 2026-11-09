@@ -7,7 +7,7 @@ index d4436e1..8dc0339 100644
      /** Returns the biggest allowed framebuffer size. @todo Allow the application to limit this? */
      getMaxDrawingBufferSize() {
 -        const maxTextureDimension = this.device.limits.maxTextureDimension2D;
-+        // xcell patch: the ResizeObserver registered in the constructor can fire
++        // skopia patch: the ResizeObserver registered in the constructor can fire
 +        // before the WebGL device finishes initializing (slow on machines with
 +        // no GPU acceleration), so device.limits is still undefined here.
 +        // Guard with a fallback; the next resize uses the real limit.

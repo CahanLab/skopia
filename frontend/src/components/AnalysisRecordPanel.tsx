@@ -5,7 +5,7 @@ import FileBrowser from './FileBrowser'
 
 /**
  * The analysis record: what this session did, and the export that makes it
- * reproducible outside xcell.
+ * reproducible outside skopia.
  *
  * Recording is always on — the backend logs every mutating operation whether or
  * not this panel has ever been opened, because the alternative (a record button
@@ -30,7 +30,7 @@ const dark = {
   faint: '#888',
 }
 
-type Fidelity = 'exact' | 'xcell' | 'manual'
+type Fidelity = 'exact' | 'skopia' | 'manual'
 
 interface RecordStep {
   index: number
@@ -52,14 +52,14 @@ interface RecordFigure {
   id: string
   caption: string
   step_index: number | null
-  // Set when the PNG was rendered from a saved figure (uns['xcell_figures']).
+  // Set when the PNG was rendered from a saved figure (uns['skopia_figures']).
   figure_id?: string | null
 }
 
 interface RecordCounts {
   total: number
   exact: number
-  xcell: number
+  skopia: number
   manual: number
   subset: number
 }
@@ -78,12 +78,12 @@ const FIDELITY_STYLE: Record<Fidelity, { label: string; color: string; title: st
   exact: {
     label: 'exact',
     color: dark.accent,
-    title: 'The exported code is the library call xcell actually made',
+    title: 'The exported code is the library call skopia actually made',
   },
-  xcell: {
-    label: 'xcell',
+  skopia: {
+    label: 'skopia',
     color: dark.warn,
-    title: 'Reproducible by calling xcell’s own Python API',
+    title: 'Reproducible by calling skopia’s own Python API',
   },
   manual: {
     label: 'manual',
@@ -288,7 +288,7 @@ export default function AnalysisRecordPanel() {
                 {counts.total} step{counts.total === 1 ? '' : 's'} in the report
               </span>
               <span><b style={{ color: dark.accent }}>{counts.exact}</b> re-run as written</span>
-              <span><b style={{ color: dark.warn }}>{counts.xcell}</b> need xcell</span>
+              <span><b style={{ color: dark.warn }}>{counts.skopia}</b> need skopia</span>
               <span><b style={{ color: dark.faint }}>{counts.manual}</b> manual</span>
               {counts.subset > 0 && (
                 <span style={{ color: dark.warn }}>

@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 from scipy.sparse import csr_matrix, issparse
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 def _adata(n=12, n_genes=6, seed=0):
@@ -127,7 +127,7 @@ def test_an_unknown_post_transform_is_refused_by_name():
 
 
 def test_the_transform_is_recorded_so_the_layer_can_be_identified_later():
-    """layer_scale reads xcell's own action history to say what a matrix
+    """layer_scale reads skopia's own action history to say what a matrix
     holds; a lognorm layer that claimed to be counts would mislead every
     downstream picker."""
     a = _adaptor()
@@ -154,7 +154,7 @@ def test_the_layer_reports_how_it_was_made_including_the_transform():
     """Provenance is what tells a later reader whether a smoothed layer holds
     counts or log-normalized values — the classifier infers it from the values,
     but the history knows."""
-    from xcell import layer_scale as ls
+    from skopia import layer_scale as ls
 
     a = _adaptor()
     a.run_smooth(graph_key='connectivities', output_layer='s', post_transform='lognorm')

@@ -7,7 +7,7 @@ Analyze → Cells gains two operations next to UMAP and Leiden:
   spatial graph, a Combine Neighbors result, or a subset's own graph.
 - **Pseudotime (DPT)** — diffusion pseudotime (Haghverdi et al. 2016, scanpy's
   implementation) from a chosen root, on an existing diffusion map. The root can
-  come from stemFinder, so the potency ranking that already exists in xcell
+  come from stemFinder, so the potency ranking that already exists in skopia
   orients the trajectory.
 
 Decisions were made without a review round (the session ran on "proceed
@@ -68,7 +68,7 @@ Negative weights are rejected (400): the transition matrix is undefined.
 
 ## Backend
 
-### Pure module `backend/xcell/diffusion.py`
+### Pure module `backend/skopia/diffusion.py`
 
 No adaptor import; scanpy imported inside the functions.
 
@@ -110,7 +110,7 @@ graph to the scope and writes NaN outside. Synchronous like UMAP — 1.9 s for
 the eigenproblem at 50 k cells.
 
 Writes `.obsm[key]` and a registry entry
-`uns['xcell_diffmaps'][key] = {graph_key, n_comps, evals, symmetrized, cell_subset?}`
+`uns['skopia_diffmaps'][key] = {graph_key, n_comps, evals, symmetrized, cell_subset?}`
 (no `None` values — h5ad cannot write them). For `X_diffmap` it also writes
 scanpy's `uns['diffmap_evals']`, so `sc.tl.dpt` works on an exported file.
 
@@ -137,7 +137,7 @@ scanpy's `uns['diffmap_evals']`, so `sc.tl.dpt` works on an exported file.
   `X_diffmap_<subset>` → `dpt_pseudotime_<subset>`. Re-running overwrites (like
   Leiden), since trying another root is the expected loop.
 - Writes `.obs[key]` (float, NaN where undefined) and
-  `uns['xcell_dpt'][key] = {diffmap_key, n_dcs, root_index, root_name, root_rule}`.
+  `uns['skopia_dpt'][key] = {diffmap_key, n_dcs, root_index, root_name, root_rule}`.
 - Logged with the **resolved** root (`root_mode='cells', root_cells=[i]`), so the
   exported notebook replays the same root whatever produced it; the prose
   summary keeps the rule ("lowest `stemfinder`").
@@ -146,7 +146,7 @@ Both record into the subset tree when their scope is a subset
 (`_subset_record_step(name, 'diffmap' | 'dpt', key, params)`); the registry,
 `_subset_forget_key`, `_subset_derived_keys` (+ naming fallback),
 `_subset_summary.embeddings` and `delete_cell_subset(drop_derived=True)` learn
-the two new kinds. Deleting drops `uns['xcell_diffmaps'][key]` / `uns['xcell_dpt'][col]` too.
+the two new kinds. Deleting drops `uns['skopia_diffmaps'][key]` / `uns['skopia_dpt'][col]` too.
 
 `check_prerequisites`: `'diffmap': ['neighbors']`.
 
@@ -162,9 +162,9 @@ DPT modal.
 
 ### Codegen
 
-`diffmap` and `dpt` are `xcell`-fidelity `_direct` calls
+`diffmap` and `dpt` are `skopia`-fidelity `_direct` calls
 (`xa.run_diffmap(...)`, `xa.run_dpt(...)`). **[decision]** not `exact`: the
-isolated-cell and symmetrisation handling are xcell's, and an `exact` line
+isolated-cell and symmetrisation handling are skopia's, and an `exact` line
 that differs on a spatial graph is the failure the record exists to prevent.
 
 ## Frontend

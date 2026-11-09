@@ -18,7 +18,7 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix, issparse
 
-from xcell import stemfinder as sf
+from skopia import stemfinder as sf
 
 HAVE_PSF = importlib.util.find_spec("pystemfinder") is not None
 needs_psf = pytest.mark.skipif(not HAVE_PSF, reason="pystemfinder not installed")

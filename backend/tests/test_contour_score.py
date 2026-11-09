@@ -4,7 +4,7 @@ import numpy as np
 import anndata
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import _contour_score_field
+from skopia.adaptor import _contour_score_field
 
 
 def _toy_adata():

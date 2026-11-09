@@ -96,7 +96,7 @@ interface ParsedGeneList {
   folder?: string          // optional sub-group (JSON only)
 }
 
-// A curated gene-set bundle shipped with xcell (read-only library).
+// A curated gene-set bundle shipped with skopia (read-only library).
 interface LibrarySet {
   name: string
   genes: string[]
@@ -539,7 +539,7 @@ export default function ImportModal() {
             </div>
           )}
 
-          {/* Bundled gene-set libraries shipped with xcell. Loaded on demand
+          {/* Bundled gene-set libraries shipped with skopia. Loaded on demand
               into the user's editable Manual sets. */}
           {bundles.length > 0 && (
             <div style={{ marginTop: '20px' }}>

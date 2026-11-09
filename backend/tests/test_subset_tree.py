@@ -15,10 +15,10 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.codegen import translate
-from xcell.main import app
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.codegen import translate
+from skopia.main import app
 
 
 def _adata(n_cells=60, n_genes=80, seed=0):
@@ -64,7 +64,7 @@ def test_a_subset_inside_another_gets_it_as_parent():
     a.create_cell_subset('chondro', ACTIVE)
     out = a.create_cell_subset('prolif', [0, 2, 4, 6])
     assert out['parent'] == 'chondro' and out['depth'] == 1
-    assert a.adata.uns['xcell_cell_subsets']['prolif']['parent'] == 'chondro'
+    assert a.adata.uns['skopia_cell_subsets']['prolif']['parent'] == 'chondro'
     chondro = _subset(a, 'chondro')
     assert chondro['children'] == ['prolif'] and chondro['parent'] is None and chondro['depth'] == 0
 
@@ -183,7 +183,7 @@ def test_the_notebook_emits_the_parent():
 def test_each_scoped_step_records_its_key_and_params_in_the_registry():
     a = _adaptor(); _global_pipeline(a)
     a.create_cell_subset('chondro', ACTIVE); _chain(a, 'chondro')
-    d = a.adata.uns['xcell_cell_subsets']['chondro']['derived']
+    d = a.adata.uns['skopia_cell_subsets']['chondro']['derived']
     assert d['hvg']['key'] == 'highly_variable__chondro' and d['hvg']['params']['n_top_genes'] == 10
     assert d['pca']['key'] == 'X_pca_chondro' and d['pca']['params']['n_comps'] == 4
     assert d['graph']['key'] == 'chondro_connectivities' and d['graph']['params']['n_neighbors'] == 5
@@ -223,7 +223,7 @@ def test_a_key_that_vanished_is_not_reported_even_if_recorded():
 def test_a_file_from_before_the_record_is_still_detected_by_name():
     a = _adaptor(); _global_pipeline(a)
     a.create_cell_subset('chondro', ACTIVE); _chain(a, 'chondro')
-    a.adata.uns['xcell_cell_subsets']['chondro'].pop('derived')
+    a.adata.uns['skopia_cell_subsets']['chondro'].pop('derived')
     s = _subset(a, 'chondro')
     assert s['derived']['pca'] == 'X_pca_chondro' and s['derived']['leiden'] == ['leiden_chondro']
     assert s['derived']['umap'] == ['X_umap_chondro'] and s['steps'] == {}
@@ -273,7 +273,7 @@ def _legacy_subset(a, name, idx):
     a.adata.obs['subset_' + name] = mask
     reg = a._subset_registry()
     reg[name] = {'obs_key': 'subset_' + name, 'created_at': '', 'description': ''}
-    a.adata.uns['xcell_cell_subsets'] = reg
+    a.adata.uns['skopia_cell_subsets'] = reg
 
 
 def test_a_subset_named_spatial_does_not_claim_the_datasets_spatial_results():
@@ -293,7 +293,7 @@ def test_a_recorded_graph_another_tool_has_since_overwritten_is_not_dropped():
     a = _adaptor(); _global_pipeline(a)
     _legacy_subset(a, 'spatial', ACTIVE)
     a.run_neighbors(n_neighbors=5, cell_subset='spatial')
-    assert a.adata.uns['xcell_cell_subsets']['spatial']['derived']['graph']['key'] == 'spatial_connectivities'
+    assert a.adata.uns['skopia_cell_subsets']['spatial']['derived']['graph']['key'] == 'spatial_connectivities'
     # squidpy writes its graph to the same keys, over every cell.
     a.adata.obsm['spatial'] = np.random.default_rng(1).random((a.n_cells, 2)) * 100
     a.run_spatial_neighbors(n_neighs=6, coord_type='generic')
@@ -305,7 +305,7 @@ def test_a_recorded_graph_another_tool_has_since_overwritten_is_not_dropped():
 def test_a_subsets_own_graph_from_before_the_record_is_still_dropped():
     a = _adaptor(); _global_pipeline(a)
     a.create_cell_subset('chondro', ACTIVE); _chain(a, 'chondro')
-    a.adata.uns['xcell_cell_subsets']['chondro'].pop('derived')
+    a.adata.uns['skopia_cell_subsets']['chondro'].pop('derived')
     assert _subset(a, 'chondro')['derived']['graph'] == 'chondro_connectivities'
     out = a.delete_cell_subset('chondro', drop_derived=True)
     assert {'chondro_connectivities', 'chondro_distances'} <= set(out['dropped'])
@@ -355,7 +355,7 @@ RING = {'ring': [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]], 'cuts': [], 'anchors': []}
 def test_lines_are_written_to_uns_and_survive_a_reload(tmp_path):
     a = _adaptor()
     a.set_lines([LINE])
-    assert json.loads(a.adata.uns['xcell_lines_json'])[0]['name'] == 'ridge'
+    assert json.loads(a.adata.uns['skopia_lines_json'])[0]['name'] == 'ridge'
     p = tmp_path / 'x.h5ad'
     a.adata.write_h5ad(p)
     b = DataAdaptor(str(p))
@@ -366,12 +366,12 @@ def test_clearing_the_lines_clears_the_file_too():
     a = _adaptor()
     a.set_lines([LINE])
     a.set_lines([])
-    assert a.get_lines() == [] and json.loads(a.adata.uns['xcell_lines_json']) == []
+    assert a.get_lines() == [] and json.loads(a.adata.uns['skopia_lines_json']) == []
 
 
 def test_an_old_export_with_embedding_instead_of_embedding_name_still_loads():
     ad = _adata()
-    ad.uns['xcell_lines_json'] = json.dumps([
+    ad.uns['skopia_lines_json'] = json.dumps([
         {'name': 'old', 'embedding': 'X_umap', 'points': [[0, 0], [1, 1]]},
         {'name': 'broken', 'points': []},
     ])
@@ -386,7 +386,7 @@ def test_an_old_export_with_embedding_instead_of_embedding_name_still_loads():
 
 def test_a_corrupt_lines_blob_does_not_block_the_load():
     ad = _adata()
-    ad.uns['xcell_lines_json'] = '{not json'
+    ad.uns['skopia_lines_json'] = '{not json'
     assert DataAdaptor('x.h5ad', adata=ad).get_lines() == []
 
 
@@ -394,7 +394,7 @@ def test_the_export_carries_the_full_lines():
     a = _adaptor(); _global_pipeline(a)
     a.set_lines([{**LINE, 'embeddingName': 'X_umap'}])
     exported = a.prepare_export_with_lines()
-    stored = json.loads(exported.uns['xcell_lines_json'])
+    stored = json.loads(exported.uns['skopia_lines_json'])
     assert stored[0]['strokeColor'] == '#4ecdc4' and stored[0]['id'] == 'line_1'
 
 
@@ -439,7 +439,7 @@ def test_dropping_results_also_drops_decorations_on_its_embeddings():
     out = a.delete_cell_subset('chondro', drop_derived=True)
     assert out['dropped_lines'] == ['ridge'] and out['dropped_territories'] == ['zones']
     assert [line['name'] for line in a.get_lines()] == ['keep']
-    assert json.loads(a.adata.uns['xcell_lines_json'])[0]['name'] == 'keep'
+    assert json.loads(a.adata.uns['skopia_lines_json'])[0]['name'] == 'keep'
     assert set(a.get_territories()) == {'keepzones'}
 
 
@@ -586,7 +586,7 @@ def test_renaming_a_subsets_leiden_column_follows_it_in_the_registry():
     s = _subset(a, 'chondro')
     assert s['derived']['leiden'] == ['chondro_clusters']
     assert s['steps']['leiden']['chondro_clusters']['resolution'] == 0.8
-    assert 'leiden_chondro' not in a.adata.uns['xcell_cell_subsets']['chondro']['derived']['leiden']
+    assert 'leiden_chondro' not in a.adata.uns['skopia_cell_subsets']['chondro']['derived']['leiden']
 
 
 def test_renaming_a_recorded_pseudotime_column_follows_it_too():
@@ -595,5 +595,5 @@ def test_renaming_a_recorded_pseudotime_column_follows_it_too():
     a.adata.obs['dpt_chondro'] = np.where(a.adata.obs['subset_chondro'].values, 0.5, np.nan)
     a._subset_record_step('chondro', 'dpt', 'dpt_chondro', {'n_dcs': 5})
     a.rename_obs_column('dpt_chondro', 'chondro_time')
-    d = a.adata.uns['xcell_cell_subsets']['chondro']['derived']['dpt']
+    d = a.adata.uns['skopia_cell_subsets']['chondro']['derived']['dpt']
     assert list(d) == ['chondro_time'] and d['chondro_time'] == {'n_dcs': 5}

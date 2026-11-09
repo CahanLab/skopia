@@ -1,4 +1,4 @@
-"""Tests for xcell.neighborhood — cell-type neighborhood composition + enrichment.
+"""Tests for skopia.neighborhood — cell-type neighborhood composition + enrichment.
 
 The planted geometry gives a known answer: types A and B alternate on one
 checkerboard grid (strong attraction), while type C sits on a distant grid of
@@ -9,7 +9,7 @@ import json
 import numpy as np
 import pytest
 
-from xcell import neighborhood as nb
+from skopia import neighborhood as nb
 
 
 def _checkerboard(width: int = 10, offset: float = 0.0) -> np.ndarray:

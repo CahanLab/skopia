@@ -1,10 +1,10 @@
-# Why xcell's NMF specificity weight defaults to 1.0, not GeneNMF's 5.0
+# Why skopia's NMF specificity weight defaults to 1.0, not GeneNMF's 5.0
 
 **Date:** 2026-08-19
-**Data:** `E11.5_hindlimbs_102424_xcell_qced-08132026.h5ad` — 24,172 cells ×
+**Data:** `E11.5_hindlimbs_102424_skopia_qced-08132026.h5ad` — 24,172 cells ×
 12,236 genes, 5,001 highly variable. Values are log1p-normalized (min non-zero
 0.693), 2.6% dense.
-**Code:** `xcell/gene_nmf.py`, k=12, seed 0, `tol=1e-6`, `weight_explained=0.5`.
+**Code:** `skopia/gene_nmf.py`, k=12, seed 0, `tol=1e-6`, `weight_explained=0.5`.
 
 ## The finding
 
@@ -65,8 +65,8 @@ Not a tuning question — recorded because it sets what "converged" means here.
 
 | solver | time | iters | relative residual |
 |---|---|---|---|
-| `xcell.gene_nmf` tol=1e-4 (default) | 0.5 s | 27 | 0.90754 |
-| `xcell.gene_nmf` tol=1e-6 | 2.5 s | 130 | 0.90687 |
+| `skopia.gene_nmf` tol=1e-4 (default) | 0.5 s | 27 | 0.90754 |
+| `skopia.gene_nmf` tol=1e-6 | 2.5 s | 130 | 0.90687 |
 | sklearn `mu` | 3.6 s | 80 | 0.90710 |
 | sklearn `cd` | 6.5 s | 164 | 0.90670 |
 

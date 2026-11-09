@@ -24,7 +24,7 @@ const PAGE = 50
 // An import bigger than this lands as a collapsed folder: the Genes pane draws
 // every set of an open folder, and a whole library's worth locks the tab.
 const COLLAPSE_IMPORT_ABOVE = 100
-const SPECIES_KEY = 'xcell_librarySpecies'
+const SPECIES_KEY = 'skopia_librarySpecies'
 
 const dark = {
   panel: '#16213e', border: '#0f3460', inset: '#0f1625', accent: '#4ecdc4',

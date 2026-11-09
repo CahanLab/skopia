@@ -25,7 +25,7 @@ named warning when `weighted_mean` is selected against such a reference.
 
 **Phase 1, already merged and the reason this phase is decidable:**
 `docs/superpowers/plans/2026-08-09-localize-calibration-harness.md` —
-`backend/xcell/localize_metrics.py`, `POST /api/localize/evaluate_map`, and the
+`backend/skopia/localize_metrics.py`, `POST /api/localize/evaluate_map`, and the
 Map quality table.
 
 ## Global Constraints
@@ -37,7 +37,7 @@ Map quality table.
 - `backend/tests/` has **no `conftest.py`** — each file is self-contained, with
   module-level `_x()` factories, seeded `np.random.default_rng(0)`, `csr_matrix`
   + `float32`.
-- `backend/xcell/localize.py` and `backend/xcell/localize_metrics.py` are
+- `backend/skopia/localize.py` and `backend/skopia/localize_metrics.py` are
   **pure**: arrays in, arrays and plain dicts out. No AnnData, no adaptor
   import. Both docstrings say so; keep it true.
 - Heavy imports (`scipy.optimize`, `scipy.spatial`) stay **function-local**.
@@ -72,13 +72,13 @@ belong.
 
 | file | responsibility |
 |---|---|
-| `backend/xcell/localize.py` (modify) | `injective_feasibility`, `injective_assignment`, `'injective'` in `AGGREGATIONS`, the full-matrix path in `project_knn` |
+| `backend/skopia/localize.py` (modify) | `injective_feasibility`, `injective_assignment`, `'injective'` in `AGGREGATIONS`, the full-matrix path in `project_knn` |
 | `backend/tests/test_localize.py` (modify) | the estimator's behaviour on synthetic tissue |
-| `backend/xcell/adaptor.py` (modify) | early feasibility check in `prepare_localize`; new `localize_reference_geometry` |
+| `backend/skopia/adaptor.py` (modify) | early feasibility check in `prepare_localize`; new `localize_reference_geometry` |
 | `backend/tests/test_localize_adaptor.py` (modify) | the 400-before-the-task guard |
-| `backend/xcell/localize_metrics.py` (modify) | `mean_collapse_risk` |
+| `backend/skopia/localize_metrics.py` (modify) | `mean_collapse_risk` |
 | `backend/tests/test_localize_metrics.py` (modify) | its answers on geometry with known shape |
-| `backend/xcell/api/routes.py` (modify) | `POST /api/localize/reference_geometry` |
+| `backend/skopia/api/routes.py` (modify) | `POST /api/localize/reference_geometry` |
 | `backend/tests/test_localize_metrics_routes.py` (modify) | the route contract |
 | `frontend/src/lib/localizeAdvice.ts` (new) | `adviseParameters`, moved out of the modal and given real logic |
 | `frontend/src/lib/localizeAdvice.test.ts` (new) | one case per rule, plus one per rule staying silent |
@@ -118,7 +118,7 @@ export function adviseParameters(o: LocalizeSettings): Advice[]
 ### Task 1: `injective` as an aggregation
 
 **Files:**
-- Modify: `backend/xcell/localize.py`
+- Modify: `backend/skopia/localize.py`
 - Modify: `backend/tests/test_localize.py`
 
 **Interfaces:**
@@ -136,7 +136,7 @@ Append to `backend/tests/test_localize.py`. First extend the import at the top o
 the file (line 16) so it reads:
 
 ```python
-from xcell.localize import (
+from skopia.localize import (
     AGGREGATIONS,
     METRICS,
     TRANSFORMS,
@@ -245,13 +245,13 @@ def test_injective_reports_the_section_of_the_spot_it_assigned():
 cd backend && pixi run -e dev pytest tests/test_localize.py -q
 ```
 
-Expected: `ImportError: cannot import name 'injective_assignment' from 'xcell.localize'`
+Expected: `ImportError: cannot import name 'injective_assignment' from 'skopia.localize'`
 — which fails the whole file, including the tests that passed before. That is
 the expected state; Step 4 restores them.
 
 - [ ] **Step 3: Implement**
 
-In `backend/xcell/localize.py`, change line 41:
+In `backend/skopia/localize.py`, change line 41:
 
 ```python
 AGGREGATIONS = ('weighted_mean', 'median', 'best_match', 'densest', 'injective')
@@ -404,7 +404,7 @@ else.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/localize.py backend/tests/test_localize.py
+git add backend/skopia/localize.py backend/tests/test_localize.py
 git commit -m "feat(localize): injective assignment — one distinct spot per cell"
 ```
 
@@ -418,7 +418,7 @@ through is the size guard: `project_knn` raises it inside `compute_fn`, which is
 a background task that dies a minute later rather than a 400 the user can read.
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — `prepare_localize` (~line 8035)
+- Modify: `backend/skopia/adaptor.py` — `prepare_localize` (~line 8035)
 - Modify: `backend/tests/test_localize_adaptor.py`
 
 **Interfaces:**
@@ -478,7 +478,7 @@ work.
 
 - [ ] **Step 3: Implement**
 
-In `backend/xcell/adaptor.py`, in `prepare_localize`, immediately after the
+In `backend/skopia/adaptor.py`, in `prepare_localize`, immediately after the
 existing aggregation check:
 
 ```python
@@ -505,7 +505,7 @@ Expected: all pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_localize_adaptor.py
+git add backend/skopia/adaptor.py backend/tests/test_localize_adaptor.py
 git commit -m "feat(localize): refuse an infeasible injective run with a 400"
 ```
 
@@ -525,7 +525,7 @@ is a place the type occupies is a property of the reference's geometry and
 nothing else. **The mean of a ring is its hole.**
 
 **Files:**
-- Modify: `backend/xcell/localize_metrics.py`
+- Modify: `backend/skopia/localize_metrics.py`
 - Modify: `backend/tests/test_localize_metrics.py`
 
 **Interfaces:**
@@ -542,7 +542,7 @@ at the top of that file — a filled unit disc centred at the origin — so ever
 case below is geometry whose answer is known by construction.
 
 ```python
-from xcell.localize_metrics import mean_collapse_risk
+from skopia.localize_metrics import mean_collapse_risk
 
 
 def test_collapse_risk_flags_an_annular_population():
@@ -606,7 +606,7 @@ Expected: `ImportError: cannot import name 'mean_collapse_risk'`.
 
 - [ ] **Step 3: Implement**
 
-Append to `backend/xcell/localize_metrics.py`:
+Append to `backend/skopia/localize_metrics.py`:
 
 ```python
 def mean_collapse_risk(coords, scores, *, top: float = 0.2) -> dict[str, Any]:
@@ -696,7 +696,7 @@ the line.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/localize_metrics.py backend/tests/test_localize_metrics.py
+git add backend/skopia/localize_metrics.py backend/tests/test_localize_metrics.py
 git commit -m "feat(localize): detect populations a mean estimator would collapse"
 ```
 
@@ -705,9 +705,9 @@ git commit -m "feat(localize): detect populations a mean estimator would collaps
 ### Task 4: the reference-geometry route
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — add `localize_reference_geometry` after
+- Modify: `backend/skopia/adaptor.py` — add `localize_reference_geometry` after
   `evaluate_localization_maps` (~line 8248)
-- Modify: `backend/xcell/api/routes.py` — add after `/localize/evaluate_map`
+- Modify: `backend/skopia/api/routes.py` — add after `/localize/evaluate_map`
 - Modify: `backend/tests/test_localize_metrics_routes.py`
 
 **Interfaces:**
@@ -725,7 +725,7 @@ query involved at all.
 
 - [ ] **Step 1: Add the adaptor method**
 
-In `backend/xcell/adaptor.py`, after `evaluate_localization_maps`:
+In `backend/skopia/adaptor.py`, after `evaluate_localization_maps`:
 
 ```python
     def localize_reference_geometry(
@@ -736,7 +736,7 @@ In `backend/xcell/adaptor.py`, after `evaluate_localization_maps`:
         Called on the **reference** adaptor, about itself — there is no query and
         no prediction, which is what lets the answer be shown while the
         parameters are still being chosen. See
-        :func:`xcell.localize_metrics.mean_collapse_risk` for what the number is.
+        :func:`skopia.localize_metrics.mean_collapse_risk` for what the number is.
 
         Args:
             gene_sets: population name -> gene list. Genes absent from this
@@ -744,7 +744,7 @@ In `backend/xcell/adaptor.py`, after `evaluate_localization_maps`:
                 in ``skipped_gene_sets`` rather than failing the whole call.
             layer: which matrix to score from; ``None`` is ``.X``.
         """
-        from xcell import localize_metrics as lm
+        from skopia import localize_metrics as lm
 
         spatial_key = self._get_spatial_key()
         if spatial_key is None:
@@ -843,7 +843,7 @@ Expected: 404 on the new tests — the route does not exist.
 
 - [ ] **Step 4: Add the route**
 
-In `backend/xcell/api/routes.py`, after `localize_evaluate_map`:
+In `backend/skopia/api/routes.py`, after `localize_evaluate_map`:
 
 ```python
 class ReferenceGeometryRequest(BaseModel):
@@ -890,7 +890,7 @@ Expected: all pass, no regressions against the 678 already there.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/xcell/api/routes.py \
+git add backend/skopia/adaptor.py backend/skopia/api/routes.py \
         backend/tests/test_localize_metrics_routes.py
 git commit -m "feat(localize): reference geometry route for pre-run advice"
 ```
@@ -1302,7 +1302,7 @@ pixi run backend      # :8000
 pixi run dev          # :5173
 ```
 
-Stop them later with `pkill -f "uvicorn xcell.main:app"; pkill -f vite` — killing
+Stop them later with `pkill -f "uvicorn skopia.main:app"; pkill -f vite` — killing
 by port leaves a reloader that re-binds and serves stale data. **Editing a
 backend file restarts the server and drops both loaded datasets**, so batch any
 fixes rather than fixing one thing at a time.
@@ -1385,7 +1385,7 @@ curl -s -X POST "localhost:8000/api/localize/prepare?dataset=primary" \
 - [ ] **Step 6: Stop the servers and write the docs**
 
 ```bash
-pkill -f "uvicorn xcell.main:app"; pkill -f vite
+pkill -f "uvicorn skopia.main:app"; pkill -f vite
 ```
 
 `README.md` — in the Localize section, add `injective` to the aggregation list

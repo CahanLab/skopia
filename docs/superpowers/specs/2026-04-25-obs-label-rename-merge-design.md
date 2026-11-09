@@ -86,15 +86,15 @@ Frontend:
 
 ## Files to touch
 
-- `xcell/backend/xcell/adaptor.py` — fix `get_obs_column`; add `rename_obs_label`, `merge_obs_labels`.
-- `xcell/backend/xcell/api/routes.py` — `POST /obs/{column}/rename_label`, `POST /obs/{column}/merge_labels`.
-- `xcell/frontend/src/hooks/useData.ts` — two helpers (`renameObsLabel`, `mergeObsLabels`) accepting optional `slot`.
-- `xcell/frontend/src/components/CellPanel.tsx` — inline label rename, column overflow with "Merge labels…", refresh after success, selectedCategorySource remap.
-- `xcell/frontend/src/components/MergeLabelsModal.tsx` — new modal.
-- `xcell/CHANGELOG.md`, `xcell/README.md`, `xcell/CLAUDE.md` — doc updates.
+- `skopia/backend/skopia/adaptor.py` — fix `get_obs_column`; add `rename_obs_label`, `merge_obs_labels`.
+- `skopia/backend/skopia/api/routes.py` — `POST /obs/{column}/rename_label`, `POST /obs/{column}/merge_labels`.
+- `skopia/frontend/src/hooks/useData.ts` — two helpers (`renameObsLabel`, `mergeObsLabels`) accepting optional `slot`.
+- `skopia/frontend/src/components/CellPanel.tsx` — inline label rename, column overflow with "Merge labels…", refresh after success, selectedCategorySource remap.
+- `skopia/frontend/src/components/MergeLabelsModal.tsx` — new modal.
+- `skopia/CHANGELOG.md`, `skopia/README.md`, `skopia/CLAUDE.md` — doc updates.
 
 ## Verification
 
 - Manual: load a spatial dataset, run Contourize, confirm clicking a contour level in the Cells panel selects cells. Rename one level, confirm summary refreshes. Merge two levels, confirm result. Repeat on a leiden clustering and on a user annotation.
-- Build: `npm run build` in `xcell/frontend` must pass.
+- Build: `npm run build` in `skopia/frontend` must pass.
 - No automated tests exist for this area.

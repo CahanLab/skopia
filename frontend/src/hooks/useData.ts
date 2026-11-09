@@ -37,7 +37,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
     err.status = response.status
     throw err
   }
-  // A successful reply that isn't JSON never comes from xcell's backend — it
+  // A successful reply that isn't JSON never comes from skopia's backend — it
   // comes from whatever else grabbed the port first.
   await assertJsonResponse(response)
   return response.json()

@@ -6,9 +6,9 @@ make are marked **[decision]** so they are easy to find and reverse.
 
 ## The problem
 
-xcell's Gene Panel is where a biological question turns into a set of genes,
+skopia's Gene Panel is where a biological question turns into a set of genes,
 but the only genes it can start from are the ones already in a file on disk.
-Asking "how are the collagens expressed in this tissue?" means leaving xcell
+Asking "how are the collagens expressed in this tissue?" means leaving skopia
 to find a collagen list, reformatting it, and importing it — and then
 discovering that "the collagens" are not one expression pattern but several,
 which a single mean or UCell score flattens into one number.
@@ -19,7 +19,7 @@ Three things are missing:
    Reactome, KEGG, WikiPathways, PanglaoDB, CellMarker, Tabula Muris …) and
    STRING's interaction network are all one HTTP request away, and none of
    them is reachable from the Gene Panel.
-2. **A view of genes as objects.** xcell can already build a gene–gene graph
+2. **A view of genes as objects.** skopia can already build a gene–gene graph
    from expression (`gene_pca` → `gene_neighbors` → `cluster_genes`) but never
    shows it; and it knows nothing about similarity that comes from
    *annotation* rather than expression.
@@ -49,7 +49,7 @@ Four increments, each usable on its own, in this order:
 Everything the existing surveys found reusable is reused: `_resolve_gene_mask`
 and `GeneSubsetSpec` for gene subsets, the `cell_context` vocabulary and
 `_resolve_cell_context` for cell scope, `task_manager` for anything slow,
-`.obsm` + `uns['xcell_score_matrices']` for per-cell scores,
+`.obsm` + `uns['skopia_score_matrices']` for per-cell scores,
 `gene_coexpression.corr_matrix` for expression similarity, `gene_nmf` for the
 NMF branch, `lib/hclust.ts` for dendrogram order, and the Gene Panel's
 `OverflowMenu` rows and `addFolderToCategory` for every result.
@@ -58,7 +58,7 @@ NMF branch, `lib/hclust.ts` for dendrogram order, and the Gene Panel's
 
 ### Sources are adapters behind one interface, and the network is optional
 
-`backend/xcell/gene_set_sources.py` is a pure module (no adaptor import) with
+`backend/skopia/gene_set_sources.py` is a pure module (no adaptor import) with
 one class per source implementing:
 
 ```
@@ -91,12 +91,12 @@ second parser.
 
 ### A library is fetched once and searched locally
 
-**[decision]** Cache directory: `$XDG_CACHE_HOME/xcell/gene_set_sources/`
-(default `~/.cache/xcell/…`), overridable as `gene_set_sources.cache_dir` in
+**[decision]** Cache directory: `$XDG_CACHE_HOME/skopia/gene_set_sources/`
+(default `~/.cache/skopia/…`), overridable as `gene_set_sources.cache_dir` in
 `config.yaml`. One JSON file per library
 (`<source>/<species>/<library_id>.json`) and one catalogue file per source
 (`<source>/catalogue.<species>.json`, refreshed when older than 7 days or on
-demand). This is the first user-level cache in xcell; the only precedent is
+demand). This is the first user-level cache in skopia; the only precedent is
 `visium_hd.py`'s cache-next-to-the-file, which has no "file" here.
 
 Searching, filtering and paging happen over the cached JSON in the backend,
@@ -135,7 +135,7 @@ are already imported. Nothing else reads it.
 
 `prepare_gene_nmf` is the reference: `.obsm[key]` + registry entry (per-cell
 program scores, NaN for cells outside the scope), `.varm[f'{key}_loadings']`
-(all genes, zeros outside the set), `uns['xcell_gene_set_decomposition'][key]`
+(all genes, zeros outside the set), `uns['skopia_gene_set_decomposition'][key]`
 (params, program gene lists, variance explained), `_log_action` and a
 `codegen` entry. **[decision]** The PCA branch is added alongside NMF rather
 than reusing `run_pca`, because `run_pca` overwrites the dataset's `X_pca`
@@ -172,7 +172,7 @@ collagens). The modal draws the edge on the scree.
 
 ### A gene map is a similarity, then an embedding, then a picture
 
-`backend/xcell/gene_similarity.py` (pure) builds a genes × genes similarity
+`backend/skopia/gene_similarity.py` (pure) builds a genes × genes similarity
 from up to three channels, each in [0, 1]:
 
 - **expression** — `gene_coexpression.corr_matrix` (bicor by default) on the
@@ -188,7 +188,7 @@ weights from the modal (default expression 1.0, annotation 1.0, STRING 0.5
 when enabled). **[decision]** Two-dimensional coordinates come from UMAP on
 the precomputed distance `1 - S` when `umap-learn` is importable, else
 classical MDS; modules from Leiden on the kNN graph of `S`. The result is
-JSON-serialisable and lives in `uns['xcell_gene_maps'][key]` with `genes`,
+JSON-serialisable and lives in `uns['skopia_gene_maps'][key]` with `genes`,
 `coords`, `modules`, per-channel availability and the similarity matrix
 itself (float32, capped at 3,000 genes — a larger request is a 400 with the
 cap in the message).
@@ -202,7 +202,7 @@ returns gene names, and a lassoed selection becomes a gene set in one click.
 ## Architecture
 
 ```
-external sources ──► gene_set_sources.py ──► ~/.cache/xcell/gene_set_sources/*.json
+external sources ──► gene_set_sources.py ──► ~/.cache/skopia/gene_set_sources/*.json
                               │
                      routes: /api/gene_set_sources/…      (catalogue, fetch [202], search, string)
                               │
@@ -210,7 +210,7 @@ adaptor: gene_set_overlap(sets, columns) ──► resolved names + counts   (PO
 adaptor: prepare_cluster_cells_by_gene_set ──► obsm X_pca_<key>, obsp, obs leiden_<key>, obsm X_umap_<key>
 adaptor: gene_set_coherence ──► {n_genes, eigengene_pve, mean_corr}
 adaptor: prepare_gene_set_decomposition ──► obsm[key] + registry, varm, uns, gene sets
-adaptor: prepare_gene_map ──► uns['xcell_gene_maps'][key]        gene_similarity.py (pure)
+adaptor: prepare_gene_map ──► uns['skopia_gene_maps'][key]        gene_similarity.py (pure)
                               │
 frontend: GeneSetLibraryModal, ClusterCellsByGeneSetModal, DecomposeGeneSetModal, GeneMapModal
           + gene-set row ⋯ items; pure lib/geneSetLibrary.ts, lib/genePlot.ts

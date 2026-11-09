@@ -311,7 +311,7 @@ export default function GeneMapModal() {
               {Object.entries(data.channel_weights).map(([c, w]) => (
                 <span key={c}>{c} {Math.round(w * 100)}%{c === 'annotation' && data.channels.annotation ? ` (${String(data.channels.annotation.n_genes_annotated)} of ${data.genes.length} annotated, ${String(data.channels.annotation.n_terms)} sets)` : ''}{c === 'string' && data.channels.string ? ` (${String(data.channels.string.n_edges)} edges)` : ''}{c === 'go' && data.channels.go ? ` (${String(data.channels.go.aspect).toUpperCase()}: ${String(data.channels.go.n_genes_annotated)} of ${data.genes.length} annotated, ${String(data.channels.go.n_terms)} terms)` : ''}</span>
               ))}
-              <span style={{ color: dark.dim }}>stored as <code>uns['xcell_gene_maps']['{data.key}']</code></span>
+              <span style={{ color: dark.dim }}>stored as <code>uns['skopia_gene_maps']['{data.key}']</code></span>
               <div style={{ flex: 1 }} />
               <button onClick={() => setPhase('config')} style={{ ...btnGhost, padding: '2px 8px' }}>Adjust &amp; re-run</button>
             </div>

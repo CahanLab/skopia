@@ -1,10 +1,10 @@
-"""Tests for the pure multicontour logic (xcell.multicontour)."""
+"""Tests for the pure multicontour logic (skopia.multicontour)."""
 
 import numpy as np
 import anndata
 from scipy.sparse import csr_matrix
 
-import xcell.multicontour as mc
+import skopia.multicontour as mc
 
 
 def make_adata():

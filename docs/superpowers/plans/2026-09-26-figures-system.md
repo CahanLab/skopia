@@ -4,7 +4,7 @@
 
 **Goal:** Declarative, persisted, reproducible figures: a figure record (kind + inputs + params + provenance) stored in `uns`, rendered in the browser from a backend `figure_data` table, editable and exportable from a Figures tab, logged in the analysis record — with enrichment heatmap and enrichment network as the first two kinds.
 
-**Architecture:** `enrichment_figures.py` (pure) assembles the heatmap matrix / network graph from per-contrast enrichment results. The adaptor owns the registry (`uns['xcell_figures']`, JSON strings, `xcell_figures_seq` id counter), validates inputs, resolves provenance step indices, logs `figure_create/update/delete`, and dispatches `figure_data`. Thin routes. Frontend: `lib/figures.ts` (types, PNG rasteriser), `lib/figureSchemas.ts` (param forms), `FiguresView.tsx` (gallery / renderer / params / export), two SVG renderers, store fields per dataset, Enrichment modal buttons.
+**Architecture:** `enrichment_figures.py` (pure) assembles the heatmap matrix / network graph from per-contrast enrichment results. The adaptor owns the registry (`uns['skopia_figures']`, JSON strings, `skopia_figures_seq` id counter), validates inputs, resolves provenance step indices, logs `figure_create/update/delete`, and dispatches `figure_data`. Thin routes. Frontend: `lib/figures.ts` (types, PNG rasteriser), `lib/figureSchemas.ts` (param forms), `FiguresView.tsx` (gallery / renderer / params / export), two SVG renderers, store fields per dataset, Enrichment modal buttons.
 
 **Tech Stack:** numpy/scipy; React + SVG; pytest; vitest.
 
@@ -12,12 +12,12 @@
 
 ## Global Constraints
 
-- Figure records are JSON strings under `uns['xcell_figures'][id]`; ids `fig_<n>` from `uns['xcell_figures_seq']`, never reused.
+- Figure records are JSON strings under `uns['skopia_figures'][id]`; ids `fig_<n>` from `uns['skopia_figures_seq']`, never reused.
 - `figure_data` never mutates state; a `params_override` preview is not logged.
 - Every `_log_action` name gets a `codegen.REGISTRY` entry in the same commit.
 - Rendering is browser SVG (`data-figure-svg` root attribute); PNG = rasterised SVG. No matplotlib.
 - Numbers crossing the API are finite (`signed_logp` floors at 300).
-- Frontend inline styles, house palette. Worktree `/private/tmp/claude-501/xcell-wt`; test commands as in Plan 1.
+- Frontend inline styles, house palette. Worktree `/private/tmp/claude-501/skopia-wt`; test commands as in Plan 1.
 
 ## Review Focus
 
@@ -31,7 +31,7 @@
 
 ### Task 1: `enrichment_figures.py` — matrix, collapse, network, layout
 
-**Files:** Create `backend/xcell/enrichment_figures.py`; test `backend/tests/test_enrichment_figures.py`.
+**Files:** Create `backend/skopia/enrichment_figures.py`; test `backend/tests/test_enrichment_figures.py`.
 
 **Interfaces (produces):**
 ```python
@@ -59,7 +59,7 @@ bipartite_layout(groups: list[int], sets: list[int], edges) -> np.ndarray
 import numpy as np
 import pytest
 
-from xcell import enrichment_figures as ef
+from skopia import enrichment_figures as ef
 
 
 def _row(name, nes, padj, library='L'):
@@ -435,11 +435,11 @@ def assemble_network(results_by_col: dict[str, dict[str, Any]], *, value: str, p
 
 ### Task 2: Adaptor figure registry, provenance, `figure_data`, attach
 
-**Files:** `backend/xcell/adaptor.py` (new `figures` section after the enrichment section), `backend/xcell/analysis_record.py` (`Figure.figure_id`), `backend/xcell/codegen.py`, `backend/xcell/config.yaml` (`figures:`), test `backend/tests/test_figures_adaptor.py`.
+**Files:** `backend/skopia/adaptor.py` (new `figures` section after the enrichment section), `backend/skopia/analysis_record.py` (`Figure.figure_id`), `backend/skopia/codegen.py`, `backend/skopia/config.yaml` (`figures:`), test `backend/tests/test_figures_adaptor.py`.
 
 **Interfaces (produces):**
 ```python
-FIGURES_UNS_KEY = 'xcell_figures'; FIGURES_SEQ_KEY = 'xcell_figures_seq'
+FIGURES_UNS_KEY = 'skopia_figures'; FIGURES_SEQ_KEY = 'skopia_figures_seq'
 FIGURE_KINDS = ('enrichment_heatmap', 'enrichment_network', 'composition_barplot', 'expression_heatmap')
 create_figure(kind, *, title=None, caption='', inputs, params=None) -> dict   # ValueError on bad kind/inputs
 update_figure(id, *, title=None, caption=None, params=None) -> dict          # KeyError unknown id
@@ -483,7 +483,7 @@ Defaults per kind from `config.yaml figures.<kind>` (spec values). `composition_
 
 `attach_figure_to_record`: `fig = self.analysis_record.add_figure(png_b64, caption=caption or record['title'], step_index=record['provenance'].get('created_step'))`, set `fig.figure_id = id`. Add `figure_id: str | None = None` to `analysis_record.Figure` (+ `to_dict`/`from_dict`), and include it in `_record_payload`'s figure entries and `notebook_export.figure_payloads`' neighbour metadata (check how captions reach the notebook and add `figure_id` beside the caption).
 
-Codegen entries: `figure_create` (XCELL, `_direct('create_figure', ('kind','title','caption','inputs','params'))` plus a second code line `xa.figure_data(<id>)` — write a custom `code=` that returns `[_xcall(...), f"{ADATA}_fig = {ADAPTOR}.figure_data({_lit(r['id'])})"]`; check how `_xcall`/`ADAPTOR` are named in codegen.py and mirror), `figure_update` (`_direct('update_figure', ('id','title','caption','params'))` — the logged params must include `id`), `figure_delete` (`_direct('delete_figure', ('id',))`).
+Codegen entries: `figure_create` (SKOPIA, `_direct('create_figure', ('kind','title','caption','inputs','params'))` plus a second code line `xa.figure_data(<id>)` — write a custom `code=` that returns `[_xcall(...), f"{ADATA}_fig = {ADAPTOR}.figure_data({_lit(r['id'])})"]`; check how `_xcall`/`ADAPTOR` are named in codegen.py and mirror), `figure_update` (`_direct('update_figure', ('id','title','caption','params'))` — the logged params must include `id`), `figure_delete` (`_direct('delete_figure', ('id',))`).
 
 Config:
 ```yaml
@@ -501,7 +501,7 @@ figures:
 
 ### Task 3: Routes
 
-**Files:** `backend/xcell/api/routes.py`; test `backend/tests/test_figures_routes.py`.
+**Files:** `backend/skopia/api/routes.py`; test `backend/tests/test_figures_routes.py`.
 
 Routes: `GET /figures` → `{figures: [...]}`; `POST /figures` body `{kind, title?, caption?, inputs, params?}` → record; `GET /figures/{id}`; `PUT /figures/{id}` body `{title?, caption?, params?}`; `DELETE /figures/{id}`; `POST /figures/{id}/data` body `{params?}` → data (409 on `FigureInputMissing`, 400 on other ValueError); `POST /figures/{id}/attach` body `{png_b64, caption?}` (validate base64 like `/record/figure`). Tests: full CRUD; data for heatmap + network after a batch run via the route; 409 after deleting the input; attach returns ids and `GET /record` shows the figure with `figure_id`.
 

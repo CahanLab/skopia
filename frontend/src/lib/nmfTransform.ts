@@ -1,13 +1,13 @@
 /**
  * Picking the right source transform for NMF from a layer's detected scale.
  *
- * Every other gene-expression path in xcell defaults to normalize_total +
+ * Every other gene-expression path in skopia defaults to normalize_total +
  * log1p, which is right for raw counts and wrong for anything already on a log
  * scale — there it silently factorizes log(1 + log(1 + counts)). NMF is more
  * sensitive to that than coloring is, because the extra compression flattens
  * exactly the high-expression differences the factors are built from, so the
- * modal picks its default from the scale xcell already detects
- * (`/api/scanpy/layers` → `scale.verdict`, see backend/xcell/layer_scale.py).
+ * modal picks its default from the scale skopia already detects
+ * (`/api/scanpy/layers` → `scale.verdict`, see backend/skopia/layer_scale.py).
  */
 export type NmfTransform = 'log1p' | 'none'
 
@@ -22,7 +22,7 @@ const NO_TRANSFORM = new Set([
 export function defaultTransformFor(verdict: string | undefined): NmfTransform {
   if (verdict && NO_TRANSFORM.has(verdict)) return 'none'
   // raw_counts, normalized_linear, empty, unknown, or no detection at all —
-  // log1p, matching the rest of xcell.
+  // log1p, matching the rest of skopia.
   return 'log1p'
 }
 

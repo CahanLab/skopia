@@ -16,7 +16,7 @@
 - TDD: write the failing test, run it, watch it fail, then implement.
 - Backend tests from `backend/`: `pixi run -e dev pytest`. Frontend: `cd frontend && npm test`, typecheck `npx tsc --noEmit`.
 - `backend/tests/` has **no `conftest.py`** — each file is self-contained, with module-level `_adata()` / `_adaptor()` factories, seeded `np.random.default_rng(0)`, `csr_matrix` + `float32`.
-- `backend/xcell/localize_metrics.py` is **pure**: arrays in, plain dicts out. No AnnData, no adaptor import — same contract as `localize.py`, which its docstring states explicitly.
+- `backend/skopia/localize_metrics.py` is **pure**: arrays in, plain dicts out. No AnnData, no adaptor import — same contract as `localize.py`, which its docstring states explicitly.
 - Everything crossing the API must be JSON-serializable: **no `inf`, no `NaN`**. Use `None` for "not computable" (see `layer_scale._cv` and `localize._f`).
 - Heavy imports (`scipy.ndimage`, `scipy.spatial`) stay function-local.
 - Error mapping in routes: `ValueError → 400`, `KeyError → 404`, `except HTTPException: raise` before any catch-all.
@@ -36,10 +36,10 @@ would be measuring the wrong thing.
 
 | file | responsibility |
 |---|---|
-| `backend/xcell/localize_metrics.py` (new) | the four pure metrics + `evaluate_map` orchestrator |
+| `backend/skopia/localize_metrics.py` (new) | the four pure metrics + `evaluate_map` orchestrator |
 | `backend/tests/test_localize_metrics.py` (new) | unit tests on synthetic geometry with known answers |
-| `backend/xcell/adaptor.py` (modify) | `evaluate_localization_maps()` — pulls arrays, calls the module |
-| `backend/xcell/api/routes.py` (modify) | `POST /api/localize/evaluate_map` |
+| `backend/skopia/adaptor.py` (modify) | `evaluate_localization_maps()` — pulls arrays, calls the module |
+| `backend/skopia/api/routes.py` (modify) | `POST /api/localize/evaluate_map` |
 | `backend/tests/test_localize_metrics_routes.py` (new) | route contract |
 | `frontend/src/components/LocalizeModal.tsx` (modify) | "Map quality" table |
 
@@ -64,7 +64,7 @@ The two coordinate-only metrics. No markers involved, so they are the simplest
 place to establish the module and its conventions.
 
 **Files:**
-- Create: `backend/xcell/localize_metrics.py`
+- Create: `backend/skopia/localize_metrics.py`
 - Create: `backend/tests/test_localize_metrics.py`
 
 **Interfaces:**
@@ -88,7 +88,7 @@ here builds geometry whose right answer is known by construction.
 import numpy as np
 import pytest
 
-from xcell.localize_metrics import dispersion, occupancy
+from skopia.localize_metrics import dispersion, occupancy
 
 
 def _disc(n=2000, r=1.0, seed=0):
@@ -177,11 +177,11 @@ def test_metrics_are_json_safe_on_degenerate_input():
 cd backend && pixi run -e dev pytest tests/test_localize_metrics.py -q
 ```
 
-Expected: `ModuleNotFoundError: No module named 'xcell.localize_metrics'`.
+Expected: `ModuleNotFoundError: No module named 'skopia.localize_metrics'`.
 
 - [ ] **Step 3: Implement**
 
-Create `backend/xcell/localize_metrics.py`:
+Create `backend/skopia/localize_metrics.py`:
 
 ```python
 """Is a predicted spatial map any good?
@@ -327,7 +327,7 @@ mean — the mean is itself dragged by the outlier.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/localize_metrics.py backend/tests/test_localize_metrics.py
+git add backend/skopia/localize_metrics.py backend/tests/test_localize_metrics.py
 git commit -m "feat(localize): dispersion and occupancy metrics for a predicted map"
 ```
 
@@ -338,7 +338,7 @@ git commit -m "feat(localize): dispersion and occupancy metrics for a predicted 
 The headline metric: does a cell type land where it lives?
 
 **Files:**
-- Modify: `backend/xcell/localize_metrics.py`
+- Modify: `backend/skopia/localize_metrics.py`
 - Modify: `backend/tests/test_localize_metrics.py`
 
 **Interfaces:**
@@ -350,7 +350,7 @@ The headline metric: does a cell type land where it lives?
 Append to `backend/tests/test_localize_metrics.py`:
 
 ```python
-from xcell.localize_metrics import spatial_pattern_fidelity
+from skopia.localize_metrics import spatial_pattern_fidelity
 
 
 def _annulus_scores(coords, inner=0.75):
@@ -412,7 +412,7 @@ Expected: `ImportError: cannot import name 'spatial_pattern_fidelity'`.
 
 - [ ] **Step 3: Implement**
 
-Append to `backend/xcell/localize_metrics.py`:
+Append to `backend/skopia/localize_metrics.py`:
 
 ```python
 def _rank_weights(scores: np.ndarray) -> np.ndarray:
@@ -499,7 +499,7 @@ detecting that inversion is the metric's entire purpose.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/localize_metrics.py backend/tests/test_localize_metrics.py
+git add backend/skopia/localize_metrics.py backend/tests/test_localize_metrics.py
 git commit -m "feat(localize): spatial pattern fidelity — does a cell type land where it lives"
 ```
 
@@ -508,7 +508,7 @@ git commit -m "feat(localize): spatial pattern fidelity — does a cell type lan
 ### Task 3: Axis fidelity
 
 **Files:**
-- Modify: `backend/xcell/localize_metrics.py`
+- Modify: `backend/skopia/localize_metrics.py`
 - Modify: `backend/tests/test_localize_metrics.py`
 
 **Interfaces:**
@@ -522,7 +522,7 @@ git commit -m "feat(localize): spatial pattern fidelity — does a cell type lan
 Append to `backend/tests/test_localize_metrics.py`:
 
 ```python
-from xcell.localize_metrics import axis_direction, axis_fidelity
+from skopia.localize_metrics import axis_direction, axis_fidelity
 
 
 def test_axis_direction_finds_the_gradient():
@@ -590,7 +590,7 @@ Expected: `ImportError: cannot import name 'axis_direction'`.
 
 - [ ] **Step 3: Implement**
 
-Append to `backend/xcell/localize_metrics.py`:
+Append to `backend/skopia/localize_metrics.py`:
 
 ```python
 def axis_direction(coords, scores) -> np.ndarray:
@@ -664,7 +664,7 @@ Expected: all pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/localize_metrics.py backend/tests/test_localize_metrics.py
+git add backend/skopia/localize_metrics.py backend/tests/test_localize_metrics.py
 git commit -m "feat(localize): axis fidelity against the reference's own ceiling"
 ```
 
@@ -673,10 +673,10 @@ git commit -m "feat(localize): axis fidelity against the reference's own ceiling
 ### Task 4: `evaluate_map`, the adaptor method, and the route
 
 **Files:**
-- Modify: `backend/xcell/localize_metrics.py`
+- Modify: `backend/skopia/localize_metrics.py`
 - Modify: `backend/tests/test_localize_metrics.py`
-- Modify: `backend/xcell/adaptor.py` — add `evaluate_localization_maps` next to `evaluate_localization` (~line 8153, where `spatial_reference_bundle` is consumed)
-- Modify: `backend/xcell/api/routes.py` — add the route after `/localize/evaluate`
+- Modify: `backend/skopia/adaptor.py` — add `evaluate_localization_maps` next to `evaluate_localization` (~line 8153, where `spatial_reference_bundle` is consumed)
+- Modify: `backend/skopia/api/routes.py` — add the route after `/localize/evaluate`
 - Create: `backend/tests/test_localize_metrics_routes.py`
 
 **Interfaces:**
@@ -691,7 +691,7 @@ git commit -m "feat(localize): axis fidelity against the reference's own ceiling
 Append to `backend/tests/test_localize_metrics.py`:
 
 ```python
-from xcell.localize_metrics import evaluate_map
+from skopia.localize_metrics import evaluate_map
 
 
 def test_evaluate_map_bundles_every_metric_per_marker_set():
@@ -724,7 +724,7 @@ Expected: `ImportError: cannot import name 'evaluate_map'`.
 
 - [ ] **Step 3: Implement the orchestrator**
 
-Append to `backend/xcell/localize_metrics.py`:
+Append to `backend/skopia/localize_metrics.py`:
 
 ```python
 def evaluate_map(ref_coords, pred_coords, marker_sets: list[dict]) -> dict[str, Any]:
@@ -753,7 +753,7 @@ def evaluate_map(ref_coords, pred_coords, marker_sets: list[dict]) -> dict[str, 
 
 - [ ] **Step 4: Add the adaptor method**
 
-In `backend/xcell/adaptor.py`, beside the other Localize methods:
+In `backend/skopia/adaptor.py`, beside the other Localize methods:
 
 ```python
     def evaluate_localization_maps(
@@ -775,7 +775,7 @@ In `backend/xcell/adaptor.py`, beside the other Localize methods:
                 dataset are dropped; a set left with none is skipped and named
                 in ``skipped``.
         """
-        from xcell import localize_metrics as lm
+        from skopia import localize_metrics as lm
 
         ref_coords = np.asarray(bundle['coords'], dtype=float)
         ref_expr = np.asarray(bundle['expr'], dtype=np.float32)
@@ -812,7 +812,7 @@ In `backend/xcell/adaptor.py`, beside the other Localize methods:
 ```
 
 Check `_resolve_source_matrix` and `_split_present_genes` exist with those
-names before relying on them: `rg -n "def _resolve_source_matrix|def _split_present_genes" backend/xcell/adaptor.py`.
+names before relying on them: `rg -n "def _resolve_source_matrix|def _split_present_genes" backend/skopia/adaptor.py`.
 
 - [ ] **Step 5: Write the failing route test**
 
@@ -826,9 +826,9 @@ import anndata
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.main import app
-from xcell.api import routes
-from xcell.adaptor import DataAdaptor
+from skopia.main import app
+from skopia.api import routes
+from skopia.adaptor import DataAdaptor
 
 client = TestClient(app)
 
@@ -929,7 +929,7 @@ Expected: 404 — the route does not exist.
 
 - [ ] **Step 7: Add the route**
 
-In `backend/xcell/api/routes.py`, after the `/localize/evaluate` route, following
+In `backend/skopia/api/routes.py`, after the `/localize/evaluate` route, following
 `LocalizeRequest`'s shape:
 
 ```python
@@ -976,8 +976,8 @@ Expected: all pass, no regressions.
 - [ ] **Step 9: Commit**
 
 ```bash
-git add backend/xcell/localize_metrics.py backend/xcell/adaptor.py \
-        backend/xcell/api/routes.py backend/tests/test_localize_metrics.py \
+git add backend/skopia/localize_metrics.py backend/skopia/adaptor.py \
+        backend/skopia/api/routes.py backend/tests/test_localize_metrics.py \
         backend/tests/test_localize_metrics_routes.py
 git commit -m "feat(localize): score predicted maps against the reference"
 ```
@@ -1134,7 +1134,7 @@ pixi run backend      # :8000
 pixi run dev          # :5173
 ```
 
-Stop later with `pkill -f "uvicorn xcell.main:app"; pkill -f vite` — killing by
+Stop later with `pkill -f "uvicorn skopia.main:app"; pkill -f vite` — killing by
 port leaves a reloader that re-binds and serves stale data. Editing a backend
 file restarts the server and drops the loaded datasets, so batch any fixes.
 

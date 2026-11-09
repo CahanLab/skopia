@@ -25,13 +25,13 @@ keys stay; the registry records the tree instead of inferring it from names.
 
 A subset node owns embeddings — `X_pca_<name>`, `X_umap_<name>`, a UMAP over
 another graph (`X_umap_<name>_spatial`), and PC subsets `X_pca_<name>_<suffix>`
-— and the things drawn *on* those embeddings. xcell has three kinds of
+— and the things drawn *on* those embeddings. skopia has three kinds of
 embedding-specific decoration:
 
 | decoration | where it lives today | keyed by |
 |---|---|---|
-| shapes and lines (`drawnLines`) | browser store only; `uns['xcell_lines_json']` at export | `embeddingName` (+ `dimX`/`dimY`) |
-| territories | `uns['xcell_territories_json']` | `embedding` |
+| shapes and lines (`drawnLines`) | browser store only; `uns['skopia_lines_json']` at export | `embeddingName` (+ `dimX`/`dimY`) |
+| territories | `uns['skopia_territories_json']` | `embedding` |
 | embedding transforms | applied to `obsm` in place; shapes follow via `transformShapesForEmbedding` | embedding name |
 
 (Contours, sections, highlight overlays, label overlays and snapshots are
@@ -44,7 +44,7 @@ already how rendering works), and nothing can drift.
 
 **Shapes and lines persist like territories.** They are lost on reload today,
 which would make the tree's account of them hollow across sessions. The
-existing `POST /api/lines` sync now writes `uns['xcell_lines_json']` (the full
+existing `POST /api/lines` sync now writes `uns['skopia_lines_json']` (the full
 line: id, name, embedding, dims, points, smoothed points, draw type, closed,
 visibility, stroke, fill — not projections, which are recomputed), the adaptor
 hydrates from it on load, `GET /api/lines` returns it, and the browser hydrates
@@ -63,7 +63,7 @@ embedding is gone.
 
 ## The registry
 
-`uns['xcell_cell_subsets'][name]` stays a plain dict (readable in scanpy);
+`uns['skopia_cell_subsets'][name]` stays a plain dict (readable in scanpy);
 arrays that h5ad makes of empty lists are normalised back on read.
 
 ```
@@ -161,6 +161,6 @@ named the column, and refreshes subsets if it was one.
 - anndata 0.12 writes `None` and empty lists into uns, but an empty list reads
   back as `array([], dtype=float64)` — normalise on read, never trust the type.
 - Marker genes and the heatmap still ignore the mask (no cell-index list).
-- Verify in the browser on the isolated stack (`/private/tmp/claude-501/xcell-wt`,
+- Verify in the browser on the isolated stack (`/private/tmp/claude-501/skopia-wt`,
   `:8100` / `:5273`); his `--reload` backend on `:8000` restarts on any
   main-repo `backend/*.py` write. Check `GET :8000/api/schema` before merging.

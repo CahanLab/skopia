@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from xcell import gene_coexpression as gc
+from skopia import gene_coexpression as gc
 
 
 # ---- shared synthetic helpers (reused by later tasks) ---------------------

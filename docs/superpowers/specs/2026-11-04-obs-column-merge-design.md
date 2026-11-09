@@ -75,7 +75,7 @@ Refused with a `ValueError` (400) naming the offender:
 - any one dataset holds both source and target, or two sources of the same
   target (a cell would have two values).
 
-`uns['xcell_combine']['obs_merge_into']` records the mapping. Categories of
+`uns['skopia_combine']['obs_merge_into']` records the mapping. Categories of
 the merged column are the union, in order of first appearance across
 inputs, as the existing merge already does.
 
@@ -144,7 +144,7 @@ Exact copy of hints, widths, and the vitest cases for the policy split.
    leaves. Message: convert to string first. (A boolean split by a combine
    arrives as object True/False/NaN, which is the label class, and merges.)
 2. **Empty means null, `''` or `unassigned`** for label columns, in the
-   manager merge and in its codegen. `unassigned` is xcell's own sentinel
+   manager merge and in its codegen. `unassigned` is skopia's own sentinel
    outside a mask (CNV clones, subset Leiden), and a merge that stops at it
    never reaches the real label. Numeric columns: null only.
 3. **Class must agree across holders** for a pooled combine column: labels

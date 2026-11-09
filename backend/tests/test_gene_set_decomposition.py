@@ -15,9 +15,9 @@ import pytest
 from scipy.sparse import csr_matrix
 from fastapi.testclient import TestClient
 
-from xcell import gene_coexpression as gc
-from xcell import gene_set_decomposition as gsd
-from xcell.adaptor import DataAdaptor
+from skopia import gene_coexpression as gc
+from skopia import gene_set_decomposition as gsd
+from skopia.adaptor import DataAdaptor
 
 
 N_CELLS = 240
@@ -146,13 +146,13 @@ def test_adaptor_pca_writes_score_matrix_loadings_and_registry():
     assert out["program_names"] == ["PC1", "PC2"]
     assert out["n_genes_used"] == 18 and out["genes_missing"] == [] and out["n_cells"] == N_CELLS
     assert ad.obsm["matrix"].shape == (N_CELLS, 2) and not np.isnan(ad.obsm["matrix"]).any()
-    assert ad.uns["xcell_score_matrices"]["matrix"]["columns"] == ["PC1", "PC2"]
-    assert ad.uns["xcell_score_matrices"]["matrix"]["source"] == "gene_set_decomposition"
+    assert ad.uns["skopia_score_matrices"]["matrix"]["columns"] == ["PC1", "PC2"]
+    assert ad.uns["skopia_score_matrices"]["matrix"]["source"] == "gene_set_decomposition"
     L = ad.varm["matrix_loadings"]
     assert L.shape == (ad.n_vars, 2)
     filler_rows = [list(ad.var_names).index(g) for g in FILLER]
     assert np.all(L[filler_rows] == 0)
-    reg = ad.uns["xcell_gene_set_decomposition"]["matrix"]
+    reg = ad.uns["skopia_gene_set_decomposition"]["matrix"]
     assert reg["method"] == "pca" and reg["genes_used"] == A + B
     assert set(reg["programs"]) == {"PC1", "PC2"}
     assert "genes" in reg["programs"]["PC1"] and "genes_down" in reg["programs"]["PC1"]
@@ -176,7 +176,7 @@ def test_adaptor_nmf_branch_and_scope_and_overwrite():
         a.prepare_gene_set_decomposition(A + B, key="matrix", method="pca", k=2)
     out = _run(a, method="pca", k=2, overwrite=True)
     assert out["program_names"] == ["PC1", "PC2"]
-    assert a.adata.uns["xcell_gene_set_decomposition"]["matrix"]["method"] == "pca"
+    assert a.adata.uns["skopia_gene_set_decomposition"]["matrix"]["method"] == "pca"
 
 
 def test_adaptor_validation_and_clamping():
@@ -223,8 +223,8 @@ def _poll(client, task_id, timeout=60.0):
 
 
 def test_routes(monkeypatch):
-    from xcell.main import app
-    from xcell.api import routes
+    from skopia.main import app
+    from skopia.api import routes
     a = _adaptor()
     monkeypatch.setattr(routes, "get_adaptor", lambda dataset=None: a)
     client = TestClient(app)
@@ -249,7 +249,7 @@ def test_routes(monkeypatch):
 
 
 def test_codegen_entry():
-    from xcell import codegen
+    from skopia import codegen
     spec = codegen.REGISTRY["gene_set_decomposition"]
     step = types.SimpleNamespace(action="gene_set_decomposition", params={
         "genes": A, "key": "matrix", "method": "pca", "k": 2, "loading_threshold": 0.2,

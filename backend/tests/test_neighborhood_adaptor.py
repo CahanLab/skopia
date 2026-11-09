@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 def _adata(with_section: bool = False):
@@ -92,9 +92,9 @@ def test_compute_apply_writes_state_and_returns_json():
     # AnnData state: obsm matrix + score-matrix registry + uns result.
     comp = a.adata.obsm["neighborhood_composition"]
     assert comp.shape == (a.adata.n_obs, 3)
-    reg = a.adata.uns["xcell_score_matrices"]["neighborhood_composition"]
+    reg = a.adata.uns["skopia_score_matrices"]["neighborhood_composition"]
     assert list(reg["columns"]) == ["A", "B", "C"]
-    stored = a.adata.uns["xcell_neighborhood"]
+    stored = a.adata.uns["skopia_neighborhood"]
     assert stored["categories"] == ["A", "B", "C"]
     assert stored["params"]["column"] == "cell_type"
     assert stored["params"]["n_neighs"] == 6

@@ -90,18 +90,22 @@ const styles = {
     gap: '12px',
     flex: '0 0 auto',
   },
-  title: {
-    fontSize: '20px',
-    fontWeight: 600,
-    color: '#e94560',
-    margin: 0,
-    lineHeight: 1.1,
+  brand: {
+    display: 'flex',
+    alignItems: 'flex-end',
+    gap: '8px',
+  },
+  brandLockup: {
+    display: 'block',
+    height: '40px',
+    width: 'auto',
   },
   version: {
-    fontSize: '10px',
-    color: '#666',
-    lineHeight: 1.2,
+    fontSize: '11px',
+    color: '#8C95AD',
+    lineHeight: 1,
     letterSpacing: '0.3px',
+    marginBottom: '6px',
   },
   statsInline: {
     fontSize: '11px',
@@ -804,10 +808,10 @@ export default function App() {
   const [crumbsExpanded, setCrumbsExpanded] = useState(false)
   const [recentFiles, setRecentFiles] = useState<string[]>(() => {
     try {
-      return JSON.parse(localStorage.getItem('xcell_recentFiles') || '[]')
+      return JSON.parse(localStorage.getItem('skopia_recentFiles') || '[]')
     } catch { return [] }
   })
-  const lastBrowseDirRef = useRef<string | null>(localStorage.getItem('xcell_lastBrowseDir'))
+  const lastBrowseDirRef = useRef<string | null>(localStorage.getItem('skopia_lastBrowseDir'))
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false)
 
@@ -1102,7 +1106,7 @@ export default function App() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'xcell_export.h5ad'
+      a.download = 'skopia_export.h5ad'
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -1173,7 +1177,7 @@ export default function App() {
       setCrumbsExpanded(false)
       if (data.shortcuts) setBrowseShortcuts(data.shortcuts)
       lastBrowseDirRef.current = data.current
-      localStorage.setItem('xcell_lastBrowseDir', data.current)
+      localStorage.setItem('skopia_lastBrowseDir', data.current)
     } catch (err) {
       setLoadError((err as Error).message)
     } finally {
@@ -1280,7 +1284,7 @@ export default function App() {
       const filePath = loadFilePath.trim()
       setRecentFiles(prev => {
         const updated = [filePath, ...prev.filter(f => f !== filePath)].slice(0, 5)
-        localStorage.setItem('xcell_recentFiles', JSON.stringify(updated))
+        localStorage.setItem('skopia_recentFiles', JSON.stringify(updated))
         return updated
       })
       setIsLoadModalOpen(false)
@@ -1296,11 +1300,12 @@ export default function App() {
       <header style={styles.header}>
         <div style={styles.titleGroup}>
           <div
-            style={{ display: 'flex', flexDirection: 'column' }}
-            title={`xcell ${__XCELL_VERSION__}${__XCELL_COMMIT__ ? ` · commit ${__XCELL_COMMIT__} (when the dev server started)` : ''}`}
+            style={styles.brand}
+            title={`Skopia ${__SKOPIA_VERSION__}${__SKOPIA_COMMIT__ ? ` · commit ${__SKOPIA_COMMIT__} (when the dev server started)` : ''}`}
           >
-            <h1 style={styles.title}>xcell</h1>
-            <span style={styles.version}>v{__XCELL_VERSION__}</span>
+            {/* The lockup carries the wordmark; only the version stays live text. */}
+            <img src="/brand/skopia-lockup-dark.svg" alt="Skopia" height={40} style={styles.brandLockup} />
+            <span style={styles.version}>v{__SKOPIA_VERSION__}</span>
           </div>
           {schema && (
             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.3' }}>
@@ -1804,7 +1809,7 @@ export default function App() {
           )}
         </div>
         <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <a href="https://github.com/CahanLab/xcell" target="_blank" rel="noopener noreferrer" title="xcell on GitHub" style={{ display: 'flex', alignItems: 'center' }}>
+          <a href="https://github.com/CahanLab/skopia" target="_blank" rel="noopener noreferrer" title="skopia on GitHub" style={{ display: 'flex', alignItems: 'center' }}>
             <svg width="20" height="20" viewBox="0 0 16 16" fill="#888">
               <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
             </svg>

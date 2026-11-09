@@ -25,7 +25,7 @@ masked chain.
 **A mask is now something you can name, and a named subset is data.**
 
 - `create_cell_subset(name, indices)` writes `obs['subset_<name>']` (bool) and
-  a registry entry in `uns['xcell_cell_subsets']`. It survives a reload,
+  a registry entry in `uns['skopia_cell_subsets']`. It survives a reload,
   exports with the h5ad, and reads naturally in scanpy
   (`adata[adata.obs['subset_chondro']]`).
 - The clustering chain takes `cell_subset='<name>'` and writes to keys
@@ -92,8 +92,8 @@ masked chain.
 ## Record and notebook
 
 Scoped steps record `cell_subset` in their params and the selection alongside;
-codegen emits them through the xcell API (`xa.run_pca(..., cell_subset='chondro')`,
-fidelity `xcell`) without the "runs on the whole dataset" caveat, since the
+codegen emits them through the skopia API (`xa.run_pca(..., cell_subset='chondro')`,
+fidelity `skopia`) without the "runs on the whole dataset" caveat, since the
 call honours the subset. `create_cell_subset` is emitted from the recorded
 selection (`SELECTIONS['step_N']`).
 

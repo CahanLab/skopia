@@ -6,7 +6,7 @@ import anndata
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 def _adata(n_cells=50, n_genes=12):
@@ -38,7 +38,7 @@ def test_matrix_shape_and_registry():
     assert res["columns"] == ["progenitorState", "differentiatedState", "cellCycle"]
     assert a.adata.obsm["scores"].shape == (a.n_cells, 3)
     # column names recorded in .uns registry so unnamed obsm cols resolve back
-    reg = a.adata.uns["xcell_score_matrices"]["scores"]
+    reg = a.adata.uns["skopia_score_matrices"]["scores"]
     assert reg["columns"] == ["progenitorState", "differentiatedState", "cellCycle"]
     assert reg["aggregation"] == "mean"
 

@@ -68,10 +68,10 @@ densified at once; `report(fraction, message)` after each chunk.
 | Where | What |
 |---|---|
 | `obsm['X_<key>']` | cells × windows, float32, NaN rows outside the cell mask |
-| `obsm['X_<key>_chrom']` + `uns['xcell_score_matrices']` | cells × chromosomes mean CNV, columns = chromosome names, so the embedding can be colored by one chromosome |
+| `obsm['X_<key>_chrom']` + `uns['skopia_score_matrices']` | cells × chromosomes mean CNV, columns = chromosome names, so the embedding can be colored by one chromosome |
 | `obs['<key>_score']` | mean absolute CNV per cell |
 | `obs['<key>_clone']` + `uns['<key>_clone_colors']` | categorical clone labels, `unassigned` outside the mask; absent when `cluster='none'` |
-| `uns['xcell_cnv'][key]` | JSON string: windows (`chromosome`, `start`, `end`, `n_genes`), chromosomes (`name`, `start`, `size`), params, gene counts, reference, clone summary |
+| `uns['skopia_cnv'][key]` | JSON string: windows (`chromosome`, `start`, `end`, `n_genes`), chromosomes (`name`, `start`, `size`), params, gene counts, reference, clone summary |
 
 `_log_action('cnv', ...)` with a `codegen.REGISTRY` entry
 (`_two_phase_on_selection('prepare_cnv')`).
@@ -83,7 +83,7 @@ densified at once; `report(fraction, message)` after each chunk.
   categorical `.obs` columns with their categories, layers, x_scale,
   existing CNV keys.
 - `POST /api/cnv` → 202 `{task_id}`; `CnvRequest` mirrors `prepare_cnv`.
-- `GET /api/cnv/results?dataset=` → the stored `uns['xcell_cnv']` records
+- `GET /api/cnv/results?dataset=` → the stored `uns['skopia_cnv']` records
   (for the modal's result pane and the figure input picker).
 
 Errors: ValueError → 400 (no positions matched, too few genes, bad column,

@@ -26,10 +26,10 @@ Outstanding decision for the user: **push the branch / open a PR / merge to main
   Show labels on plot); continuous `.obs` coloring honors the color scale +
   new palettes (sunset/ocean/grape/mint); label renamed "Continuous Color Scale".
 - Feature 3 — Ligand-receptor spatial scoring (CytoSignal-style, no velocity):
-  engine `backend/xcell/ligrec.py`; `prepare_ligrec`/`finalize_ligrec`/
+  engine `backend/skopia/ligrec.py`; `prepare_ligrec`/`finalize_ligrec`/
   `get_ligrec_result`/`suggest_ligrec_params` on the adaptor; routes
   `/scanpy/ligrec/{suggest,result,prepare,finalize}`; `LigRecModal.tsx`.
-  Bundled DB `backend/xcell/data/lr_pairs.csv` (2508 pairs from CellPhoneDB v5,
+  Bundled DB `backend/skopia/data/lr_pairs.csv` (2508 pairs from CellPhoneDB v5,
   built by `build_lr_db.py`); synthetic `toy_spatial_ligrec.h5ad`
   (`generate_toy_ligrec.py`). Results persist to `adata.obsm['lrscore']` +
   `['lrscore_significant']` + `adata.uns['lrscore']`; re-opening the tool restores
@@ -46,9 +46,9 @@ Outstanding decision for the user: **push the branch / open a PR / merge to main
 - Backend tests: `cd backend && pixi run -e dev python -m pytest tests/ -q`
 - Frontend check: `cd frontend && npx tsc --noEmit && npm run build`
 - App (the user usually has their own on :8000/:5173 — DO NOT kill those):
-  isolated stack = backend `XCELL_DATA_PATH=<abs>/backend/xcell/data/toy_spatial_ligrec.h5ad pixi run -e dev uvicorn xcell.main:app --host 127.0.0.1 --port 8001`
-  + frontend `XCELL_BACKEND=http://127.0.0.1:8001 npx vite --port 5180 --strictPort`
-  (vite.config reads `XCELL_BACKEND`). Drive with Playwright MCP at the chosen port.
+  isolated stack = backend `SKOPIA_DATA_PATH=<abs>/backend/skopia/data/toy_spatial_ligrec.h5ad pixi run -e dev uvicorn skopia.main:app --host 127.0.0.1 --port 8001`
+  + frontend `SKOPIA_BACKEND=http://127.0.0.1:8001 npx vite --port 5180 --strictPort`
+  (vite.config reads `SKOPIA_BACKEND`). Drive with Playwright MCP at the chosen port.
   Always clean up your own servers + screenshot PNGs afterward.
 
 **Key conventions / gotchas learned:**
@@ -148,7 +148,7 @@ Refs: CellChat Nat Commun 2021 (s41467-021-21246-9); CellChat v2 spatial
      BMP → {NOG, GREM1, GREM2, CHRD, CHRDL1, CHRDL2, BMPER, ...};
      WNT → {DKK1, DKK2, SFRP1..5, WIF1, NKD1};
      Activin/Nodal/TGFβ → {LEFTY1, LEFTY2, CER1, FST, FSTL3, BAMBI};
-     Notch → {DLK1, ...}. Store as `backend/xcell/data/lr_antagonists.csv`
+     Notch → {DLK1, ...}. Store as `backend/skopia/data/lr_antagonists.csv`
      with columns `pathway, antagonist_genes` (and/or per-interaction).
    Recommend (b) to start (Python-friendly, no R), seeded from CellChatDB values,
    with (a) as a later "import full cofactor table" step.

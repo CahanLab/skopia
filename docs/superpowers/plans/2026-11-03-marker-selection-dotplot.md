@@ -4,7 +4,7 @@
 
 **Goal:** Store marker-gene runs so top-X-with-filters is a read, plot them as heatmaps and scanpy-style dot plots, and keep both in the Heatmap tab and the Figures system.
 
-**Architecture:** A marker run becomes a JSON record in `uns['xcell_marker_genes']`; a pure `marker_genes.py` selects from it. Heatmap and a new `dotplot.py` take resolved gene-set groups; the adaptor resolves a marker key into groups at request or draw time. Frontend: the Heatmap tab gains a plot-type and a row-source switch; the Figures tab gains a dot plot kind.
+**Architecture:** A marker run becomes a JSON record in `uns['skopia_marker_genes']`; a pure `marker_genes.py` selects from it. Heatmap and a new `dotplot.py` take resolved gene-set groups; the adaptor resolves a marker key into groups at request or draw time. Frontend: the Heatmap tab gains a plot-type and a row-source switch; the Figures tab gains a dot plot kind.
 
 **Tech Stack:** FastAPI + scanpy backend, React/Zustand frontend, pytest, tsc.
 
@@ -32,7 +32,7 @@
 ### Task 1: Pure selection module
 
 **Files:**
-- Create: `backend/xcell/marker_genes.py`
+- Create: `backend/skopia/marker_genes.py`
 - Test: `backend/tests/test_marker_genes_store.py`
 
 **Interfaces:**
@@ -48,14 +48,14 @@
 ### Task 2: Stored runs in the adaptor and routes
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (`run_marker_genes` ~14396; add store methods beside the enrichment store ~6490)
-- Modify: `backend/xcell/api/routes.py` (~1781 marker routes)
-- Modify: `backend/xcell/codegen.py:695` (summary) and add `marker_genes_delete`
-- Modify: `backend/xcell/config.yaml` `marker_genes.store_top_n: 500`
+- Modify: `backend/skopia/adaptor.py` (`run_marker_genes` ~14396; add store methods beside the enrichment store ~6490)
+- Modify: `backend/skopia/api/routes.py` (~1781 marker routes)
+- Modify: `backend/skopia/codegen.py:695` (summary) and add `marker_genes_delete`
+- Modify: `backend/skopia/config.yaml` `marker_genes.store_top_n: 500`
 - Test: `backend/tests/test_marker_genes_store.py` (extend)
 
 **Interfaces:**
-- Produces: `MARKER_UNS_KEY = 'xcell_marker_genes'`; `_marker_store() -> dict[str, str]`; `_store_marker_run(key_hint, record) -> str`; `list_marker_runs() -> list[dict]` (key, uid, label, obs_column, n_groups, n_cells_tested, cell_subset, created_at, store_top_n); `get_marker_run(key, include_table=False) -> dict` (KeyError); `delete_marker_run(key) -> {'deleted': key}` logs `marker_genes_delete`; `select_marker_genes(key, **selection) -> dict` (Task 1 result plus `key`, `uid`, `obs_column`); `marker_gene_set_groups(key, **selection) -> list[{name, genes}]` in the record's group order, only non-empty groups; `_marker_run_uid(key) -> str | None`.
+- Produces: `MARKER_UNS_KEY = 'skopia_marker_genes'`; `_marker_store() -> dict[str, str]`; `_store_marker_run(key_hint, record) -> str`; `list_marker_runs() -> list[dict]` (key, uid, label, obs_column, n_groups, n_cells_tested, cell_subset, created_at, store_top_n); `get_marker_run(key, include_table=False) -> dict` (KeyError); `delete_marker_run(key) -> {'deleted': key}` logs `marker_genes_delete`; `select_marker_genes(key, **selection) -> dict` (Task 1 result plus `key`, `uid`, `obs_column`); `marker_gene_set_groups(key, **selection) -> list[{name, genes}]` in the record's group order, only non-empty groups; `_marker_run_uid(key) -> str | None`.
 - `run_marker_genes(..., store_top_n: int | None = None, label: str | None = None)` returns today's keys plus `key`, `uid`, `truncated`, each group `n_candidates`, each gene also `score`, `pct_in`, `pct_out`. Scanpy call adds `pts=True`; the `filter_rank_genes_groups` block is removed, thresholds map to `select_markers` (`min_log2fc = log2(min_fold_change)`).
 - Routes: `GET /api/marker_genes/runs` → `{runs: [...]}`; `GET /api/marker_genes/runs/{key}?table=false`; `DELETE /api/marker_genes/runs/{key}`; `POST /api/marker_genes/runs/{key}/select` body `MarkerSelection(top_n=10, min_pct_in, max_pct_out, min_log2fc, max_padj, rank_by='score', groups)`. `MarkerGenesRequest` gains `store_top_n: int | None`, `label: str | None`. `MarkerGenesResponse` dropped as a response_model (the dict is returned directly) so the new fields pass.
 
@@ -67,8 +67,8 @@
 ### Task 3: Heatmap from a marker run
 
 **Files:**
-- Modify: `backend/xcell/api/routes.py` (`HeatmapRequest` ~2267)
-- Modify: `backend/xcell/adaptor.py` (helper `_resolve_marker_groups(markers: dict | None) -> list[{name, genes}]`)
+- Modify: `backend/skopia/api/routes.py` (`HeatmapRequest` ~2267)
+- Modify: `backend/skopia/adaptor.py` (helper `_resolve_marker_groups(markers: dict | None) -> list[{name, genes}]`)
 - Test: `backend/tests/test_marker_genes_store.py` (extend)
 
 **Interfaces:**
@@ -81,9 +81,9 @@
 ### Task 4: Dot plot module, adaptor path, and route
 
 **Files:**
-- Create: `backend/xcell/dotplot.py`
-- Modify: `backend/xcell/adaptor.py` (`dotplot_data`)
-- Modify: `backend/xcell/api/routes.py` (`POST /api/dotplot/data` beside the heatmap route)
+- Create: `backend/skopia/dotplot.py`
+- Modify: `backend/skopia/adaptor.py` (`dotplot_data`)
+- Modify: `backend/skopia/api/routes.py` (`POST /api/dotplot/data` beside the heatmap route)
 - Test: `backend/tests/test_dotplot.py`
 
 **Interfaces:**
@@ -97,8 +97,8 @@
 ### Task 5: Figures backend
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (`FIGURE_KINDS`, `_FIGURE_PARAM_KEYS`, `_validate_figure_inputs`, `create_figure` input_ids, `_figure_provenance_steps`, `_default_figure_title`, `figure_data`, `update_figure` checks)
-- Modify: `backend/xcell/config.yaml` figures section
+- Modify: `backend/skopia/adaptor.py` (`FIGURE_KINDS`, `_FIGURE_PARAM_KEYS`, `_validate_figure_inputs`, `create_figure` input_ids, `_figure_provenance_steps`, `_default_figure_title`, `figure_data`, `update_figure` checks)
+- Modify: `backend/skopia/config.yaml` figures section
 - Test: `backend/tests/test_figures_adaptor.py`, `backend/tests/test_figures_routes.py` (schema pin if present)
 
 **Interfaces:**

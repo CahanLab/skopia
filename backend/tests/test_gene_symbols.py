@@ -1,6 +1,6 @@
 import pytest
 
-from xcell.gene_symbols import (
+from skopia.gene_symbols import (
     detect_species, load_table, map_ids, strip_version,
 )
 

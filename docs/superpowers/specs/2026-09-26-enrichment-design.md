@@ -6,7 +6,7 @@
 ## Goal
 
 Answer "which annotated gene sets does this gene list / this contrast point
-at?" inside xcell, against the gene-set libraries the app already caches
+at?" inside skopia, against the gene-set libraries the app already caches
 (MSigDB, GO, Enrichr, OmniPath, MGI) and against the user's own Gene Panel
 sets. Two complementary tests:
 
@@ -29,7 +29,7 @@ to the analysis record, and can be turned into Gene Panel sets.
   multilevel exact p-value refinement of fgsea is out of scope — the empirical
   p is floored at `1/(1 + n_same_sign_nulls)`, about `2/n_perm`, and the UI says so.
 - No new library downloads from this feature. It runs only against libraries
-  already in `~/.cache/xcell/gene_set_sources/` (the Library modal fetches
+  already in `~/.cache/skopia/gene_set_sources/` (the Library modal fetches
   them). An uncached library is a 400 with a hint.
 - No phenotype (sample-label) permutation GSEA; single-cell contrasts do not
   have exchangeable samples in the sense that test assumes.
@@ -38,7 +38,7 @@ to the analysis record, and can be turned into Gene Panel sets.
 
 ## Backend
 
-### `backend/xcell/enrichment.py` (pure)
+### `backend/skopia/enrichment.py` (pure)
 
 Takes arrays and plain dicts; never imports the adaptor. Public functions:
 
@@ -154,7 +154,7 @@ alongside as `ranking: {genes: [...], scores: [...]}` only from the adaptor
   n_sets_input, n_sets_tested, n_perm, results, params}`. `genes`/`scores`
   are the full ranked list (≤ ~20k entries) so the UI can draw the metric
   strip under the curve.
-- **Storage.** `uns['xcell_enrichment']` is a dict `key → json.dumps(result)`.
+- **Storage.** `uns['skopia_enrichment']` is a dict `key → json.dumps(result)`.
   JSON strings are the existing precedent for record-shaped data (drawn
   lines, territories) because h5ad cannot write lists of dicts. Keys are
   sanitised (`_sanitize_subset_name` rule) and default to `ora_<query name>` /
@@ -291,7 +291,7 @@ Backend (`backend/tests/`, self-contained, seeded):
   ties and duplicates; `curve` present only for `curve_top_n`; weight 0
   reduces to the classic KS statistic.
 - `test_enrichment_adaptor.py` — universe honours the session gene mask and a
-  `gene_subset` column; results land in `uns['xcell_enrichment']` as JSON
+  `gene_subset` column; results land in `uns['skopia_enrichment']` as JSON
   and round-trip through `get_enrichment_results`; key uniqueness; diffexp
   ranking (a gene up-regulated in the group ranks first with `score`
   metric, `reference='rest'` and `reference=<group>` both work); PCA
@@ -305,7 +305,7 @@ Frontend: `lib/enrichment.test.ts` for every helper; `npx tsc --noEmit`.
 
 Browser: isolated stack (worktree, :8100/:5273) with the bundled toy data
 and the mouse Hallmark library copied into a scratch cache dir via
-`XCELL_...`/config `gene_set_sources.cache_dir`; seed a Gene Panel set via
+`SKOPIA_...`/config `gene_set_sources.cache_dir`; seed a Gene Panel set via
 `PUT /api/gene_sets`; run ORA from the set menu and GSEA on a Leiden cluster;
 confirm the table, an expanded curve, "Add to gene sets" producing a folder,
 and the analysis record entry. The live :8000 backend is not touched.

@@ -18,10 +18,10 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.codegen import XCELL, translate
-from xcell.main import app
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.codegen import SKOPIA, translate
+from skopia.main import app
 
 
 def _adata(n_cells=60, n_genes=80, seed=0):
@@ -60,7 +60,7 @@ def test_creating_a_subset_writes_a_boolean_obs_column_and_a_registry_entry():
     col = a.adata.obs['subset_chondro']
     assert col.dtype == bool
     assert col.values[ACTIVE].all() and not col.values[1::2].any()
-    assert 'chondro' in a.adata.uns['xcell_cell_subsets']
+    assert 'chondro' in a.adata.uns['skopia_cell_subsets']
 
 
 def test_listing_reports_each_subset_with_its_live_cell_count():
@@ -125,7 +125,7 @@ def test_deleting_removes_the_column_and_the_entry():
     a.create_cell_subset('chondro', ACTIVE)
     a.delete_cell_subset('chondro')
     assert 'subset_chondro' not in a.adata.obs
-    assert 'chondro' not in a.adata.uns['xcell_cell_subsets']
+    assert 'chondro' not in a.adata.uns['skopia_cell_subsets']
     assert a.list_cell_subsets() == []
 
 
@@ -417,13 +417,13 @@ def test_the_whole_chain_is_json_serialisable_and_recorded_with_its_selection():
 
 # --- codegen ------------------------------------------------------------------
 
-def test_a_scoped_step_is_exported_through_the_xcell_api_naming_the_subset():
-    from xcell.analysis_record import AnalysisRecord
+def test_a_scoped_step_is_exported_through_the_skopia_api_naming_the_subset():
+    from skopia.analysis_record import AnalysisRecord
     r = AnalysisRecord()
     step = r.add_step('pca', {'n_comps': 4, 'svd_solver': 'arpack', 'gene_subset': None,
                               'cell_subset': 'chondro'}, {}, selection=ACTIVE, n_total=60)
     t = translate(step)
-    assert t.fidelity == XCELL
+    assert t.fidelity == SKOPIA
     assert t.code == ["xa.run_pca(n_comps=4, svd_solver='arpack', cell_subset='chondro')"]
     # The code honours the subset, so the "runs on the whole dataset" caveat
     # would be wrong here.
@@ -431,12 +431,12 @@ def test_a_scoped_step_is_exported_through_the_xcell_api_naming_the_subset():
 
 
 def test_creating_a_subset_is_exported_from_the_recorded_selection():
-    from xcell.analysis_record import AnalysisRecord
+    from skopia.analysis_record import AnalysisRecord
     r = AnalysisRecord()
     step = r.add_step('create_cell_subset', {'name': 'chondro'}, {'n_cells': 30},
                       selection=ACTIVE, n_total=60)
     t = translate(step)
-    assert t.fidelity == XCELL
+    assert t.fidelity == SKOPIA
     assert t.code == [f"xa.create_cell_subset('chondro', SELECTIONS['step_{step.index}'])"]
 
 

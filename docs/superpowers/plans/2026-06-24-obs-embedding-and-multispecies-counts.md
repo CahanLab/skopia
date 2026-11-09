@@ -14,11 +14,11 @@
 - Backend tests: `cd backend && pixi run -e dev python -m pytest tests/ -q`
 - Frontend: `cd frontend && npx tsc --noEmit && npm run build`
 - Commit trailer: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`
-- Isolated smoke stack (never the user's :8000/:5173): backend on :8001, vite `XCELL_BACKEND=http://127.0.0.1:8001 npx vite --port 5180 --strictPort`.
+- Isolated smoke stack (never the user's :8000/:5173): backend on :8001, vite `SKOPIA_BACKEND=http://127.0.0.1:8001 npx vite --port 5180 --strictPort`.
 
 ## File map
-- `backend/xcell/adaptor.py` — `create_obs_embedding`, `sum_counts_by_pattern`, `assign_species`.
-- `backend/xcell/api/routes.py` — three `POST /scanpy/*` routes + request models.
+- `backend/skopia/adaptor.py` — `create_obs_embedding`, `sum_counts_by_pattern`, `assign_species`.
+- `backend/skopia/api/routes.py` — three `POST /scanpy/*` routes + request models.
 - `backend/tests/test_obs_embedding.py`, `backend/tests/test_species_counts.py` — new.
 - `frontend/src/components/ScanpyModal.tsx` — `obsDtype` on ParamDef + numeric obs fetch + render branch; 3 registry entries + `multigenome` category; post-run wiring.
 
@@ -27,7 +27,7 @@
 ### Task 1: Backend — `create_obs_embedding`
 
 **Files:**
-- Modify `backend/xcell/adaptor.py`, `backend/xcell/api/routes.py`
+- Modify `backend/skopia/adaptor.py`, `backend/skopia/api/routes.py`
 - Create `backend/tests/test_obs_embedding.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -42,9 +42,9 @@ import pytest
 from scipy.sparse import csr_matrix
 from fastapi.testclient import TestClient
 
-from xcell.adaptor import DataAdaptor
-from xcell.main import app
-from xcell.api import routes
+from skopia.adaptor import DataAdaptor
+from skopia.main import app
+from skopia.api import routes
 
 
 def _adata():
@@ -122,7 +122,7 @@ Expected: FAIL (`DataAdaptor` has no attribute `create_obs_embedding`).
 
 - [ ] **Step 3: Implement the adaptor method**
 
-In `backend/xcell/adaptor.py`, after `get_embedding` (ends ~:522) add:
+In `backend/skopia/adaptor.py`, after `get_embedding` (ends ~:522) add:
 
 ```python
     def create_obs_embedding(
@@ -165,7 +165,7 @@ In `backend/xcell/adaptor.py`, after `get_embedding` (ends ~:522) add:
 
 - [ ] **Step 4: Implement the route**
 
-In `backend/xcell/api/routes.py`, near the other scanpy routes (e.g. after the
+In `backend/skopia/api/routes.py`, near the other scanpy routes (e.g. after the
 `/scanpy/highly_variable_genes` block, ~:1755) add a request model + route:
 
 ```python
@@ -198,7 +198,7 @@ Expected: PASS (7 tests).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/xcell/api/routes.py backend/tests/test_obs_embedding.py
+git add backend/skopia/adaptor.py backend/skopia/api/routes.py backend/tests/test_obs_embedding.py
 git commit -m "$(printf 'backend: create_obs_embedding (2D obsm from two numeric .obs columns)\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>')"
 ```
 
@@ -207,7 +207,7 @@ git commit -m "$(printf 'backend: create_obs_embedding (2D obsm from two numeric
 ### Task 2: Backend — `sum_counts_by_pattern`
 
 **Files:**
-- Modify `backend/xcell/adaptor.py`, `backend/xcell/api/routes.py`
+- Modify `backend/skopia/adaptor.py`, `backend/skopia/api/routes.py`
 - Create `backend/tests/test_species_counts.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -222,9 +222,9 @@ import pytest
 from scipy.sparse import csr_matrix
 from fastapi.testclient import TestClient
 
-from xcell.adaptor import DataAdaptor
-from xcell.main import app
-from xcell.api import routes
+from skopia.adaptor import DataAdaptor
+from skopia.main import app
+from skopia.api import routes
 
 
 def _adata():
@@ -321,7 +321,7 @@ Expected: FAIL (`sum_counts_by_pattern` missing).
 
 - [ ] **Step 3: Implement `sum_counts_by_pattern`**
 
-In `backend/xcell/adaptor.py`, after `create_obs_embedding` add:
+In `backend/skopia/adaptor.py`, after `create_obs_embedding` add:
 
 ```python
     def sum_counts_by_pattern(
@@ -413,7 +413,7 @@ Immediately after, add:
 
 - [ ] **Step 5: Implement the routes**
 
-In `backend/xcell/api/routes.py`, after the `embedding_from_obs` route add:
+In `backend/skopia/api/routes.py`, after the `embedding_from_obs` route add:
 
 ```python
 class SumCountsRequest(BaseModel):
@@ -471,7 +471,7 @@ Expected: all pass.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/xcell/api/routes.py backend/tests/test_species_counts.py
+git add backend/skopia/adaptor.py backend/skopia/api/routes.py backend/tests/test_species_counts.py
 git commit -m "$(printf 'backend: sum_counts_by_pattern + assign_species (multi-species/PDX)\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>')"
 ```
 
@@ -673,7 +673,7 @@ Start backend :8001 + vite :5180. Use a dataset with numeric `.obs` columns and
 species-prefixed genes. The user's adE11 dataset has numeric obs (e.g.
 `total_counts`, `n_genes_by_counts`) for Feature 1; for Feature 2 use a dataset
 with `GRCh38_`/`mm10_` genes, or synthesize one
-(`backend/xcell/data/` toy) — if none is available, verify Feature 2 via the
+(`backend/skopia/data/` toy) — if none is available, verify Feature 2 via the
 backend route with curl and verify only Feature 1 in the browser.
 
 Browser (Analyze → ScanpyModal):

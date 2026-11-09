@@ -1,6 +1,6 @@
 /**
  * Presentation helpers for MyGene.info annotations (the ⓘ card in the Genes
- * panel). The record shape mirrors backend/xcell/gene_annotations.py.
+ * panel). The record shape mirrors backend/skopia/gene_annotations.py.
  */
 
 export interface GoTerm {

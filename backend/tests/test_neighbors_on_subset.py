@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 def _adaptor(n_cells=60, n_genes=80, seed=0):

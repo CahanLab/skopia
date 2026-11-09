@@ -1,7 +1,7 @@
 // Text annotations placed on an embedding. Position is in the embedding's
 // data coordinates, so a note stays on its cells under pan and zoom; size is
 // in screen pixels, like the axis labels of every plotting tool. Stored with
-// the dataset in uns['xcell_text_annotations_json'] (see the adaptor).
+// the dataset in uns['skopia_text_annotations_json'] (see the adaptor).
 
 import { pointInPolygon, transformPoint, type Pt, type ShapeAffine } from '../utils/shapeTransform'
 

@@ -558,7 +558,7 @@ const SCANPY_FUNCTIONS: Record<string, CategoryDef> = {
       },
       territories: {
         label: 'Define Territories',
-        description: "Draw named regions on the spatial plot and save them with the dataset. You draw the dividing cuts; xcell derives the regions between them, so neighbouring territories share a boundary exactly and cannot overlap or leave gaps. Opens the Territory tool.",
+        description: "Draw named regions on the spatial plot and save them with the dataset. You draw the dividing cuts; skopia derives the regions between them, so neighbouring territories share a boundary exactly and cannot overlap or leave gaps. Opens the Territory tool.",
         prerequisites: ['has_spatial'],
         custom: true,
         params: [],
@@ -1025,7 +1025,7 @@ export default function ScanpyModal() {
   const functionDef: FunctionDef | undefined = categoryDef?.functions[selectedFunction]
 
   // Initialize param values when function changes. User config overrides
-  // (from ~/.xcell/config.yaml|json via /api/config/defaults) take precedence
+  // (from ~/.skopia/config.yaml|json via /api/config/defaults) take precedence
   // over the hardcoded defaults in SCANPY_FUNCTIONS for matching param names.
   const userConfig = useStore((s) => s.userConfig)
   useEffect(() => {

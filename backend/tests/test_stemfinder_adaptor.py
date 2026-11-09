@@ -14,11 +14,11 @@ import pytest
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell import codegen
-from xcell import stemfinder as sf
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.main import app
+from skopia import codegen
+from skopia import stemfinder as sf
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.main import app
 
 HAVE_PSF = importlib.util.find_spec("pystemfinder") is not None
 needs_psf = pytest.mark.skipif(not HAVE_PSF, reason="pystemfinder not installed")
@@ -167,7 +167,7 @@ def test_the_mask_scores_only_its_cells_as_a_run_on_them_alone_would():
 
 @needs_psf
 def test_scores_equal_a_direct_pystemfinder_run():
-    # The contract the feature rests on: xcell only prepares what PyStemFinder
+    # The contract the feature rests on: skopia only prepares what PyStemFinder
     # expects, so the same preparation done by hand gives the same numbers.
     import pystemfinder as psf
     import scanpy as sc

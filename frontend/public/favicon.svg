@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="32" height="32" role="img" aria-label="Skopia"><title>Skopia</title>
+<rect width="100" height="100" rx="20" fill="#0E1322"/>
+<g transform="translate(7 6) scale(0.86)"><circle cx="52" cy="25.6" r="4" fill="#FDE725" opacity="0.9"/><circle cx="68" cy="42" r="3.6" fill="#FDE725" opacity="0.75"/><circle cx="83" cy="57" r="3.2" fill="#FDE725" opacity="0.6"/>
+<g fill="none" stroke-linecap="round"><path d="M16.9 96h0M50 96h0M83.1 96h0" stroke="#4A5478" stroke-width="16"/><path d="M14 76h0M30 76h0M48 76h0" stroke="#4A5478" stroke-width="11"/><path d="M66 75h0" stroke="#1F9E89" stroke-width="11"/><path d="M84 74h0" stroke="#35B779" stroke-width="11"/><path d="M66 59h0" stroke="#6DCD59" stroke-width="8"/><path d="M80 57h0" stroke="#FDE725" stroke-width="8"/></g>
+<path d="M31.3 24 L27.5 72 M36.7 24 L40.5 72" stroke="#F2F4F8" stroke-width="7" stroke-linecap="round" fill="none"/><path d="M22 14 L34 5 L46 14 Z" fill="#F2F4F8" stroke="#F2F4F8" stroke-width="2" stroke-linejoin="round"/><rect x="25.5" y="13" width="17" height="13" rx="1.5" fill="#F2F4F8"/><rect x="28.5" y="16" width="11" height="6" rx="1" fill="#FDE725"/></g>
+</svg>

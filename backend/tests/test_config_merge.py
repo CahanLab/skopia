@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from xcell import config as user_config
+from skopia import config as user_config
 
 
 @pytest.fixture(autouse=True)
@@ -46,7 +46,7 @@ def test_deep_merge_non_dict_replaces():
 
 def test_shipped_base_loaded_when_no_user_config(monkeypatch, tmp_path):
     # No user override anywhere: env unset, home points to an empty dir.
-    monkeypatch.delenv("XCELL_CONFIG_PATH", raising=False)
+    monkeypatch.delenv("SKOPIA_CONFIG_PATH", raising=False)
     monkeypatch.setattr(user_config.Path, "home", staticmethod(lambda: tmp_path))
     cfg = user_config.load_user_config()
     # The shipped config.yaml must exist and provide the requested defaults.
@@ -60,7 +60,7 @@ def test_user_override_deep_merges_over_shipped_base(monkeypatch, tmp_path):
     # A partial user config overrides one key; everything else comes from base.
     override_file = tmp_path / "config.json"
     override_file.write_text(json.dumps({"display": {"point_size": 7}}))
-    monkeypatch.setenv("XCELL_CONFIG_PATH", str(override_file))
+    monkeypatch.setenv("SKOPIA_CONFIG_PATH", str(override_file))
     cfg = user_config.load_user_config()
     # user key wins
     assert cfg["display"]["point_size"] == 7

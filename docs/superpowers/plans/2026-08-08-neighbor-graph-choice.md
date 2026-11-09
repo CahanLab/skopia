@@ -35,7 +35,7 @@
 One rule for deriving names from a graph key, in one place, so the backend default and the frontend prefill cannot drift.
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — add two module-level helpers near `_contour_score_field` (~line 246, just above `class DataAdaptor`); extend `list_neighbor_graphs` (~line 5348).
+- Modify: `backend/skopia/adaptor.py` — add two module-level helpers near `_contour_score_field` (~line 246, just above `class DataAdaptor`); extend `list_neighbor_graphs` (~line 5348).
 - Test: `backend/tests/test_graph_choice.py` (create)
 
 **Interfaces:**
@@ -63,7 +63,7 @@ import anndata
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor, _default_output_name, _graph_suffix
+from skopia.adaptor import DataAdaptor, _default_output_name, _graph_suffix
 
 
 def _adata(n_genes=8):
@@ -123,11 +123,11 @@ cd backend && pixi run -e dev pytest tests/test_graph_choice.py -q
 
 Expected: `ImportError: cannot import name '_default_output_name'`.
 
-If `run_spatial_neighbors` turns out to be a `prepare_*` pair rather than a direct method, check its real signature with `rg -n "def run_spatial_neighbors|def prepare_spatial_neighbors" backend/xcell/adaptor.py` and drive it the way `backend/tests/` already does — grep for `spatial_neighbors` in the existing tests and copy that call.
+If `run_spatial_neighbors` turns out to be a `prepare_*` pair rather than a direct method, check its real signature with `rg -n "def run_spatial_neighbors|def prepare_spatial_neighbors" backend/skopia/adaptor.py` and drive it the way `backend/tests/` already does — grep for `spatial_neighbors` in the existing tests and copy that call.
 
 - [ ] **Step 3: Implement the helpers**
 
-In `backend/xcell/adaptor.py`, immediately above `class DataAdaptor:`:
+In `backend/skopia/adaptor.py`, immediately above `class DataAdaptor:`:
 
 ```python
 _CONN_SUFFIX = '_connectivities'
@@ -178,7 +178,7 @@ Expected: 3 passed.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_graph_choice.py
+git add backend/skopia/adaptor.py backend/tests/test_graph_choice.py
 git commit -m "feat(graphs): derive output names from the connectivity graph key"
 ```
 
@@ -187,13 +187,13 @@ git commit -m "feat(graphs): derive output names from the connectivity graph key
 ### Task 2: UMAP on any graph
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — add `_GRAPH_META_KEY`, `_umap_neighbors_meta`, `_umap_call` beside the Task 1 helpers; rewrite `run_umap` (~line 5657); add `_require_graph` as a `DataAdaptor` method next to `run_umap`.
+- Modify: `backend/skopia/adaptor.py` — add `_GRAPH_META_KEY`, `_umap_neighbors_meta`, `_umap_call` beside the Task 1 helpers; rewrite `run_umap` (~line 5657); add `_require_graph` as a `DataAdaptor` method next to `run_umap`.
 - Test: `backend/tests/test_graph_choice.py`
 
 **Interfaces:**
 - Consumes: `_graph_suffix`, `_default_output_name` (Task 1).
 - Produces:
-  - `_GRAPH_META_KEY: str = '_xcell_graph'`
+  - `_GRAPH_META_KEY: str = '_skopia_graph'`
   - `_umap_neighbors_meta(adata, graph_key: str) -> dict`
   - `DataAdaptor._require_graph(self, graph_key: str) -> None` (raises `ValueError`)
   - `run_umap(min_dist=0.5, spread=1.0, n_components=2, graph_key=None, key_added=None, active_cell_indices=None) -> dict` with `embedding_name` and `graph_key` in the result.
@@ -234,7 +234,7 @@ def test_umap_on_spatial_graph_writes_its_own_embedding():
 
 
 def test_umap_leaves_no_temporary_neighbors_entry():
-    from xcell.adaptor import _GRAPH_META_KEY
+    from skopia.adaptor import _GRAPH_META_KEY
 
     a = _adaptor()
     a.run_pca(n_comps=5)
@@ -246,8 +246,8 @@ def test_umap_leaves_no_temporary_neighbors_entry():
 
 
 def test_temporary_entry_is_removed_even_when_umap_raises(monkeypatch):
-    from xcell import adaptor as adaptor_mod
-    from xcell.adaptor import _GRAPH_META_KEY
+    from skopia import adaptor as adaptor_mod
+    from skopia.adaptor import _GRAPH_META_KEY
 
     a = _adaptor()
     a.run_pca(n_comps=5)
@@ -306,7 +306,7 @@ def test_umap_on_spatial_graph_without_pca_does_not_invent_one():
 
 
 def test_umap_keeps_a_real_uns_entrys_recorded_params():
-    from xcell.adaptor import _umap_neighbors_meta
+    from skopia.adaptor import _umap_neighbors_meta
 
     a = _adaptor()
     a.run_spatial_neighbors(n_neighs=6)
@@ -398,18 +398,18 @@ Expected: the new tests fail — `TypeError: run_umap() got an unexpected keywor
 
 - [ ] **Step 3: Add the metadata synthesis**
 
-In `backend/xcell/adaptor.py`, beside the Task 1 helpers. Add `from collections.abc import Mapping` to the module imports:
+In `backend/skopia/adaptor.py`, beside the Task 1 helpers. Add `from collections.abc import Mapping` to the module imports:
 
 ```python
 # Where the synthesized neighbors entry lives while sc.tl.umap reads it. Also
 # emitted by codegen, so the exported notebook uses the same name.
-_GRAPH_META_KEY = '_xcell_graph'
+_GRAPH_META_KEY = '_skopia_graph'
 
 
 def _umap_neighbors_meta(adata, graph_key: str) -> dict[str, Any]:
     """A ``uns['neighbors']``-shaped entry that ``sc.tl.umap`` will accept.
 
-    scanpy reads three fields without guarding them, and the graphs xcell
+    scanpy reads three fields without guarding them, and the graphs skopia
     produces are each missing one:
 
     - squidpy's ``uns['spatial_neighbors']`` has no ``params['method']``, and
@@ -618,7 +618,7 @@ Expected: no regressions. `run_umap`'s signature gained keyword-only-ish params 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_graph_choice.py
+git add backend/skopia/adaptor.py backend/tests/test_graph_choice.py
 git commit -m "feat(umap): embed any obsp connectivity graph, not just the default"
 ```
 
@@ -627,7 +627,7 @@ git commit -m "feat(umap): embed any obsp connectivity graph, not just the defau
 ### Task 3: Leiden on any graph
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` — `run_leiden` (~line 5716)
+- Modify: `backend/skopia/adaptor.py` — `run_leiden` (~line 5716)
 - Test: `backend/tests/test_graph_choice.py`
 
 **Interfaces:**
@@ -819,7 +819,7 @@ cd backend && pixi run -e dev pytest -q
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_graph_choice.py
+git add backend/skopia/adaptor.py backend/tests/test_graph_choice.py
 git commit -m "feat(leiden): cluster any obsp connectivity graph"
 ```
 
@@ -828,7 +828,7 @@ git commit -m "feat(leiden): cluster any obsp connectivity graph"
 ### Task 4: Routes
 
 **Files:**
-- Modify: `backend/xcell/api/routes.py` — `UmapRequest` (~line 1678), `LeidenRequest` (~line 1685), `run_umap` route (~line 2216), `run_leiden` route (follows it)
+- Modify: `backend/skopia/api/routes.py` — `UmapRequest` (~line 1678), `LeidenRequest` (~line 1685), `run_umap` route (~line 2216), `run_leiden` route (follows it)
 - Test: `backend/tests/test_graph_choice_routes.py` (create)
 
 **Interfaces:**
@@ -847,9 +847,9 @@ import anndata
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.main import app
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.main import app
 
 client = TestClient(app)
 
@@ -922,7 +922,7 @@ def test_umap_route_default_body_still_works():
     assert r.json()["embedding_name"] == "X_umap"
 ```
 
-Before running, confirm the import path and the installer helper by looking at an existing route test — `rg -n "from xcell.main import app|set_adaptor" backend/tests/*.py | head`. If the suite uses `monkeypatch.setattr(routes, "get_adaptor", lambda dataset=None: a)` instead of `set_adaptor`, follow that; the lambda **must** accept `dataset=None`.
+Before running, confirm the import path and the installer helper by looking at an existing route test — `rg -n "from skopia.main import app|set_adaptor" backend/tests/*.py | head`. If the suite uses `monkeypatch.setattr(routes, "get_adaptor", lambda dataset=None: a)` instead of `set_adaptor`, follow that; the lambda **must** accept `dataset=None`.
 
 - [ ] **Step 2: Run it and watch it fail**
 
@@ -979,7 +979,7 @@ Expected: 6 passed.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/api/routes.py backend/tests/test_graph_choice_routes.py
+git add backend/skopia/api/routes.py backend/tests/test_graph_choice_routes.py
 git commit -m "feat(api): graph_key on the umap and leiden routes"
 ```
 
@@ -987,10 +987,10 @@ git commit -m "feat(api): graph_key on the umap and leiden routes"
 
 ### Task 5: Codegen
 
-The exported notebook runs standalone, so `neighbors_key='_xcell_graph'` cannot be emitted alone — the entry does not exist there. Emit the synthesis too, and fidelity stays `exact`.
+The exported notebook runs standalone, so `neighbors_key='_skopia_graph'` cannot be emitted alone — the entry does not exist there. Emit the synthesis too, and fidelity stays `exact`.
 
 **Files:**
-- Modify: `backend/xcell/codegen.py` — `umap` and `leiden` entries in `REGISTRY` (~lines 351–366)
+- Modify: `backend/skopia/codegen.py` — `umap` and `leiden` entries in `REGISTRY` (~lines 351–366)
 - Test: `backend/tests/test_codegen.py`
 
 **Interfaces:**
@@ -1023,11 +1023,11 @@ def test_umap_on_a_named_graph_emits_the_neighbors_entry_it_needs():
     code = '\n'.join(t.code)
     # Emitting only the call would fail in the notebook: the entry it names
     # does not exist there.
-    assert "adata.uns['_xcell_graph']" in code
+    assert "adata.uns['_skopia_graph']" in code
     assert "'connectivities_key': 'spatial_connectivities'" in code
     assert "'method': 'umap'" in code
     assert "'distances_key'" in code
-    assert "neighbors_key='_xcell_graph'" in code
+    assert "neighbors_key='_skopia_graph'" in code
     assert "key_added='X_umap_spatial'" in code
 
 
@@ -1069,13 +1069,13 @@ Expected: the two named-graph tests fail — `graph_key` is not in the `only` tu
 
 - [ ] **Step 3: Implement the builders**
 
-In `backend/xcell/codegen.py`, above `REGISTRY`. Import the shared constant so the emitted key cannot drift from the adaptor's:
+In `backend/skopia/codegen.py`, above `REGISTRY`. Import the shared constant so the emitted key cannot drift from the adaptor's:
 
 ```python
-from xcell.adaptor import _GRAPH_META_KEY, _graph_suffix
+from skopia.adaptor import _GRAPH_META_KEY, _graph_suffix
 ```
 
-If that import turns out to be circular (`adaptor` importing `codegen`), check with `rg -n "^from|^import" backend/xcell/codegen.py backend/xcell/adaptor.py | rg "codegen|adaptor"`. If it is circular, redefine `_GRAPH_META_KEY = '_xcell_graph'` in `codegen.py` with a comment naming `adaptor.py` as the source of truth, and add a test asserting the two are equal.
+If that import turns out to be circular (`adaptor` importing `codegen`), check with `rg -n "^from|^import" backend/skopia/codegen.py backend/skopia/adaptor.py | rg "codegen|adaptor"`. If it is circular, redefine `_GRAPH_META_KEY = '_skopia_graph'` in `codegen.py` with a comment naming `adaptor.py` as the source of truth, and add a test asserting the two are equal.
 
 ```python
 def _code_umap(step: Step) -> list[str]:
@@ -1164,8 +1164,8 @@ adata.var_names=[f'g{i}' for i in range(60)]
 adata.obsm['spatial']=rng.random((200,2))*100
 sq.gr.spatial_neighbors(adata, coord_type='generic', n_neighs=6)
 # --- paste the two emitted lines here, verbatim ---
-adata.uns['_xcell_graph'] = {'connectivities_key': 'spatial_connectivities', 'distances_key': 'spatial_distances', 'params': {'method': 'umap'}}
-sc.tl.umap(adata, min_dist=0.5, spread=1.0, n_components=2, key_added='X_umap_spatial', neighbors_key='_xcell_graph')
+adata.uns['_skopia_graph'] = {'connectivities_key': 'spatial_connectivities', 'distances_key': 'spatial_distances', 'params': {'method': 'umap'}}
+sc.tl.umap(adata, min_dist=0.5, spread=1.0, n_components=2, key_added='X_umap_spatial', neighbors_key='_skopia_graph')
 sc.tl.leiden(adata, resolution=0.5, key_added='leiden_spatial', obsp='spatial_connectivities')
 print('ran clean:', adata.obsm['X_umap_spatial'].shape, adata.obs['leiden_spatial'].nunique(), 'clusters')
 print('no phantom pca:', 'X_pca' not in adata.obsm)
@@ -1179,7 +1179,7 @@ Note the emitted `params` has no `use_rep`, so this notebook path relies on `n_v
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/xcell/codegen.py backend/tests/test_codegen.py
+git add backend/skopia/codegen.py backend/tests/test_codegen.py
 git commit -m "feat(record): export UMAP/Leiden runs that used a non-default graph"
 ```
 
@@ -1320,7 +1320,7 @@ pixi run backend     # :8000
 pixi run dev         # :5173
 ```
 
-Note: `uvicorn --reload` spawns a child. To stop it later use `pkill -f "uvicorn xcell.main:app"` — `lsof -ti :8000 | xargs kill` leaves a reloader that re-binds and serves stale data.
+Note: `uvicorn --reload` spawns a child. To stop it later use `pkill -f "uvicorn skopia.main:app"` — `lsof -ti :8000 | xargs kill` leaves a reloader that re-binds and serves stale data.
 
 Editing any backend file restarts the server and resets the loaded dataset, so batch backend fixes and re-run the setup once.
 
@@ -1350,7 +1350,7 @@ File → Analysis Record → export the notebook. Execute it. Both the UMAP and 
 - [ ] **Step 5: Stop the servers**
 
 ```bash
-pkill -f "uvicorn xcell.main:app"; pkill -f "vite"
+pkill -f "uvicorn skopia.main:app"; pkill -f "vite"
 ```
 
 - [ ] **Step 6: Update the docs**

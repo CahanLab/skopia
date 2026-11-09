@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell import cnv
+from skopia import cnv
 
 N_CHROM, GENES_PER_CHROM = 6, 150
 N_GENES = N_CHROM * GENES_PER_CHROM

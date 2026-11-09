@@ -1,4 +1,4 @@
-"""Physical scale of spatial coordinates: uns['xcell_spatial_scale'].
+"""Physical scale of spatial coordinates: uns['skopia_spatial_scale'].
 
 The h5ad carries no units — Curio Seeker writes µm, plain Visium writes
 image pixels, Localize writes whatever the reference used — so the scale is
@@ -11,8 +11,8 @@ import anndata
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
 
 
 def _adata(uns_spatial: dict | None = None) -> anndata.AnnData:
@@ -41,7 +41,7 @@ def test_set_scale_persists_to_uns_and_reads_back():
     a = _adaptor()
     out = a.spatial_scale_set(2.5)
     assert out == {'um_per_unit': 2.5, 'source': 'user'}
-    assert a.adata.uns['xcell_spatial_scale'] == {'um_per_unit': 2.5}
+    assert a.adata.uns['skopia_spatial_scale'] == {'um_per_unit': 2.5}
     assert a.spatial_scale() == {'um_per_unit': 2.5, 'source': 'user'}
 
 
@@ -50,7 +50,7 @@ def test_setting_none_clears_back_to_unset():
     a.spatial_scale_set(1.0)
     out = a.spatial_scale_set(None)
     assert out == {'um_per_unit': None, 'source': None}
-    assert 'xcell_spatial_scale' not in a.adata.uns
+    assert 'skopia_spatial_scale' not in a.adata.uns
 
 
 @pytest.mark.parametrize('bad', [0, -1.5, float('nan'), float('inf')])

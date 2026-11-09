@@ -8,7 +8,7 @@
 
 **Tech Stack:** React 18 + TypeScript + Zustand 4 (frontend only). SVG for the histogram. No new dependencies.
 
-**Repository note:** The working root is `/Users/pcahan/code/xcell/`. The active project is `xcell/`. All file paths below are relative to the git root at `xcell/`. Run commands from that directory.
+**Repository note:** The working root is `/Users/pcahan/code/skopia/`. The active project is `skopia/`. All file paths below are relative to the git root at `skopia/`. Run commands from that directory.
 
 **Spec:** `docs/superpowers/specs/2026-04-14-select-cells-by-expression-design.md`
 
@@ -387,7 +387,7 @@ Expected: TypeScript compiles without errors.
 
 - [ ] **Step 6: Manual smoke test**
 
-Start the backend and frontend dev servers (from `backend/`: `uvicorn xcell.main:app --reload` ; from `frontend/`: `npm run dev`). Open the browser at `http://localhost:5173`. Click a gene in the browse/search list's `⋯` menu and pick `Select cells…`. Confirm the empty modal shell opens. Cancel it. Do the same from a gene set row's `⋯` menu and from a gene row inside an expanded gene set.
+Start the backend and frontend dev servers (from `backend/`: `uvicorn skopia.main:app --reload` ; from `frontend/`: `npm run dev`). Open the browser at `http://localhost:5173`. Click a gene in the browse/search list's `⋯` menu and pick `Select cells…`. Confirm the empty modal shell opens. Cancel it. Do the same from a gene set row's `⋯` menu and from a gene row inside an expanded gene set.
 
 - [ ] **Step 7: Commit**
 

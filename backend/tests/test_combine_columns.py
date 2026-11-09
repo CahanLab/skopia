@@ -13,7 +13,7 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import combine_datasets, describe_combine_columns
+from skopia.adaptor import combine_datasets, describe_combine_columns
 
 
 GENES = [f'g{i}' for i in range(20)]
@@ -243,7 +243,7 @@ def test_the_policy_is_recorded_in_uns(tmp_path):
     out = combine_datasets(
         [pa, pb], ['A', 'B'], obs_policy={'seurat_clusters': 'separate'},
     )
-    rec = out.uns['xcell_combine']
+    rec = out.uns['skopia_combine']
     assert rec['obs_policy']['seurat_clusters'] == 'separate'
     assert rec['obs_policy']['nCount_RNA'] == 'merge'   # resolved default, recorded
 
@@ -257,7 +257,7 @@ def test_spatial_mode_applies_the_policy_too(tmp_path):
     b.obs['cl'] = pd.Categorical(r.choice(['x', 'y'], 40))
     pa, pb = _write(tmp_path, 'a.h5ad', a), _write(tmp_path, 'b.h5ad', b)
     out = combine_datasets([pa, pb], ['A', 'B'], obs_policy={'cl': 'separate'})
-    assert out.uns['xcell_combine']['mode'] == 'spatial'
+    assert out.uns['skopia_combine']['mode'] == 'spatial'
     assert 'cl__A' in out.obs.columns
 
 
@@ -274,7 +274,7 @@ def test_the_combined_result_still_writes_to_h5ad(tmp_path):
 # ---------------------------------------------------------------------------
 def _client():
     from fastapi.testclient import TestClient
-    from xcell.main import app
+    from skopia.main import app
     return TestClient(app)
 
 
@@ -324,7 +324,7 @@ def test_combine_route_applies_the_column_policy(tmp_path):
         'obs_policy': {'seurat_clusters': 'separate', 'nCount_RNA': 'drop'},
     })
     assert r.status_code == 200, r.text
-    from xcell.api import routes as _routes
+    from skopia.api import routes as _routes
     obs_cols = set(_routes.get_adaptor('primary').adata.obs.columns)
     assert 'seurat_clusters__A' in obs_cols
     assert not [c for c in obs_cols if c.startswith('nCount_RNA')]
@@ -429,7 +429,7 @@ def test_combine_with_no_policy_pools_a_shared_vocabulary(tmp_path):
     assert 'cell_type__A' not in out.obs.columns
     assert out.obs['cell_type'].notna().all()
     assert list(out.obs['cell_type'].cat.categories) == ['B cell', 'NK', 'T cell', 'Mono']
-    assert out.uns['xcell_combine']['obs_policy']['cell_type'] == 'merge'
+    assert out.uns['skopia_combine']['obs_policy']['cell_type'] == 'merge'
 
 
 def test_a_category_pooled_with_free_text_keeps_every_value(tmp_path):
@@ -463,7 +463,7 @@ def test_merge_into_pools_two_names_into_the_target(tmp_path):
     assert out.obs['cell_type'].notna().all()
     assert list(out.obs['cell_type'].cat.categories) == ['B cell', 'NK', 'T cell', 'Mono']
     assert out.obs.loc[out.obs['sample'] == 'A', 'cell_type'].iloc[0] == 'T cell'
-    rec = out.uns['xcell_combine']
+    rec = out.uns['skopia_combine']
     assert rec['obs_merge_into'] == {'celltype': 'cell_type'}
     assert rec['obs_policy']['celltype'] == 'merge'
     assert rec['obs_policy']['cell_type'] == 'merge'
@@ -541,7 +541,7 @@ def test_same_as_never_offers_a_column_from_the_same_dataset(tmp_path):
 
 
 def test_combine_route_accepts_obs_merge_into(tmp_path):
-    from xcell.api import routes
+    from skopia.api import routes
     pa, pb = _renamed(tmp_path)
     files = [{'file_path': str(pa), 'label': 'A'}, {'file_path': str(pb), 'label': 'B'}]
     try:

@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 
 N_CELLS, N_GENES, K = 150, 30, 3
@@ -134,7 +134,7 @@ def test_run_writes_a_registered_score_matrix():
     a = _adaptor()
     out = _run(a, key="NMF")
     assert a.adata.obsm["NMF"].shape == (N_CELLS, out["n_programs"])
-    reg = a.adata.uns["xcell_score_matrices"]["NMF"]
+    reg = a.adata.uns["skopia_score_matrices"]["NMF"]
     assert reg["columns"] == [p["name"] for p in out["programs"]]
     assert reg["source"] == "gene_nmf"
 
@@ -161,7 +161,7 @@ def test_run_writes_full_length_gene_loadings_to_varm():
 def test_run_records_the_programs_and_params_in_uns():
     a = _adaptor()
     out = _run(a, key="NMF", seed=4)
-    rec = a.adata.uns["xcell_gene_nmf"]["NMF"]
+    rec = a.adata.uns["skopia_gene_nmf"]["NMF"]
     assert rec["params"]["k"] == K
     assert rec["params"]["seed"] == 4
     assert list(rec["program_names"]) == [p["name"] for p in out["programs"]]
@@ -176,7 +176,7 @@ def test_stored_record_survives_an_h5ad_round_trip(tmp_path):
     path = tmp_path / "out.h5ad"
     a.adata.write_h5ad(path)
     back = anndata.read_h5ad(path)
-    rec = back.uns["xcell_gene_nmf"]["NMF"]
+    rec = back.uns["skopia_gene_nmf"]["NMF"]
     assert list(rec["program_names"]) == [p["name"] for p in out["programs"]]
     assert "NMF_loadings" in back.varm
     assert back.obsm["NMF"].shape == (N_CELLS, out["n_programs"])
@@ -280,7 +280,7 @@ def test_two_keys_coexist_without_clobbering_each_other():
     a = _adaptor()
     _run(a, key="NMF")
     _run(a, key="NMF_alt", seed=9)
-    assert set(a.adata.uns["xcell_gene_nmf"]) == {"NMF", "NMF_alt"}
+    assert set(a.adata.uns["skopia_gene_nmf"]) == {"NMF", "NMF_alt"}
     assert "NMF" in a.adata.obsm and "NMF_alt" in a.adata.obsm
 
 

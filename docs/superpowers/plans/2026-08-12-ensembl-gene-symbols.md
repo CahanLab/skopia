@@ -4,14 +4,14 @@
 
 **Goal:** Let a user turn a dataset whose `.var` holds only Ensembl IDs into one with official gene symbols, in one action, offline.
 
-**Architecture:** A pure `xcell/gene_symbols.py` loads the shipped GENCODE tables and maps IDs; the adaptor writes `.var['gene_symbol']` and optionally calls the *existing* `swap_var_index` to promote it. No new renaming path.
+**Architecture:** A pure `skopia/gene_symbols.py` loads the shipped GENCODE tables and maps IDs; the adaptor writes `.var['gene_symbol']` and optionally calls the *existing* `swap_var_index` to promote it. No new renaming path.
 
 **Tech Stack:** numpy, pandas, gzip (stdlib), pytest, React + TypeScript with inline styles.
 
 ## Global Constraints
 
 - Spec: `docs/superpowers/specs/2026-08-12-ensembl-gene-symbols-design.md`.
-- Shipped tables: `xcell/data/ensembl_symbols_{human,mouse}.tsv.gz`, `id<TAB>symbol`, no header. Built by `xcell/data/build_gene_symbol_maps.py`.
+- Shipped tables: `skopia/data/ensembl_symbols_{human,mouse}.tsv.gz`, `id<TAB>symbol`, no header. Built by `skopia/data/build_gene_symbol_maps.py`.
 - Species detected from ID prefixes (`ENSG`→human, `ENSMUSG`→mouse) by majority; anything else is refused with the species named.
 - Version suffixes stripped on both sides (`ENSG00000141510.15` → `ENSG00000141510`).
 - Unmapped IDs keep their own ID. Never blank, never `NaN`, never dropped.
@@ -26,7 +26,7 @@
 ### Task 1: The pure lookup module
 
 **Files:**
-- Create: `backend/xcell/gene_symbols.py`
+- Create: `backend/skopia/gene_symbols.py`
 - Test: `backend/tests/test_gene_symbols.py`
 
 **Interfaces:**
@@ -38,7 +38,7 @@
 import numpy as np
 import pytest
 
-from xcell.gene_symbols import (
+from skopia.gene_symbols import (
     detect_species, load_table, map_ids, strip_version,
 )
 
@@ -108,15 +108,15 @@ def test_the_shipped_tables_load_and_are_large():
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `cd backend && pixi run -e dev pytest tests/test_gene_symbols.py -q`
-Expected: FAIL — `ModuleNotFoundError: No module named 'xcell.gene_symbols'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'skopia.gene_symbols'`
 
 - [ ] **Step 3: Write the minimal implementation**
 
 ```python
-"""Map Ensembl gene IDs to official symbols, from tables shipped with xcell.
+"""Map Ensembl gene IDs to official symbols, from tables shipped with skopia.
 
 Pure: takes lists of strings, returns plain dicts. The tables are loaded from
-``xcell/data`` and cached per species, so a session pays the read once.
+``skopia/data`` and cached per species, so a session pays the read once.
 
 Shipped rather than fetched so this works with no network, returns instantly,
 and maps the same dataset the same way in a year -- which a live API cannot
@@ -194,13 +194,13 @@ def load_table(species: str) -> dict[str, str]:
     """Ensembl ID -> symbol for one species, read once per session."""
     if species not in SPECIES_PREFIXES.values():
         raise ValueError(
-            f"no symbol table for '{species}' — xcell ships human and mouse")
+            f"no symbol table for '{species}' — skopia ships human and mouse")
     path = _DATA / f'ensembl_symbols_{species}.tsv.gz'
     if not path.exists():
         raise ValueError(
             f'the {species} symbol table is missing from this install '
             f'({path.name}). Rebuild it with '
-            '`python xcell/data/build_gene_symbol_maps.py`.')
+            '`python skopia/data/build_gene_symbol_maps.py`.')
     table: dict[str, str] = {}
     with gzip.open(path, 'rt') as fh:
         for line in fh:
@@ -243,7 +243,7 @@ Expected: PASS (10 passed)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/gene_symbols.py backend/tests/test_gene_symbols.py backend/xcell/data/
+git add backend/skopia/gene_symbols.py backend/tests/test_gene_symbols.py backend/skopia/data/
 git commit -m "feat(genes): map Ensembl ids to symbols from shipped GENCODE tables"
 ```
 
@@ -252,7 +252,7 @@ git commit -m "feat(genes): map Ensembl ids to symbols from shipped GENCODE tabl
 ### Task 2: Adaptor — preview and apply
 
 **Files:**
-- Modify: `backend/xcell/adaptor.py` (new methods near `swap_var_index`, `adaptor.py:1567`)
+- Modify: `backend/skopia/adaptor.py` (new methods near `swap_var_index`, `adaptor.py:1567`)
 - Test: `backend/tests/test_gene_symbols_adaptor.py`
 
 **Interfaces:**
@@ -270,7 +270,7 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
+from skopia.adaptor import DataAdaptor
 
 MOUSE = ['ENSMUSG00000002603', 'ENSMUSG00000051951', 'ENSMUSG00000000001']
 
@@ -365,7 +365,7 @@ Add to `adaptor.py` immediately after `swap_var_index`:
 
     def _gene_symbol_state(self) -> tuple[dict[str, Any], str | None]:
         """(species detection over var_names, an existing symbol column or None)."""
-        from xcell import gene_symbols as gs
+        from skopia import gene_symbols as gs
 
         ids = [str(n) for n in self.adata.var_names]
         existing = next(
@@ -374,7 +374,7 @@ Add to `adaptor.py` immediately after `swap_var_index`:
 
     def preview_gene_symbol_mapping(self) -> dict[str, Any]:
         """What mapping Ensembl ids to symbols would do here. Mutates nothing."""
-        from xcell import gene_symbols as gs
+        from skopia import gene_symbols as gs
 
         detection, existing = self._gene_symbol_state()
         ids = [str(n) for n in self.adata.var_names]
@@ -391,7 +391,7 @@ Add to `adaptor.py` immediately after `swap_var_index`:
             if detection['unsupported']:
                 out['reason'] = (
                     f"These look like {detection['unsupported']} Ensembl ids. "
-                    'xcell ships symbol tables for human and mouse only.')
+                    'skopia ships symbol tables for human and mouse only.')
             else:
                 out['reason'] = (
                     'These gene names are not Ensembl ids, so there is nothing '
@@ -424,7 +424,7 @@ Add to `adaptor.py` immediately after `swap_var_index`:
         pattern, a collision here is a fact about the annotation and there is
         nothing for the user to correct.
         """
-        from xcell import gene_symbols as gs
+        from skopia import gene_symbols as gs
 
         if not column:
             raise ValueError('column must be a non-empty name')
@@ -433,7 +433,7 @@ Add to `adaptor.py` immediately after `swap_var_index`:
             if detection['unsupported']:
                 raise ValueError(
                     f"These look like {detection['unsupported']} Ensembl ids; "
-                    'xcell ships symbol tables for human and mouse only.')
+                    'skopia ships symbol tables for human and mouse only.')
             raise ValueError(
                 'These gene names are not Ensembl ids, so there is nothing to '
                 'map.')
@@ -470,7 +470,7 @@ Expected: PASS, no regressions in the existing suite.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/adaptor.py backend/tests/test_gene_symbols_adaptor.py
+git add backend/skopia/adaptor.py backend/tests/test_gene_symbols_adaptor.py
 git commit -m "feat(genes): preview and apply Ensembl symbol mapping"
 ```
 
@@ -479,7 +479,7 @@ git commit -m "feat(genes): preview and apply Ensembl symbol mapping"
 ### Task 3: Routes
 
 **Files:**
-- Modify: `backend/xcell/api/routes.py` (beside the var-identifier routes, `routes.py:2475`)
+- Modify: `backend/skopia/api/routes.py` (beside the var-identifier routes, `routes.py:2475`)
 - Test: `backend/tests/test_gene_symbols_routes.py`
 
 **Interfaces:**
@@ -495,9 +495,9 @@ import pandas as pd
 from fastapi.testclient import TestClient
 from scipy.sparse import csr_matrix
 
-from xcell.adaptor import DataAdaptor
-from xcell.api import routes
-from xcell.main import app
+from skopia.adaptor import DataAdaptor
+from skopia.api import routes
+from skopia.main import app
 
 MOUSE = ['ENSMUSG00000002603', 'ENSMUSG00000051951', 'ENSMUSG00000000001']
 
@@ -586,7 +586,7 @@ Expected: PASS, full suite.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/xcell/api/routes.py backend/tests/test_gene_symbols_routes.py
+git add backend/skopia/api/routes.py backend/tests/test_gene_symbols_routes.py
 git commit -m "feat(api): routes for previewing and applying symbol mapping"
 ```
 
