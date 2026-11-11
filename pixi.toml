@@ -92,6 +92,18 @@ httpx = ">=0.25"
 # install instructions instead of failing.
 pySingleCellNet = "*"
 
+[feature.pyscn]
+# Only for the gseapy entry below; lowest priority so nothing else is ever
+# taken from bioconda.
+channels = [{ channel = "bioconda", priority = -1 }]
+
+[feature.pyscn.target.osx-64.dependencies]
+# gseapy (a PySingleCellNet dependency) publishes no Intel-Mac wheel, so PyPI
+# resolves to its source tarball there and the install needs a Rust compiler.
+# bioconda has it prebuilt. test_lock_wheels.py fails if a source build
+# returns to the lock.
+gseapy = { version = "*", channel = "bioconda" }
+
 [environments]
 default = { features = [], solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
