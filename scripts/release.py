@@ -136,6 +136,85 @@ def check_tag(root: Path, tag: str) -> str:
     return version
 
 
+# --- version policy (README, "Versioning") -----------------------------------
+
+_SECTION = re.compile(r'^###\s+(\w+)')
+
+
+def classify_entries(body: str) -> dict[str, int]:
+    """Count a changelog section's top-level entries by kind.
+
+    An entry is a ``- `` line at column 0 (sub-bullets belong to their entry).
+    It is a fix if it starts ``**Fixed:`` or sits under ``### Fixed``, breaking
+    if it starts ``**Breaking:`` or sits under ``### Breaking``, otherwise a
+    feature or other change.
+    """
+    counts = {'fixed': 0, 'breaking': 0, 'other': 0}
+    section = ''
+    for line in body.splitlines():
+        h = _SECTION.match(line)
+        if h:
+            section = h.group(1).lower()
+            continue
+        if not line.startswith('- '):
+            continue
+        entry = line[2:].lstrip('*').lower()
+        if entry.startswith('breaking:') or section == 'breaking':
+            counts['breaking'] += 1
+        elif entry.startswith('fixed:') or section == 'fixed':
+            counts['fixed'] += 1
+        else:
+            counts['other'] += 1
+    return counts
+
+
+def _next(old: tuple[int, int, int], kind: str) -> str:
+    major, minor, patch = old
+    if kind == 'major':
+        return f'{major + 1}.0.0'
+    if kind == 'minor':
+        return f'{major}.{minor + 1}.0'
+    return f'{major}.{minor}.{patch + 1}'
+
+
+def bump_warnings(old: str, new: str, body: str) -> list[str]:
+    """Where releasing ``new`` after ``old`` departs from the policy.
+
+    Patch: fixes only. Minor: any feature, and before 1.0 any breaking change.
+    Major: after 1.0, a breaking change; 1.0.0 itself is a declaration and
+    needs no particular entry. Warnings, not refusals: the markers are only as
+    good as the entries.
+    """
+    o, n = parse_version(old), parse_version(new)
+    kind = 'major' if n[0] != o[0] else 'minor' if n[1] != o[1] else 'patch'
+    if new != _next(o, kind):
+        return [f'{old} -> {new} skips a number; the next {kind} release is {_next(o, kind)}.']
+
+    c = classify_entries(body)
+    if o[0] == 0 and kind == 'major':
+        return []  # 1.0.0: declared, not derived from the entries
+    if c['breaking'] and o[0] >= 1:
+        want = 'major'
+    elif c['breaking'] or c['other']:
+        want = 'minor'
+    else:
+        want = 'patch'
+    if want == kind:
+        return []
+    if want == 'patch':
+        why = f"every entry under Unreleased is a fix ({c['fixed']})"
+    elif kind == 'major':
+        why = 'nothing under Unreleased is marked **Breaking:**'
+    elif want == 'major':
+        why = f"Unreleased has {c['breaking']} breaking entries"
+    else:
+        why = f"Unreleased has {c['other']} feature or change entries"
+        if c['breaking']:
+            why += f" and {c['breaking']} breaking (before 1.0, a breaking change is a minor)"
+    return [f'{old} -> {new} is a {kind} release, but {why}: '
+            f'the policy says {_next(o, want)}.']
+
+
 # --- changelog --------------------------------------------------------------
 
 def _links_start(text: str) -> int:
@@ -161,6 +240,21 @@ def _links(text: str) -> list[tuple[str, str]]:
             label, url = line.split(']:', 1)
             out.append((label[1:], url.strip()))
     return out
+
+
+def unreleased_body(text: str) -> str:
+    """What sits under ``## [Unreleased]``, up to the next heading or links."""
+    m = re.search(r'^## \[Unreleased\][^\n]*\n', text, re.M)
+    if not m:
+        raise ReleaseError("CHANGELOG.md has no '## [Unreleased]' heading.")
+    nxt = _HEADING.search(text, m.end())
+    end = min(nxt.start() if nxt else len(text), _links_start(text))
+    return text[m.end():end].strip('\n')
+
+
+def _warn_on_bump(current: str, version: str, text: str) -> None:
+    for w in bump_warnings(current, version, unreleased_body(text)):
+        print(f'release: warning: {w}', file=sys.stderr, flush=True)
 
 
 def roll_changelog(text: str, version: str, date: str, repo_url: str) -> str:
@@ -263,9 +357,11 @@ def prepare(version: str, *, root: Path = REPO, run_tests: bool = True,
         raise ReleaseError(f'Tag {tag} already exists.')
 
     changelog = root / 'CHANGELOG.md'
+    text = changelog.read_text(encoding='utf-8')
     # Rolled before the tests run, so a changelog problem fails in seconds.
-    rolled = roll_changelog(changelog.read_text(encoding='utf-8'), version,
+    rolled = roll_changelog(text, version,
                             date or datetime.date.today().isoformat(), repo_url(root))
+    _warn_on_bump(current, version, text)
     if run_tests:
         _run_tests(root)
 
@@ -300,10 +396,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd == 'version':
             print(current_version())
         elif args.cmd == 'bump':
-            check_newer(current_version(), args.version)
+            current = current_version()
+            check_newer(current, args.version)
             changelog = REPO / 'CHANGELOG.md'
-            rolled = roll_changelog(changelog.read_text(encoding='utf-8'), args.version,
+            text = changelog.read_text(encoding='utf-8')
+            rolled = roll_changelog(text, args.version,
                                     args.date or datetime.date.today().isoformat(), repo_url())
+            _warn_on_bump(current, args.version, text)
             write_version(REPO, args.version)
             changelog.write_text(rolled, encoding='utf-8')
             print(f'release: bumped to {args.version}; review with git diff.')

@@ -167,6 +167,39 @@ the new version, then commits and tags — all locally. `git push origin main v0
 publishes it: the release workflow checks the tag and creates the GitHub release
 from that changelog section. `pixi run version` prints the current version.
 
+### Versioning
+
+Skopia follows [Semantic Versioning](https://semver.org/), MAJOR.MINOR.PATCH,
+with the rule semver gives for versions before 1.0:
+
+| Release | When | Example |
+|---|---|---|
+| **Patch** | Only fixes: nothing new, nothing that breaks | 0.5.0 → 0.5.1 |
+| **Minor** | Any new feature or change of behavior; before 1.0, also any breaking change | 0.5.0 → 0.6.0 |
+| **Major** | After 1.0, any breaking change | 1.4.2 → 2.0.0 |
+
+A change is **breaking** if code, scripts or files that worked with the
+previous release stop working, or quietly change meaning, without anything
+being done on load to carry them over. That covers removing or renaming a
+Python import path, a REST route or request field, an environment variable or
+a config key; and a saved h5ad that the new release reads differently, such as
+an `.obs`/`.uns` key whose meaning changed. A key renamed *and* migrated on
+load (as the `xcell_*` to `skopia_*` keys are) is not breaking for files, but
+the rename still is for any script that reads the old name. Moving a menu item
+or changing a default is a change, not a break; the changelog says which
+default and why.
+
+Releases are numbered in sequence: no skipped numbers, and the lower parts
+reset (0.5.3 → 0.6.0, not 0.6.3). 1.0.0 will be declared when the saved-file
+layout and the Python API are meant to stay put, not reached by counting.
+
+Every changelog entry is a bullet under *Unreleased* whose bold lead says what
+kind it is: `**Fixed: …**` for a fix, `**Breaking: …**` for a breaking change,
+anything else for a feature or change. `pixi run release` reads those leads and
+warns when the version you asked for does not fit them (a minor release of
+fixes only, a feature in a patch, a skipped number). It warns rather than
+refuses: a mislabeled entry is corrected in the changelog.
+
 > **Loading `.rds` files** is optional and needs R with the Seurat and SeuratDisk
 > packages installed separately — SeuratDisk is not available as a conda package.
 >
