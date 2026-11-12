@@ -91,10 +91,14 @@ const styles = {
     gap: '12px',
     flex: '0 0 auto',
   },
+  // The version sits under the SKOPIA wordmark, flush with its left edge. The
+  // lockup is one SVG (187 x 48 viewBox): the wordmark spans x 84.8-184.2,
+  // y 15.5-31.9, so at 40px tall it starts 71px in and ends 26.6px down,
+  // leaving ~13px of empty SVG below it that the version moves up into.
   brand: {
     display: 'flex',
-    alignItems: 'flex-end',
-    gap: '8px',
+    flexDirection: 'column' as const,
+    alignItems: 'flex-start',
   },
   brandLockup: {
     display: 'block',
@@ -106,7 +110,8 @@ const styles = {
     color: '#8C95AD',
     lineHeight: 1,
     letterSpacing: '0.3px',
-    marginBottom: '6px',
+    marginLeft: '71px',
+    marginTop: '-10px',
   },
   statsInline: {
     fontSize: '11px',
