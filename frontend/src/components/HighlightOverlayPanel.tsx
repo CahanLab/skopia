@@ -404,6 +404,25 @@ export function LayerRow({
           {Math.round(layer.intensity * 100)}%
         </span>
       </div>
+
+      {/* Row 4 — dot size of the highlighted cells */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+        <span style={{ fontSize: '10px', color: '#888' }}>dot size</span>
+        <input
+          type="range"
+          min={1}
+          max={4}
+          step={0.25}
+          value={layer.size ?? 1}
+          onChange={(e) => onUpdate({ size: parseFloat(e.target.value) })}
+          style={{ flex: 1, minWidth: 0 }}
+          title="Draw the highlighted cells larger than the rest, as a multiple of the point size (Display settings)"
+          aria-label="Highlight dot size"
+        />
+        <span style={{ fontSize: '10px', color: '#888', width: '30px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+          {(layer.size ?? 1).toFixed(2).replace(/0$/, '')}×
+        </span>
+      </div>
     </div>
   )
 }

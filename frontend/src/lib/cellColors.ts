@@ -9,6 +9,7 @@ import {
   ColorScale,
   BivariateColormap,
 } from '../store'
+import { numericExtent } from './numericExtent'
 
 // Base palette for categorical data (d3 category10). Beyond 10 categories we
 // extend with golden-angle hue stepping in HSL — see generateCategoryPalette.
@@ -252,6 +253,27 @@ export function getBivariateColor(
 // Build a per-cell weight function for a highlight layer. Hard gate: in-range
 // cells get full intensity; out-of-range get 0. Cellset layers consult their
 // mask directly.
+/**
+ * Per-cell radius multiplier from the highlight layers' `size`, or null when
+ * every layer leaves the size alone (so the plot skips the per-cell lookup).
+ * A cell takes the largest size among the layers it falls in. Membership is
+ * the layer's threshold or mask, not its opacity: a layer turned down to 0%
+ * can still enlarge its cells.
+ */
+export function highlightSizeFn(layers: readonly HighlightLayer[]): ((i: number) => number) | null {
+  const sized = layers
+    .filter((l) => l.size != null && l.size !== 1)
+    .map((l) => ({ size: l.size as number, inLayer: layerWeightFn({ ...l, intensity: 1 }) }))
+  if (sized.length === 0) return null
+  return (i: number) => {
+    let s = 1
+    for (let k = 0; k < sized.length; k++) {
+      if (sized[k].size > s && sized[k].inLayer(i) > 0) s = sized[k].size
+    }
+    return s
+  }
+}
+
 export function layerWeightFn(layer: HighlightLayer): (i: number) => number {
   const src = layer.source
   const intensity = layer.intensity
@@ -361,9 +383,7 @@ export function useCellColor(p: CellColorParams): (d: { index: number }) => [num
       }
     } else if (p.colorMode === 'metadata' && p.colorBy && p.colorBy.dtype === 'numeric') {
       const colorBy = p.colorBy
-      const values = colorBy.values.filter((v) => v !== null) as number[]
-      const min = Math.min(...values)
-      const max = Math.max(...values)
+      const { min, max } = numericExtent(colorBy.values)
       const range = max - min || 1
       const colorScale = p.displayPreferences.colorScale
 

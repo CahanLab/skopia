@@ -223,3 +223,57 @@ def test_prepare_refuses_and_changes_nothing(tmp_path):
 
     assert git('rev-parse', 'HEAD') == head
     assert release.current_version(root) == '0.1.0'
+
+
+# --- version policy (README "Versioning") -------------------------------------
+#
+# The bump must fit what is under Unreleased, read from each entry's marker:
+# "**Fixed:" is a fix, "**Breaking:" a breaking change, anything else a
+# feature. A mismatch is a warning, not a refusal: the policy is a rule for
+# people, and the markers are only as good as the entries.
+
+FIXES = '- **Fixed: a crash.** Detail.\n- **Fixed: another.** Detail.\n'
+FEATURE = '- **Fixed: a crash.** Detail.\n- **A new plot.** Detail.\n  - a sub-bullet, not an entry\n'
+BREAKING = '- **Breaking: the package is renamed.** Detail.\n- **Fixed: a crash.**\n'
+
+
+def test_classify_reads_only_top_level_entries():
+    assert release.classify_entries(FEATURE) == {'fixed': 1, 'breaking': 0, 'other': 1}
+    assert release.classify_entries(BREAKING) == {'fixed': 1, 'breaking': 1, 'other': 0}
+
+
+@pytest.mark.parametrize('old,new,body', [
+    ('0.5.0', '0.5.1', FIXES),      # fixes only -> patch
+    ('0.5.0', '0.6.0', FEATURE),    # a feature -> minor
+    ('0.5.0', '0.6.0', BREAKING),   # before 1.0 a breaking change is a minor
+    ('0.9.0', '1.0.0', FEATURE),    # 1.0 is declared, whatever the entries
+    ('1.2.0', '2.0.0', BREAKING),   # after 1.0 a breaking change is a major
+    ('1.2.3', '1.3.0', FEATURE),
+])
+def test_a_bump_that_fits_the_entries_is_silent(old, new, body):
+    assert release.bump_warnings(old, new, body) == []
+
+
+@pytest.mark.parametrize('old,new,body,says', [
+    ('0.4.0', '0.5.0', FIXES, '0.4.1'),          # what 0.5.0 actually was
+    ('0.5.0', '0.5.1', FEATURE, '0.6.0'),        # a feature hidden in a patch
+    ('0.5.0', '0.5.1', BREAKING, '0.6.0'),
+    ('1.2.0', '1.3.0', BREAKING, '2.0.0'),       # after 1.0, breaking needs a major
+    ('1.2.0', '2.0.0', FEATURE, '1.3.0'),        # a major with nothing breaking
+    ('0.5.0', '0.7.0', FEATURE, 'skips'),        # a number skipped
+    ('0.5.0', '0.6.1', FEATURE, 'skips'),
+    ('0.5.3', '0.6.2', FEATURE, 'skips'),
+])
+def test_a_bump_that_does_not_fit_warns_and_names_the_version_that_would(old, new, body, says):
+    warnings = release.bump_warnings(old, new, body)
+    assert warnings and any(says in w for w in warnings), warnings
+
+
+def test_prepare_prints_the_warning_and_still_releases(tmp_path, capsys):
+    root, git = _git_repo(tmp_path)
+    text = (root / 'CHANGELOG.md').read_text()
+    body = release.unreleased_body(text)
+    assert body.strip()
+    # CHANGELOG's Unreleased has a feature entry, so a patch bump does not fit.
+    assert release.prepare('0.1.1', root=root, run_tests=False, date='2026-10-03') == 'v0.1.1'
+    assert 'warning' in capsys.readouterr().err

@@ -13255,22 +13255,23 @@ class DataAdaptor:
         snap_subset_type = subset_type
         snap_gene_subset = gene_subset
 
-        def compute_fn() -> dict[str, Any]:
-            import squidpy as sq
+        def compute_fn(report) -> dict[str, Any]:
+            from .spatial_autocorr import spatial_autocorr
 
-            sq.gr.spatial_autocorr(
+            # Chunked over genes so the task can report progress; the result
+            # is the single squidpy call's (see spatial_autocorr.py).
+            results_df = spatial_autocorr(
                 adata_copy,
                 mode=snap_mode,
                 genes=snap_genes,
                 n_perms=snap_n_perms,
                 n_jobs=snap_n_jobs,
                 corr_method=snap_corr_method,
+                report=report,
             )
 
-            # Extract results from .uns
             uns_key = 'moranI' if snap_mode == 'moran' else 'gearyC'
             stat_col = 'I' if snap_mode == 'moran' else 'C'
-            results_df = adata_copy.uns[uns_key]
 
             # Determine p-value column
             if f'pval_{snap_corr_method}' in results_df.columns:

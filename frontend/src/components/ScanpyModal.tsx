@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { isParamVisible } from '../lib/paramVisibility'
 import { useStore, ScanpyActionRecord, PCASubsetSummary, userConfigGet } from '../store'
+import TaskProgress from './TaskProgress'
 import { appendDataset, pollTask, cancelTask, runDiffExp, fetchGeneMask, usePcaLoadings, fetchPcaSubsets, createPcaSubset, deletePcaSubset, createCellSubset, refreshCellSubsets } from '../hooks/useData'
 import { SUBSET_SCOPED_OPS, scopedOutput, suggestSubsetName, isUsableSubsetName, sanitizeSubsetName, indicesFromMask, subsetGraphKey, subsetPcaKey } from '../lib/cellSubsets'
 import { pcSourceOptions } from '../lib/pcaSubsets'
@@ -898,6 +899,9 @@ export default function ScanpyModal() {
   const [selectedFunction, setSelectedFunction] = useState<FunctionKey>('filter_genes')
   const [paramValues, setParamValues] = useState<ParamValues>({})
   const [isRunning, setIsRunning] = useState(false)
+  // What the progress strip shows while a run is in flight; reset in the
+  // run's finally, since this modal never unmounts.
+  const [taskProgress, setTaskProgress] = useState<{ progress: number | null; message: string | null; startedAt: number } | null>(null)
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
   const [prereqStatus, setPrereqStatus] = useState<PrerequisiteStatus | null>(null)
   // Offered when has_spatial is the thing missing: a localized dataset has
@@ -1504,6 +1508,7 @@ export default function ScanpyModal() {
 
     setIsRunning(true)
     setResult(null)
+    setTaskProgress({ progress: null, message: null, startedAt: Date.now() })
 
     try {
       // Build set of hidden param names (visibleWhen condition not met)
@@ -1657,7 +1662,13 @@ export default function ScanpyModal() {
       // If this is a cancellable operation, poll for completion
       if (data.task_id && data.status === 'running') {
         setActiveTaskId(data.task_id)
-        const taskResult = await pollTask(data.task_id)
+        const taskResult = await pollTask(data.task_id, undefined, (s) => {
+          setTaskProgress((prev) => prev && {
+            ...prev,
+            progress: typeof s.progress === 'number' ? s.progress : prev.progress,
+            message: s.message ?? prev.message,
+          })
+        })
         setActiveTaskId(null)
 
         if (taskResult.status === 'cancelled') {
@@ -1902,6 +1913,7 @@ export default function ScanpyModal() {
     } finally {
       setIsRunning(false)
       setActiveTaskId(null)
+      setTaskProgress(null)
     }
   }, [functionDef, isRunning, prereqStatus, selectedFunction, paramValues, selectedGeneColumns, geneSubsetOperation, addScanpyAction, refreshSchema, activeCellMask, activeSubsetName, subsetDraft, setActiveSubsetName, resetActiveCells, clearSelection, setExpressionData, setBivariateData, refreshObsSummaries, setColorBy, setEmbedding, setSelectedEmbedding, setEmbeddingDims, selectedGenes, setActiveTaskId])
 
@@ -3174,6 +3186,13 @@ export default function ScanpyModal() {
             </button>
           )}
         </div>
+        {isRunning && taskProgress && (
+          <TaskProgress
+            progress={taskProgress.progress}
+            message={taskProgress.message}
+            startedAt={taskProgress.startedAt}
+          />
+        )}
 
         {/* History section */}
         {scanpyActionHistory.length > 0 && (

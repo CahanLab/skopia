@@ -6,7 +6,7 @@ import { OrthographicView, OrthographicViewState } from '@deck.gl/core'
 import { useStore, EmbeddingData, ObsColumnData, ExpressionData, BivariateExpressionData, ColorMode, InteractionMode, DatasetSlot, DrawTool, SelectionTool } from '../store'
 import { transformPoints, meanOf, convexHull, shapeOverlapsHull, type Pt } from '../utils/shapeTransform'
 import { SnapshotLayer, renderSnapshotToCanvas } from './SnapshotPanel'
-import { layerWeightFn, useCellColor } from '../lib/cellColors'
+import { highlightSizeFn, layerWeightFn, useCellColor } from '../lib/cellColors'
 import { pickScaleBar } from '../lib/scaleBar'
 import { boundsOf, fitView } from '../lib/viewFit'
 import { cellsInPolygon, packPositions } from '../lib/embeddingCoverage'
@@ -1204,6 +1204,8 @@ export default function ScatterPlot({
   const baseRadius = displayPreferences.pointSize
   const selectedRadius = baseRadius + 2
   const maskedRadius = Math.max(1, baseRadius / 3) // 1/3 size for masked cells
+  // Highlight layers can enlarge the cells they mark (the layer's size slider).
+  const highlightSize = useMemo(() => highlightSizeFn(highlightLayers), [highlightLayers])
 
   // Helper to get radius for a point
   const getRadius = (d: { index: number }): number => {
@@ -1215,7 +1217,7 @@ export default function ScatterPlot({
     if (selectedSet.has(d.index)) {
       return selectedRadius
     }
-    return baseRadius
+    return highlightSize ? baseRadius * highlightSize(d.index) : baseRadius
   }
 
   // Pack positions into a flat Float32Array and feed deck.gl through its binary
@@ -1251,7 +1253,7 @@ export default function ScatterPlot({
         // changes — log1p/clip toggles, data ops — leaving stale colors on the
         // GPU. The Figure Builder keys on the whole data object and was fine.
         getFillColor: [colorBy, expressionData, bivariateData, highlightLayers, colorMode, selectedSet, displayPreferences, activeCellMask],
-        getRadius: [selectedCellIndices, displayPreferences.pointSize, activeCellMask],
+        getRadius: [selectedCellIndices, displayPreferences.pointSize, activeCellMask, highlightSize],
       },
     }),
   ]
