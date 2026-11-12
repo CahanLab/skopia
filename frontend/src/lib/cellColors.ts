@@ -9,6 +9,7 @@ import {
   ColorScale,
   BivariateColormap,
 } from '../store'
+import { numericExtent } from './numericExtent'
 
 // Base palette for categorical data (d3 category10). Beyond 10 categories we
 // extend with golden-angle hue stepping in HSL — see generateCategoryPalette.
@@ -361,9 +362,7 @@ export function useCellColor(p: CellColorParams): (d: { index: number }) => [num
       }
     } else if (p.colorMode === 'metadata' && p.colorBy && p.colorBy.dtype === 'numeric') {
       const colorBy = p.colorBy
-      const values = colorBy.values.filter((v) => v !== null) as number[]
-      const min = Math.min(...values)
-      const max = Math.max(...values)
+      const { min, max } = numericExtent(colorBy.values)
       const range = max - min || 1
       const colorScale = p.displayPreferences.colorScale
 

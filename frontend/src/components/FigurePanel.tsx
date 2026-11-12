@@ -7,6 +7,7 @@ import { appendDataset } from '../hooks/useData'
 import { boundsOf, fitView, zoomLimits } from '../lib/viewFit'
 import { getColorFromScale, getBivariateColor, resolveCategoryPalette, hexToRgb } from '../lib/cellColors'
 import TextAnnotationOverlay from './TextAnnotationOverlay'
+import { numericExtent } from '../lib/numericExtent'
 
 // Build a per-cell weight function for a HighlightLayer. Mirrors the
 // `layerWeightFn` in ScatterPlot.tsx (kept inline here to avoid leaking
@@ -120,9 +121,7 @@ async function fetchPanelData(panel: PanelType): Promise<PanelColorData> {
       return { kind: 'metadata-category', values: data.values, categories: data.categories ?? [], categoryColors: data.colors ?? undefined }
     }
     if (data.dtype === 'numeric') {
-      const vals = (data.values as (number | null)[]).filter((v): v is number => v != null)
-      const min = Math.min(...vals)
-      const max = Math.max(...vals)
+      const { min, max } = numericExtent(data.values)
       return { kind: 'metadata-numeric', values: data.values, min, max }
     }
   }

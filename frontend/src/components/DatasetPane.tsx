@@ -4,6 +4,7 @@ import EmbeddingPlot from './EmbeddingPlot'
 import { CategoryLegend, ContinuousLegend, ExpressionLegend, BivariateLegend } from './PlotLegends'
 import { umPerUnitForSlot, expressionLegendTitle } from '../lib/datasetPanes'
 import CoverageNotice from './CoverageNotice'
+import { numericExtent } from '../lib/numericExtent'
 
 // One dataset's plot, with the chrome that belongs to that dataset rather than
 // to the app: its own embedding picker, its own legend, its own scale bar.
@@ -158,8 +159,7 @@ export default function DatasetPane({
               panelId={`${slot}-continuous`}
               colorScale={ds.displayPreferences.colorScale}
               name={ds.colorBy.name}
-              min={Math.min(...(ds.colorBy.values.filter((v) => v !== null) as number[]))}
-              max={Math.max(...(ds.colorBy.values.filter((v) => v !== null) as number[]))}
+              {...numericExtent(ds.colorBy.values)}
             />
           )}
           {ds.colorMode === 'expression' && ds.expressionData && (

@@ -60,6 +60,7 @@ import { MESSAGES } from './messages'
 import { buildCrumbs } from './lib/pathCrumbs'
 import { isDiffmapKey, diffmapAxisLabel } from './lib/diffusion'
 import { assertJsonResponse } from './lib/foreignServer'
+import { numericExtent } from './lib/numericExtent'
 
 // The Add dropdown: section headers group the tools by what they make.
 const addMenuStyles: Record<string, React.CSSProperties> = {
@@ -2166,8 +2167,7 @@ export default function App() {
                             panelId="single-continuous"
                             colorScale={displayPreferences.colorScale}
                             name={colorBy.name}
-                            min={Math.min(...(colorBy.values.filter((v) => v !== null) as number[]))}
-                            max={Math.max(...(colorBy.values.filter((v) => v !== null) as number[]))}
+                            {...numericExtent(colorBy.values)}
                           />
                         )}
                         {colorMode === 'expression' && expressionData && (
