@@ -91,6 +91,8 @@ export interface HighlightLayer {
   id: string
   color: string       // hex
   intensity: number   // 0..1 multiplier
+  // Dot-size multiplier for the cells this layer highlights; missing = 1.
+  size?: number
   source: HighlightSource
 }
 

@@ -13,7 +13,7 @@ import {
   InteractionMode,
   DatasetSlot,
 } from '../store'
-import { useCellColor } from '../lib/cellColors'
+import { highlightSizeFn, useCellColor } from '../lib/cellColors'
 import { pointsInLassoScreen } from '../lib/lasso3d'
 import { zoomLimits } from '../lib/viewFit'
 
@@ -161,6 +161,7 @@ export default function ScatterPlot3D({
   const baseRadius = displayPreferences.pointSize
   const selectedRadius = baseRadius + 2
   const maskedRadius = Math.max(1, baseRadius / 3) // 1/3 size for masked cells
+  const highlightSize = useMemo(() => highlightSizeFn(highlightLayers), [highlightLayers])
   const getRadius = (index: number): number => {
     if (activeCellMask !== null && !activeCellMask[index]) {
       // Hide masked cells entirely when the user turned them off (radius 0 =
@@ -169,7 +170,7 @@ export default function ScatterPlot3D({
       return showMaskedCells === false ? 0 : maskedRadius
     }
     if (selectedSet.has(index)) return selectedRadius
-    return baseRadius
+    return highlightSize ? baseRadius * highlightSize(index) : baseRadius
   }
 
   // Categorical text labels overlaid at cluster centroids. Mirrors the 2D
@@ -330,7 +331,7 @@ export default function ScatterPlot3D({
       // Mirror useCellColor's deps so deck.gl rebuilds the GPU color buffer
       // whenever the color function changes (same set ScatterPlot keys on).
       getFillColor: [colorBy, expressionData, bivariateData, highlightLayers, colorMode, selectedSet, displayPreferences, activeCellMask, showMaskedCells],
-      getRadius: [selectedCellIndices, displayPreferences.pointSize, activeCellMask, showMaskedCells],
+      getRadius: [selectedCellIndices, displayPreferences.pointSize, activeCellMask, showMaskedCells, highlightSize],
     },
   })
 
