@@ -11,6 +11,7 @@ import {
 } from '../store'
 import { appendDataset } from '../hooks/useData'
 import ConfirmDialog from './ConfirmDialog'
+import NumberInput from './NumberInput'
 import {
   EMPTY_SELECTION,
   MANAGER_ORDER,
@@ -252,6 +253,7 @@ function validDestination(cats: Categories, value: string): string {
 export default function GeneSetManagerModal() {
   const source = useStore((s) => s.geneSetManager)
   const setSource = useStore((s) => s.setGeneSetManager)
+  const setGeneSetToVarSource = useStore((s) => s.setGeneSetToVarSource)
   const cats = useStore((s) => s.geneSetCategories)
   const replace = useStore((s) => s.replaceGeneSetCategories)
   const setClearGeneSetsOpen = useStore((s) => s.setClearGeneSetsOpen)
@@ -983,6 +985,14 @@ export default function GeneSetManagerModal() {
           <button onClick={saveEdit} disabled={!editDirty} style={editDirty ? styles.primaryButton : styles.disabledButton}>Save</button>
           <button onClick={() => loadEdit(focused)} disabled={!editDirty} style={{ ...styles.smallButton, opacity: editDirty ? 1 : 0.5 }}>Revert</button>
           <button onClick={duplicateFocused} style={styles.smallButton}>Duplicate</button>
+          <button
+            onClick={() => setGeneSetToVarSource({ name: focused.name, genes: focused.genes, genesDown: focused.genesDown })}
+            disabled={editDirty || focused.genes.length === 0}
+            style={{ ...styles.smallButton, opacity: editDirty || focused.genes.length === 0 ? 0.5 : 1 }}
+            title={editDirty ? 'Save or revert your edits first' : 'Write this set to the dataset as a boolean .var column'}
+          >
+            Save as .var column…
+          </button>
           <span style={{ fontSize: '11px', color: '#888', marginLeft: 'auto' }}>
             {plural(editRes.genes.length, 'gene')}{editDirty ? ' · unsaved' : ''}
           </span>
@@ -1026,8 +1036,8 @@ export default function GeneSetManagerModal() {
               {text ?? (
                 <>
                   in at least
-                  <input
-                    type="number" min={1} max={n} value={Math.min(ruleK, n)}
+                  <NumberInput
+                    min={1} max={n} value={Math.min(ruleK, n)}
                     onChange={(e) => { setRuleK(Math.max(1, Number(e.target.value) || 1)); setRuleKind('atLeast') }}
                     // Clicking into the count means this rule, even before the number changes.
                     onFocus={() => setRuleKind('atLeast')}

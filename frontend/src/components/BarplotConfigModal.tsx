@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from 'react'
 import { BarplotConfig, Schema } from '../store'
+import NumberInput from './NumberInput'
 
 const DEFAULTS: BarplotConfig = {
   columnA: '', columnB: '',
@@ -142,7 +143,7 @@ export default function BarplotConfigModal({
 
         <div style={styles.row}>
           <label style={styles.label}>Hide bars under</label>
-          <input type="number" min={0} style={styles.number} value={draft.minCells}
+          <NumberInput min={0} style={styles.number} value={draft.minCells}
                  onChange={(e) => set({ minCells: Math.max(0, Number(e.target.value) || 0) })} />
           <span style={styles.unit}>cells</span>
         </div>

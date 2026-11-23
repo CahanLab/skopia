@@ -5,6 +5,7 @@ import { DEFAULT_DOTPLOT_OPTIONS, type MarkerRestriction } from '../lib/markerSe
 import RestrictionPicker from './RestrictionPicker'
 import { useStore, cfgDefault, ObsColumnData } from '../store'
 import { useObsSummaries, runMarkerGenes, selectMarkerGenes, MarkerGenesGroupResult, appendDataset } from '../hooks/useData'
+import NumberInput from './NumberInput'
 
 const styles = {
   backdrop: {
@@ -591,8 +592,7 @@ export default function MarkerGenesModal() {
           {/* Top N */}
           <div style={styles.inputRow}>
             <span style={{ ...styles.label, marginBottom: 0 }}>Top N genes per group:</span>
-            <input
-              type="number"
+            <NumberInput
               min={1}
               max={500}
               value={topN}
@@ -612,8 +612,7 @@ export default function MarkerGenesModal() {
             <div style={styles.advancedContent}>
               <div style={styles.inputRow}>
                 <span style={{ ...styles.label, marginBottom: 0, flex: 1 }}>Min % in group:</span>
-                <input
-                  type="number"
+                <NumberInput
                   min={0}
                   max={1}
                   step={0.05}
@@ -625,8 +624,7 @@ export default function MarkerGenesModal() {
               </div>
               <div style={styles.inputRow}>
                 <span style={{ ...styles.label, marginBottom: 0, flex: 1 }}>Max % in others:</span>
-                <input
-                  type="number"
+                <NumberInput
                   min={0}
                   max={1}
                   step={0.05}
@@ -638,8 +636,7 @@ export default function MarkerGenesModal() {
               </div>
               <div style={{ ...styles.inputRow, marginBottom: 0 }}>
                 <span style={{ ...styles.label, marginBottom: 0, flex: 1 }}>Min fold change:</span>
-                <input
-                  type="number"
+                <NumberInput
                   min={0}
                   step={0.5}
                   placeholder="e.g. 2.0"

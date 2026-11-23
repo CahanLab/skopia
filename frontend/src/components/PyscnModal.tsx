@@ -5,6 +5,7 @@ import { LayerScaleBadge, layerOptionLabel, type LayerInfo } from './LayerScaleI
 import { datasetIdentity } from '../lib/datasetIdentity'
 import FileBrowser, { type BrowseEntry } from './FileBrowser'
 import { composeSavePath, splitSavePath } from '../lib/savePath'
+import NumberInput from './NumberInput'
 
 // Append .pkl, but a name already ending .pickle is a pickle too.
 const PICKLE_EXTS = ['.pkl', '.pickle']
@@ -524,8 +525,7 @@ export default function PyscnModal() {
                 {categorize && (
                   <div style={{ marginLeft: 22, marginTop: 4 }}>
                     <span style={{ ...labelStyle, display: 'inline' }}>threshold quantile </span>
-                    <input
-                      type="number" step={0.01} min={0} max={0.5} value={quantile}
+                    <NumberInput step={0.01} min={0} max={0.5} value={quantile}
                       onChange={(e) => setQuantile(Math.min(0.5, Math.max(0, parseFloat(e.target.value) || 0)))}
                       style={{ ...inputStyle, width: 70, display: 'inline-block' }}
                     />
@@ -872,8 +872,7 @@ function NumField({
   return (
     <div style={{ width: 92 }}>
       <span style={{ ...labelStyle, marginTop: 0 }}>{label}</span>
-      <input
-        type="number" min={0} value={value}
+      <NumberInput min={0} value={value}
         onChange={(e) => onChange(Math.max(0, parseInt(e.target.value) || 0))}
         style={inputStyle}
       />

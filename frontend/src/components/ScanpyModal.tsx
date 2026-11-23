@@ -8,11 +8,14 @@ import { pcSourceOptions } from '../lib/pcaSubsets'
 import { defaultGraphKey } from '../lib/graphChoice'
 import { FilterCellsQcPanel, FilterCellsDistributions } from './FilterCellsQcPanel'
 import { FilterGenesQcPanel, FilterGenesDistributions } from './FilterGenesQcPanel'
+import { HvgPreviewPanel } from './HvgPreviewPanel'
+import { hvgPreviewBody, type HvgPreview } from '../lib/hvgPreview'
 import { percentOfCells } from '../lib/percentOfCells'
 import { DEFAULT_EXCLUDE_GENE_PATTERNS, excludeGenePatternsFor } from '../lib/excludeGenes'
 import { MESSAGES } from '../messages'
 import { flattenGeneSets } from './GenePanel'
 import { parseGeneInput, computeLoadingHits, orderPcs, isHit, formatHitCount, geneSetInputText, type PcOrder } from '../lib/pcaLoadingHits'
+import NumberInput from './NumberInput'
 
 const API_BASE = '/api'
 
@@ -173,6 +176,8 @@ interface ParamDef {
   // required (Smooth); present means "" is a real choice (UMAP / Leiden, where
   // it stands for whatever uns['neighbors'] points at).
   emptyLabel?: string
+  /** Shown in an empty field, when "(optional)" would not say what empty does. */
+  placeholder?: string
 }
 
 interface FunctionDef {
@@ -248,7 +253,7 @@ const SCANPY_FUNCTIONS: Record<string, CategoryDef> = {
         description: 'Normalize counts per cell to a target sum',
         prerequisites: [],
         params: [
-          { name: 'target_sum', label: 'Target sum', type: 'number', default: 10000, description: 'Target sum per cell (null = median)' },
+          { name: 'target_sum', label: 'Target sum', type: 'number', default: null, placeholder: 'median', description: 'Counts each cell is scaled to. Empty (the default) uses the median total count across cells, as scanpy does; 10,000 gives counts per 10k.' },
         ],
       },
       log1p: {
@@ -291,24 +296,6 @@ const SCANPY_FUNCTIONS: Record<string, CategoryDef> = {
   cell_analysis: {
     label: 'Cells',
     functions: {
-      downsample: {
-        label: 'Downsample',
-        description: 'Pick a random subset of cells — a count or a percent — and select it. The sample is an ordinary selection, so Mask, Delete, Invert and Set Active all apply. Lasso a dominant cluster first to thin only that cluster and leave the rest untouched. Opens the Downsample tool.',
-        prerequisites: [],
-        custom: true,
-        params: [],
-      },
-      embedding_from_obs: {
-        label: 'Embedding from .obs',
-        description: 'Build a 2-D embedding from two numeric .obs columns (e.g. a barnyard plot of two species count columns). Optionally log each axis.',
-        prerequisites: [],
-        params: [
-          { name: 'col_x', label: 'X column', type: 'obs_column_select', obsDtype: 'numeric', default: null, description: 'Numeric .obs column for the X axis' },
-          { name: 'col_y', label: 'Y column', type: 'obs_column_select', obsDtype: 'numeric', default: null, description: 'Numeric .obs column for the Y axis' },
-          { name: 'log_axes', label: 'Log axes', type: 'select', default: 'none', options: ['none', 'x', 'y', 'both'], description: 'Apply log1p to the chosen axis/axes' },
-          { name: 'name', label: 'Name (optional)', type: 'text', default: null, description: 'Embedding name; default X_<x>_vs_<y>' },
-        ],
-      },
       pca: {
         label: 'PCA',
         description: 'Principal component analysis on cells',
@@ -317,6 +304,7 @@ const SCANPY_FUNCTIONS: Record<string, CategoryDef> = {
           { name: 'n_comps', label: 'Components', type: 'number', default: 50, description: 'Number of principal components' },
           { name: 'svd_solver', label: 'SVD solver', type: 'select', default: 'arpack', options: ['arpack', 'randomized', 'auto'], description: 'SVD algorithm' },
           { name: 'gene_subset', label: 'Gene Subset', type: 'gene_subset', default: null, description: 'Filter genes using boolean columns from .var (default: use highly_variable if available)' },
+          { name: 'scale', label: 'Scale genes', type: 'select', default: 'false', options: ['false', 'true'], optionLabels: { false: 'no (recommended)', true: 'yes: z-score each gene, clipped at 10' }, description: 'Scaling gives every gene equal weight in the components, so a lowly expressed gene pulls as hard as a strongly expressed one. Unscaled, expression magnitude still counts as information; sc-best-practices leaves genes unscaled and relies on gene selection instead. Scaling works on a copy; .X is unchanged.' },
         ],
       },
       pca_loadings: {
@@ -337,6 +325,23 @@ const SCANPY_FUNCTIONS: Record<string, CategoryDef> = {
           { name: 'metric', label: 'Metric', type: 'select', default: 'euclidean', options: ['euclidean', 'cosine', 'manhattan'], description: 'Distance metric' },
         ],
       },
+      leiden: {
+        label: 'Leiden',
+        description: 'Leiden clustering algorithm',
+        prerequisites: ['neighbors'],
+        params: [
+          { name: 'graph_key', label: 'kNN graph', type: 'graph_select', default: '', emptyLabel: 'Dataset default graph', description: 'Which cell-cell graph to cluster. Clustering the spatial graph finds spatial domains rather than cell types.' },
+          { name: 'resolution', label: 'Resolution', type: 'number', default: 0.5, description: 'Higher = more clusters' },
+          { name: 'key_added', label: 'Column name', type: 'text', default: 'leiden', description: 'Name for cluster labels' },
+        ],
+      },
+      compare_cells: {
+        label: 'DEG',
+        description: 'Differentially expressed genes between cell groups: a pairwise test for 2 groups, marker genes of each group for 3 or more',
+        prerequisites: [],
+        params: [],
+        custom: true,
+      },
       umap: {
         label: 'UMAP',
         description: 'Compute UMAP embedding',
@@ -347,16 +352,6 @@ const SCANPY_FUNCTIONS: Record<string, CategoryDef> = {
           { name: 'min_dist', label: 'Min distance', type: 'number', default: 0.5, description: 'Minimum distance between points' },
           { name: 'spread', label: 'Spread', type: 'number', default: 1.0, description: 'Spread of embedding' },
           { name: 'n_components', label: 'Dimensions', type: 'number', default: 2, description: 'Number of dimensions' },
-        ],
-      },
-      leiden: {
-        label: 'Leiden',
-        description: 'Leiden clustering algorithm',
-        prerequisites: ['neighbors'],
-        params: [
-          { name: 'graph_key', label: 'kNN graph', type: 'graph_select', default: '', emptyLabel: 'Dataset default graph', description: 'Which cell-cell graph to cluster. Clustering the spatial graph finds spatial domains rather than cell types.' },
-          { name: 'resolution', label: 'Resolution', type: 'number', default: 0.5, description: 'Higher = more clusters' },
-          { name: 'key_added', label: 'Column name', type: 'text', default: 'leiden', description: 'Name for cluster labels' },
         ],
       },
       diffmap: {
@@ -397,12 +392,23 @@ const SCANPY_FUNCTIONS: Record<string, CategoryDef> = {
         custom: true,
         params: [],
       },
-      compare_cells: {
-        label: 'Compare Cells',
-        description: 'Compare cell groups: differential expression (2 groups) or marker genes (3+ groups)',
+      downsample: {
+        label: 'Downsample',
+        description: 'Pick a random subset of cells — a count or a percent — and select it. The sample is an ordinary selection, so Mask, Delete, Invert and Set Active all apply. Lasso a dominant cluster first to thin only that cluster and leave the rest untouched. Opens the Downsample tool.',
         prerequisites: [],
-        params: [],
         custom: true,
+        params: [],
+      },
+      embedding_from_obs: {
+        label: 'Embedding from .obs',
+        description: 'Build a 2-D embedding from two numeric .obs columns (e.g. a barnyard plot of two species count columns). Optionally log each axis.',
+        prerequisites: [],
+        params: [
+          { name: 'col_x', label: 'X column', type: 'obs_column_select', obsDtype: 'numeric', default: null, description: 'Numeric .obs column for the X axis' },
+          { name: 'col_y', label: 'Y column', type: 'obs_column_select', obsDtype: 'numeric', default: null, description: 'Numeric .obs column for the Y axis' },
+          { name: 'log_axes', label: 'Log axes', type: 'select', default: 'none', options: ['none', 'x', 'y', 'both'], description: 'Apply log1p to the chosen axis/axes' },
+          { name: 'name', label: 'Name (optional)', type: 'text', default: null, description: 'Embedding name; default X_<x>_vs_<y>' },
+        ],
       },
     },
   },
@@ -1091,6 +1097,43 @@ export default function ScanpyModal() {
       .catch((err) => { if (!stale) setQcError(err instanceof Error ? err.message : String(err)) })
     return () => { stale = true }
   }, [selectedFunction, activeSlot, scanpyActionHistory])
+
+  // Highly Variable Genes: mean vs dispersion with the genes the current
+  // settings select, recomputed (debounced) as they change. The backend runs
+  // the run's own scanpy call with inplace=False, on the cells the run would
+  // use, so the preview cannot disagree with the result.
+  const [hvgPreview, setHvgPreview] = useState<HvgPreview | null>(null)
+  const [hvgPreviewError, setHvgPreviewError] = useState<string | null>(null)
+  const [hvgPreviewLoading, setHvgPreviewLoading] = useState(false)
+  const hvgPreviewKey = useMemo(() => {
+    if (selectedFunction !== 'highly_variable_genes') return null
+    const body = hvgPreviewBody(paramValues, activeCellMask ? indicesFromMask(activeCellMask) : null)
+    return body ? JSON.stringify(body) : null
+  }, [selectedFunction, paramValues, activeCellMask])
+  useEffect(() => {
+    if (!hvgPreviewKey) { setHvgPreview(null); setHvgPreviewError(null); setHvgPreviewLoading(false); return }
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => {
+      setHvgPreviewLoading(true)
+      fetch(appendDataset(`${API_BASE}/scanpy/highly_variable_genes/preview`), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: hvgPreviewKey, signal: ctrl.signal,
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const d = await res.json().catch(() => ({}))
+            throw new Error(typeof d.detail === 'string' ? d.detail : `HTTP ${res.status}`)
+          }
+          return res.json()
+        })
+        .then((data: HvgPreview) => { setHvgPreview(data); setHvgPreviewError(null); setHvgPreviewLoading(false) })
+        .catch((err) => {
+          if (err instanceof DOMException && err.name === 'AbortError') return
+          setHvgPreviewError(err instanceof Error ? err.message : String(err))
+          setHvgPreviewLoading(false)
+        })
+    }, 400)
+    return () => { clearTimeout(timer); ctrl.abort() }
+  }, [hvgPreviewKey, activeSlot, scanpyActionHistory])
 
   // Filter Genes: the same, per gene.
   const [geneQcDist, setGeneQcDist] = useState<FilterGenesDistributions | null>(null)
@@ -2176,8 +2219,7 @@ export default function ScanpyModal() {
               <label style={{ fontSize: '12px', color: '#aaa' }}>
                 {MESSAGES.pcaLoadings.topNLabel}
               </label>
-              <input
-                type="number"
+              <NumberInput
                 min={1}
                 max={500}
                 value={pcaTopN}
@@ -2553,8 +2595,7 @@ export default function ScanpyModal() {
                           </div>
                         </div>
                         <label style={{ fontSize: '11px', color: '#888' }}>Weight</label>
-                        <input
-                          type="number"
+                        <NumberInput
                           min={0}
                           step="0.1"
                           value={combineWeights[g.key] ?? 1}
@@ -2694,8 +2735,7 @@ export default function ScanpyModal() {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                   <label style={{ fontSize: '12px', color: '#aaa' }}>Top N genes</label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={compareTopN}
                     onChange={(e) => setCompareTopN(Math.max(1, parseInt(e.target.value) || 25))}
                     style={{ width: '60px', padding: '4px 6px', fontSize: '12px', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #1a1a2e', borderRadius: '4px' }}
@@ -2754,6 +2794,16 @@ export default function ScanpyModal() {
             maxCells={typeof paramValues.max_cells === 'number' ? paramValues.max_cells : null}
             onChangeThreshold={(name, value) =>
               handleParamChange(name, value == null ? '' : String(value))}
+          />
+        )}
+
+        {selectedFunction === 'highly_variable_genes' && (
+          <HvgPreviewPanel
+            preview={hvgPreview}
+            loading={hvgPreviewLoading}
+            error={hvgPreviewError}
+            splitBy={typeof paramValues.split_by === 'string' && paramValues.split_by ? paramValues.split_by : null}
+            flavor={typeof paramValues.flavor === 'string' ? paramValues.flavor : 'seurat'}
           />
         )}
 
@@ -2972,8 +3022,7 @@ export default function ScanpyModal() {
                         // The count it works out to is shown, because that is
                         // what scanpy is given and what the record will say.
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
-                          <input
-                            type="number"
+                          <NumberInput
                             step="0.01"
                             min="0"
                             style={{ ...styles.paramInput, flex: '0 0 90px' }}
@@ -2992,7 +3041,7 @@ export default function ScanpyModal() {
                           style={styles.paramInput}
                           value={paramValues[param.name] ?? ''}
                           onChange={(e) => handleParamChange(param.name, e.target.value)}
-                          placeholder={param.default === null ? '(optional)' : String(param.default)}
+                          placeholder={param.placeholder ?? (param.default === null ? '(optional)' : String(param.default))}
                         />
                       )}
                     </div>

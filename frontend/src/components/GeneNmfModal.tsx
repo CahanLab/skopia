@@ -22,6 +22,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../store'
 import { appendDataset, pollTask, refreshSchema, useDataActions, type ObsSummary } from '../hooks/useData'
 import { defaultTransformFor, transformNoteFor, type NmfTransform } from '../lib/nmfTransform'
+import NumberInput from './NumberInput'
 
 const API_BASE = '/api'
 
@@ -374,7 +375,7 @@ export default function GeneNmfModal() {
             <div style={{ display: 'flex', gap: 16 }}>
               <div style={{ flex: 1 }}>
                 <Field label="Number of programs (k)" tip={TIPS.k}>
-                  <input type="number" min={2} value={k} onChange={(e) => setK(e.target.value)} style={field} />
+                  <NumberInput min={2} value={k} onChange={(e) => setK(e.target.value)} style={field} />
                 </Field>
                 <Field label="Genes" tip={TIPS.genes}>
                   <select value={geneSubset} onChange={(e) => setGeneSubset(e.target.value)} style={field}>
@@ -462,22 +463,22 @@ export default function GeneNmfModal() {
                 borderRadius: 4, padding: '12px 14px 2px', marginBottom: 12,
               }}>
                 <Field label="Specificity weight" tip={TIPS.specificity}>
-                  <input type="number" step="1" min={0} value={specificity} onChange={(e) => setSpecificity(e.target.value)} style={field} />
+                  <NumberInput step="1" min={0} value={specificity} onChange={(e) => setSpecificity(e.target.value)} style={field} />
                 </Field>
                 <Field label="Weight explained" tip={TIPS.weightExplained}>
-                  <input type="number" step="0.05" min={0.05} max={1} value={weightExplained} onChange={(e) => setWeightExplained(e.target.value)} style={field} />
+                  <NumberInput step="0.05" min={0.05} max={1} value={weightExplained} onChange={(e) => setWeightExplained(e.target.value)} style={field} />
                 </Field>
                 <Field label="Max genes per program" tip={TIPS.maxGenes}>
-                  <input type="number" min={1} value={maxGenes} onChange={(e) => setMaxGenes(e.target.value)} style={field} />
+                  <NumberInput min={1} value={maxGenes} onChange={(e) => setMaxGenes(e.target.value)} style={field} />
                 </Field>
                 <Field label="L1 sparsity (gene loadings)" tip={TIPS.l1}>
-                  <input type="number" step="0.05" min={0} max={0.95} value={l1w} onChange={(e) => setL1w(e.target.value)} style={field} />
+                  <NumberInput step="0.05" min={0} max={0.95} value={l1w} onChange={(e) => setL1w(e.target.value)} style={field} />
                 </Field>
                 <Field label="Random seed" tip={TIPS.seed}>
-                  <input type="number" value={seed} onChange={(e) => setSeed(e.target.value)} style={field} />
+                  <NumberInput value={seed} onChange={(e) => setSeed(e.target.value)} style={field} />
                 </Field>
                 <Field label="Max iterations" tip={TIPS.maxIter}>
-                  <input type="number" min={10} value={maxIter} onChange={(e) => setMaxIter(e.target.value)} style={field} />
+                  <NumberInput min={10} value={maxIter} onChange={(e) => setMaxIter(e.target.value)} style={field} />
                 </Field>
               </div>
             )}

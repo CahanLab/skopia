@@ -16,6 +16,7 @@ import { MESSAGES } from '../messages'
 import { copyText } from '../lib/clipboard'
 import { setKey, countGeneSets } from '../lib/geneSetManager'
 import { findGeneSetLayer, findGeneSetLayers, geneSetLayerKey, highlightButtonAction, GENE_SET_LAYER_DEFAULTS } from '../lib/highlightLayers'
+import NumberInput from './NumberInput'
 
 const API_BASE = '/api'
 
@@ -868,6 +869,7 @@ function CategoryGeneSetComponent({
   } = useStore()
   const setSelectByExpressionSource = useStore((s) => s.setSelectByExpressionSource)
   const setUcellScoreSource = useStore((s) => s.setUcellScoreSource)
+  const setGeneSetToVarSource = useStore((s) => s.setGeneSetToVarSource)
   const setGeneSetManager = useStore((s) => s.setGeneSetManager)
   const highlightLayers = useStore((s) => s.highlightLayers)
   const highlightLayer = useMemo(() => findGeneSetLayer(highlightLayers, geneSet), [highlightLayers, geneSet])
@@ -1225,6 +1227,12 @@ function CategoryGeneSetComponent({
                   }),
                 disabled: geneSet.genes.length === 0,
                 tooltip: geneSet.genes.length === 0 ? 'Need at least one up-gene' : undefined,
+              },
+              {
+                label: 'Save as .var column…',
+                onClick: () => setGeneSetToVarSource({ name: geneSet.name, genes: geneSet.genes, genesDown: geneSet.genesDown }),
+                disabled: geneSet.genes.length === 0,
+                tooltip: geneSet.genes.length === 0 ? 'Gene set is empty' : 'Write this set to the dataset as a boolean .var column (true for its genes)',
               },
             ]}
           />
@@ -2391,8 +2399,7 @@ export default function GenePanel() {
                 <label style={{ fontSize: '11px', color: '#888', display: 'block', marginBottom: '4px' }}>
                   Number of Similar Genes
                 </label>
-                <input
-                  type="number"
+                <NumberInput
                   min={1}
                   max={100}
                   value={numSimilarGenes}

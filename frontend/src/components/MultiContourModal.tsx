@@ -25,6 +25,7 @@ import {
   adviseContour, adviseModules, sectionColumnCandidates,
   type Advice, type ContourGeometry,
 } from '../lib/contourAdvice'
+import NumberInput from './NumberInput'
 
 const API_BASE = '/api'
 const SELECTION_KEY = '__selection__'
@@ -350,15 +351,15 @@ export default function MultiContourModal() {
 
             <div style={styles.paramGrid}>
               <Param label="Contour levels" tip="How finely the score range is divided. Thresholds are spaced evenly in value, not in spot count, so the upper bands stay small on a skewed field. More levels give finer control over the cutoff; they do not change the field.">
-                <input type="number" min={2} max={8} value={contourLevels}
+                <NumberInput min={2} max={8} value={contourLevels}
                   onChange={(e) => setContourLevels(parseInt(e.target.value || '3', 10))} style={styles.input} />
               </Param>
               <Param label="Grid resolution" tip="Interpolation grid per axis. Sigma is measured in these pixels, so changing this rescales the smoothing by the same factor. Prefilled to roughly match the spot spacing.">
-                <input type="number" placeholder="auto" value={gridRes}
+                <NumberInput placeholder="auto" value={gridRes}
                   onChange={(e) => setGridRes(e.target.value)} style={styles.input} />
               </Param>
               <Param label="Smoothing sigma" tip="Gaussian width in grid pixels. What matters is the radius it works out to in spot spacings — under 1 it cannot reach the next spot and the bands speckle; over about 6 it spans a zone and tissues merge.">
-                <input type="number" step="0.5" placeholder="auto" value={smoothSigma}
+                <NumberInput step="0.5" placeholder="auto" value={smoothSigma}
                   onChange={(e) => setSmoothSigma(e.target.value)} style={styles.input} />
               </Param>
               <Param label="Log transform" tip="log1p before per-gene clipping. Each gene is already clipped to its 1st–99th percentile, so this is for a bulk multiplicative scale — raw counts — not for one hot spot. On an already-logged matrix it flattens the field.">
@@ -437,7 +438,7 @@ export default function MultiContourModal() {
 
             <div style={styles.paramGrid}>
               <Param label="Profile k" tip="Nearest unambiguous spatial neighbours, ranked in PCA space, that vote on a spot high in more than one module. Large k reaches past the local neighbourhood and votes for whatever is regionally dominant.">
-                <input type="number" min={1} value={profileK}
+                <NumberInput min={1} value={profileK}
                   onChange={(e) => setProfileK(parseInt(e.target.value || '15', 10))} style={styles.input} />
               </Param>
               <Param label="Column name" tip="Name of the resulting tissue .obs column.">

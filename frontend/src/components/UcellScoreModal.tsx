@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { appendDataset } from '../hooks/useData'
 import { LayerScaleBadge, layerOptionLabel, type LayerInfo } from './LayerScaleInfo'
+import NumberInput from './NumberInput'
 
 export interface UcellTarget {
   sets: { name: string; up: string[]; down: string[] }[]
@@ -91,7 +92,7 @@ export function UcellScoreModal({ target, onClose, onScored }: Props) {
           )}
         </div>
         <label style={{ display: 'block', margin: '8px 0' }}>maxRank
-          <input type="number" value={maxRank} min={1}
+          <NumberInput value={maxRank} min={1}
             onChange={(e) => setMaxRank(Math.max(1, parseInt(e.target.value) || 1500))}
             style={{ width: '100%', marginTop: 4 }} />
         </label>
@@ -101,7 +102,7 @@ export function UcellScoreModal({ target, onClose, onScored }: Props) {
         </button>
         {showAdvanced && (
           <label style={{ display: 'block', margin: '8px 0' }}>w_neg (down-set weight)
-            <input type="number" step="0.1" value={wNeg}
+            <NumberInput step="0.1" value={wNeg}
               onChange={(e) => setWNeg(parseFloat(e.target.value) || 0)}
               style={{ width: '100%', marginTop: 4 }} />
           </label>

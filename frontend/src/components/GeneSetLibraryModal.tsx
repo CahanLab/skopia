@@ -18,6 +18,7 @@ import {
   pickRows, pickSpecies, presenceLabel, rowPasses, sortLibraries, togglePick, unpickNames,
   type LibraryEntry, type LibrarySet, type OverlapEntry, type SetRow, type Species,
 } from '../lib/geneSetLibrary'
+import NumberInput from './NumberInput'
 
 const API_BASE = '/api'
 const PAGE = 50
@@ -523,12 +524,12 @@ export default function GeneSetLibraryModal() {
                   )
                 })}
                 <span style={{ marginLeft: 'auto' }}>show sets with ≥</span>
-                <input type="number" min={0} value={minPresent} onChange={(e) => setMinPresent(Math.max(0, Number(e.target.value) || 0))} style={{ ...field, width: 48 }} />
+                <NumberInput min={0} value={minPresent} onChange={(e) => setMinPresent(Math.max(0, Number(e.target.value) || 0))} style={{ ...field, width: 48 }} />
                 <span>present</span>
                 {activeColumns.length > 0 && (
                   <>
                     <span>and ≥</span>
-                    <input type="number" min={0} value={minInColumn} onChange={(e) => setMinInColumn(Math.max(0, Number(e.target.value) || 0))} style={{ ...field, width: 48 }} />
+                    <NumberInput min={0} value={minInColumn} onChange={(e) => setMinInColumn(Math.max(0, Number(e.target.value) || 0))} style={{ ...field, width: 48 }} />
                     <select value={filterColumn} onChange={(e) => setFilterColumn(e.target.value)} style={field}>
                       <option value="">(any column)</option>
                       {activeColumns.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -696,9 +697,9 @@ function StringSeeds(props: {
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <span>partners / seed</span>
-        <input type="number" min={1} max={500} value={props.limit} onChange={(e) => props.setLimit(Math.max(1, Number(e.target.value) || 1))} style={{ ...field, width: 56 }} />
+        <NumberInput min={1} max={500} value={props.limit} onChange={(e) => props.setLimit(Math.max(1, Number(e.target.value) || 1))} style={{ ...field, width: 56 }} />
         <span title="STRING combined score, 0–1000 (400 medium, 700 high)">min score</span>
-        <input type="number" min={0} max={1000} step={50} value={props.score} onChange={(e) => props.setScore(Math.min(1000, Math.max(0, Number(e.target.value) || 0)))} style={{ ...field, width: 64 }} />
+        <NumberInput min={0} max={1000} step={50} value={props.score} onChange={(e) => props.setScore(Math.min(1000, Math.max(0, Number(e.target.value) || 0)))} style={{ ...field, width: 64 }} />
       </div>
       <button onClick={props.onRun} disabled={props.busy} style={btn}>{props.busy ? 'Querying STRING…' : 'Query STRING'}</button>
       {props.meta && (

@@ -17,6 +17,7 @@ import {
   matchingIndices,
 } from '../utils/histogram'
 import { runSignature, isOutcomeCurrent } from '../lib/selectByExpression'
+import NumberInput from './NumberInput'
 
 export type { ThresholdMode, Histogram } from '../utils/histogram'
 export { computeHistogram, matchingIndices, defaultThresholds } from '../utils/histogram'
@@ -406,8 +407,7 @@ export default function SelectByExpressionModal() {
             <>
               <label style={{ color: '#888' }}>
                 {MESSAGES.selectByExpression.loInputLabel}
-                <input
-                  type="number"
+                <NumberInput
                   value={lo}
                   step="0.01"
                   onChange={(e) => setLo(Number(e.target.value))}
@@ -423,8 +423,7 @@ export default function SelectByExpressionModal() {
               </label>
               <label style={{ color: '#888' }}>
                 {MESSAGES.selectByExpression.hiInputLabel}
-                <input
-                  type="number"
+                <NumberInput
                   value={hi}
                   step="0.01"
                   onChange={(e) => setHi(Number(e.target.value))}
@@ -442,8 +441,7 @@ export default function SelectByExpressionModal() {
           ) : (
             <label style={{ color: '#888' }}>
               {MESSAGES.selectByExpression.thresholdInputLabel}
-              <input
-                type="number"
+              <NumberInput
                 value={lo}
                 step="0.01"
                 onChange={(e) => setLo(Number(e.target.value))}

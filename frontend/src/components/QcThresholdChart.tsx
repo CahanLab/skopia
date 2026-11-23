@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { computeHistogram, HistogramChart } from '../utils/histogram'
 import { toChartSpace, fromChartSpace, madBounds } from '../lib/filterCellsQc'
+import NumberInput from './NumberInput'
 
 const dark = {
   titleRow: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' } as const,
@@ -93,8 +94,7 @@ export function QcThresholdChart({
           title="Set both cutoffs at median ± k · MAD (unscaled median absolute deviation, as in scipy and the sc-best-practices QC chapter), measured on the axis as drawn. A cutoff beyond the data is left unset. Dragging a line clears it."
         >
           ± MAD{' '}
-          <input
-            type="number"
+          <NumberInput
             min="0"
             step="0.5"
             placeholder="k"

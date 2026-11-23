@@ -3,6 +3,7 @@ import { useStore, userConfigGet } from '../store'
 import { useLineAssociation, createLineEmbedding, appendDataset, cancelTask } from '../hooks/useData'
 import GeneSubsetPicker, { useGeneSubset } from './GeneSubsetPicker'
 import { parseGeneCap, GENE_CAP_MAX } from '../lib/lineAssociation'
+import NumberInput from './NumberInput'
 
 // Pull line_association defaults from user config, with hardcoded fallbacks.
 // Evaluated lazily inside useState so that if the config loads after the
@@ -333,8 +334,7 @@ function LineToolsModal({
             <div style={styles.sectionTitle}>Smoothing</div>
             <div style={styles.row}>
               <span>Window</span>
-              <input
-                type="number"
+              <NumberInput
                 min="3"
                 max="21"
                 step="2"
@@ -343,8 +343,7 @@ function LineToolsModal({
                 style={styles.smallInput}
               />
               <span>Iterations</span>
-              <input
-                type="number"
+              <NumberInput
                 min="1"
                 max="10"
                 value={lineSmoothingParams.iterations}
@@ -378,8 +377,7 @@ function LineToolsModal({
                 style={{ width: '32px', height: '24px', border: 'none', background: 'none', cursor: 'pointer' }}
               />
               <span>Width</span>
-              <input
-                type="number"
+              <NumberInput
                 min="1"
                 max="10"
                 value={line.strokeWidth || 2}
@@ -480,8 +478,7 @@ function LineToolsModal({
               <div style={{ fontSize: '11px', color: '#888', marginBottom: '6px' }}>Parameters:</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', fontSize: '11px', color: '#ccc' }}>
                 <span title="Number of interior knots for the cubic B-spline. More knots capture more complex expression patterns but risk overfitting.">Spline knots</span>
-                <input
-                  type="number"
+                <NumberInput
                   min="2"
                   max="20"
                   value={nSplineKnots}
@@ -490,8 +487,7 @@ function LineToolsModal({
                   title="Interior knots for the cubic B-spline basis (2-20). Higher = more flexible fit."
                 />
                 <span title="FDR (Benjamini-Hochberg) threshold for significance.">FDR</span>
-                <input
-                  type="number"
+                <NumberInput
                   min="0.001"
                   max="0.5"
                   step="0.01"
@@ -505,8 +501,7 @@ function LineToolsModal({
                 <span title={CAP_TITLE}>
                   {clusterGenes ? 'Max genes/module' : 'Max genes/direction'}
                 </span>
-                <input
-                  type="number"
+                <NumberInput
                   min="1"
                   max={GENE_CAP_MAX}
                   step="10"
@@ -738,17 +733,17 @@ function MultiLineToolsModal({
             <div style={styles.sectionTitle}>Parameters</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', fontSize: '11px', color: '#ccc' }}>
               <span>Spline knots</span>
-              <input type="number" min="2" max="20" value={nSplineKnots}
+              <NumberInput min="2" max="20" value={nSplineKnots}
                 onChange={(e) => setNSplineKnots(Math.max(2, Math.min(20, parseInt(e.target.value) || 5)))}
                 style={styles.smallInput} />
               <span>FDR</span>
-              <input type="number" min="0.001" max="0.5" step="0.01" value={fdrThreshold}
+              <NumberInput min="0.001" max="0.5" step="0.01" value={fdrThreshold}
                 onChange={(e) => setFdrThreshold(Math.max(0.001, Math.min(0.5, parseFloat(e.target.value) || 0.05)))}
                 style={{ ...styles.smallInput, width: '56px' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#ccc' }}>
               <span title={CAP_TITLE}>{clusterGenes ? 'Max genes/module' : 'Max genes/direction'}</span>
-              <input type="number" min="1" max={GENE_CAP_MAX} step="10" value={topN ?? ''}
+              <NumberInput min="1" max={GENE_CAP_MAX} step="10" value={topN ?? ''}
                 placeholder="all" title={CAP_TITLE}
                 onChange={(e) => setTopN(parseGeneCap(e.target.value))}
                 style={{ ...styles.smallInput, width: '56px' }} />

@@ -26,6 +26,7 @@ import {
 } from '../lib/hclust'
 import { toLongCsv, toMatrixCsv } from '../lib/neighborhoodExport'
 import { standaloneSvg, downloadText } from '../lib/svgExport'
+import NumberInput from './NumberInput'
 
 const API_BASE = '/api'
 
@@ -301,17 +302,17 @@ export default function NeighborhoodModal() {
                 </Field>
                 {mode === 'knn' ? (
                   <Field label="Neighbors (k)" tip={TIPS.n_neighs}>
-                    <input type="number" value={nNeighs} onChange={(e) => setNNeighs(e.target.value)} style={numInput} />
+                    <NumberInput value={nNeighs} onChange={(e) => setNNeighs(e.target.value)} style={numInput} />
                   </Field>
                 ) : (
                   <Field label="Radius" tip={TIPS.radius}>
-                    <input type="number" value={radius} onChange={(e) => setRadius(e.target.value)} placeholder="coordinate units" style={numInput} />
+                    <NumberInput value={radius} onChange={(e) => setRadius(e.target.value)} placeholder="coordinate units" style={numInput} />
                   </Field>
                 )}
               </div>
               <div style={{ flex: 1 }}>
                 <Field label="Permutations" tip={TIPS.n_perms}>
-                  <input type="number" value={nPerms} onChange={(e) => setNPerms(e.target.value)} style={numInput} />
+                  <NumberInput value={nPerms} onChange={(e) => setNPerms(e.target.value)} style={numInput} />
                 </Field>
                 <Field label="Section column" tip={TIPS.section_col}>
                   <select value={sectionCol} onChange={(e) => setSectionCol(e.target.value)} style={numInput}>

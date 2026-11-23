@@ -65,6 +65,6 @@ def test_user_override_deep_merges_over_shipped_base(monkeypatch, tmp_path):
     # user key wins
     assert cfg["display"]["point_size"] == 7
     # shipped defaults for other display keys survive the merge
-    assert cfg["display"]["color_scale"] == "reds"
+    assert cfg["display"]["color_scale"] == "viridis"
     # shipped scanpy defaults untouched by the display-only override
     assert cfg["scanpy"]["filter_cells"]["min_genes"] == 10

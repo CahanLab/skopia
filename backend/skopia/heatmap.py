@@ -41,6 +41,7 @@ def compute_heatmap_data(
     n_bins: int = 0,
     transform: str | None = None,
     cell_indices: list[int] | None = None,
+    groups: list[str] | None = None,
 ) -> dict[str, Any]:
     """Compute expression heatmap matrix.
 
@@ -63,6 +64,9 @@ def compute_heatmap_data(
         n_bins: Number of bins to average cells into (0 = no binning)
         transform: Optional "log1p" transformation
         cell_indices: Optional subset of cell indices
+        groups: Labels of ``obs_column`` to keep, as the dot plot's ``groups``:
+            other cells are dropped whatever the ordering, and a category
+            ordering lays the blocks out in this order. Needs ``obs_column``.
 
     Returns:
         Dictionary with matrix, row_labels, row_groups, column_groups, n_bins,
@@ -105,10 +109,13 @@ def compute_heatmap_data(
         cell_idx = np.array(cell_indices, dtype=int)
     else:
         cell_idx = np.arange(adata.n_obs)
+    if groups is not None:
+        cell_idx = _keep_groups(adata, cell_idx, obs_column, groups)
+        groups = list(dict.fromkeys(str(g) for g in groups))
 
     # Cell ordering
     ordered_idx, col_groups = _order_cells(
-        adaptor, cell_idx, cell_ordering, obs_column, line_name
+        adaptor, cell_idx, cell_ordering, obs_column, line_name, category_order=groups
     )
 
     # Extract expression matrix (ordered_cells x genes)
@@ -215,19 +222,55 @@ def compute_heatmap_data(
 # ---------------------------------------------------------------------------
 
 
+def _keep_groups(adata, cell_idx: np.ndarray, obs_column: str | None, groups: list[str]) -> np.ndarray:
+    """The cells of ``cell_idx`` whose ``obs_column`` label is in ``groups``."""
+    if not obs_column:
+        raise ValueError("groups needs an obs_column to choose the groups from")
+    if obs_column not in adata.obs.columns:
+        raise ValueError(f"Column '{obs_column}' not found in .obs")
+    wanted = [str(g) for g in groups]
+    if not wanted:
+        raise ValueError("groups must name at least one label, or be null for all of them")
+    labels = adata.obs[obs_column].astype(str).to_numpy()
+    present = set(labels)
+    unknown = [g for g in wanted if g not in present]
+    if unknown:
+        raise ValueError(f"groups: {', '.join(repr(g) for g in unknown)} not in column '{obs_column}'")
+    return cell_idx[np.isin(labels[cell_idx], wanted)]
+
+
+def _category_codes(adata, cell_idx, obs_column, category_order=None):
+    """(categories, per-cell codes) for the cells, in ``category_order``
+    when given, else the column's own order (sorted for a string column)."""
+    vals = adata.obs[obs_column].values[cell_idx]
+    if category_order is not None:
+        cats = list(category_order)
+        cmap = {c: i for i, c in enumerate(cats)}
+        codes = np.array([cmap.get(str(v), -1) for v in vals], dtype=int)
+    elif hasattr(vals, "cat"):
+        cats = vals.cat.categories.tolist()
+        codes = vals.cat.codes.values.copy()
+    else:
+        cats = sorted(set(str(v) for v in vals))
+        cmap = {c: i for i, c in enumerate(cats)}
+        codes = np.array([cmap.get(str(v), -1) for v in vals])
+    return cats, codes
+
+
 def _order_cells(
     adaptor: "DataAdaptor",
     cell_idx: np.ndarray,
     ordering: str,
     obs_column: str | None,
     line_name: str | None,
+    category_order: list[str] | None = None,
 ) -> tuple[np.ndarray, list[dict]]:
     """Compute cell ordering and return (ordered_indices, column_groups)."""
     if ordering == "none":
         return cell_idx, []
 
     if ordering in ("category", "category_then_similarity") and obs_column:
-        return _order_by_category(adaptor.adata, cell_idx, obs_column)
+        return _order_by_category(adaptor.adata, cell_idx, obs_column, category_order)
 
     if ordering in ("line_position", "line_distance") and line_name:
         return _order_by_line(
@@ -236,24 +279,17 @@ def _order_cells(
 
     if ordering == "category_then_position" and obs_column and line_name:
         return _order_category_then_position(
-            adaptor, cell_idx, obs_column, line_name
+            adaptor, cell_idx, obs_column, line_name, category_order
         )
 
     return cell_idx, []
 
 
-def _order_by_category(adata, cell_idx, obs_column):
+def _order_by_category(adata, cell_idx, obs_column, category_order=None):
     if obs_column not in adata.obs.columns:
         return cell_idx, []
 
-    vals = adata.obs[obs_column].values[cell_idx]
-    if hasattr(vals, "cat"):
-        cats = vals.cat.categories.tolist()
-        codes = vals.cat.codes.values.copy()
-    else:
-        cats = sorted(set(str(v) for v in vals))
-        cmap = {c: i for i, c in enumerate(cats)}
-        codes = np.array([cmap.get(str(v), -1) for v in vals])
+    cats, codes = _category_codes(adata, cell_idx, obs_column, category_order)
 
     order = np.argsort(codes, kind="stable")
     ordered = cell_idx[order]
@@ -292,23 +328,16 @@ def _order_by_line(adaptor, cell_idx, line_name, use_distance):
     return cell_idx[order], []
 
 
-def _order_category_then_position(adaptor, cell_idx, obs_column, line_name):
+def _order_category_then_position(adaptor, cell_idx, obs_column, line_name, category_order=None):
     adata = adaptor.adata
     if obs_column not in adata.obs.columns:
         return cell_idx, []
 
-    vals = adata.obs[obs_column].values[cell_idx]
-    if hasattr(vals, "cat"):
-        cats = vals.cat.categories.tolist()
-        codes = vals.cat.codes.values.copy()
-    else:
-        cats = sorted(set(str(v) for v in vals))
-        cmap = {c: i for i, c in enumerate(cats)}
-        codes = np.array([cmap.get(str(v), -1) for v in vals])
+    cats, codes = _category_codes(adata, cell_idx, obs_column, category_order)
 
     line = _find_line(adaptor, line_name)
     if line is None:
-        return _order_by_category(adata, cell_idx, obs_column)
+        return _order_by_category(adata, cell_idx, obs_column, category_order)
 
     positions, _ = _project(adaptor, line)
     subset_pos = positions[cell_idx]

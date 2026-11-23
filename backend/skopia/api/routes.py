@@ -2375,6 +2375,7 @@ class HeatmapRequest(BaseModel):
     n_bins: int = 0
     transform: str | None = None
     cell_indices: list[int] | None = None
+    groups: list[str] | None = None       # labels of obs_column to keep, in this order; null = all
 
 
 @router.post("/heatmap/data")
@@ -2401,6 +2402,7 @@ def get_heatmap_data(request: HeatmapRequest, dataset: str | None = Query(None))
             n_bins=request.n_bins,
             transform=request.transform,
             cell_indices=request.cell_indices,
+            groups=request.groups,
         )
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -2502,9 +2504,6 @@ class HighlyVariableGenesRequest(BaseModel):
     add_union: bool = False
     add_intersection: bool = False
     min_cells_per_group: int = 10
-    #: A named cell subset (see /cell_subsets): compute on its cells only and
-    #: write to highly_variable__<name>, leaving the pooled column alone.
-    cell_subset: str | None = None
     #: A named cell subset (see /cell_subsets): compute on its cells only and
     #: write to highly_variable__<name>, leaving the pooled column alone.
     cell_subset: str | None = None
@@ -2834,6 +2833,8 @@ class PcaRequest(BaseModel):
     active_cell_indices: list[int] | None = None
     #: A named cell subset: the embedding goes to X_pca_<name>; X_pca is untouched.
     cell_subset: str | None = None
+    #: z-score each gene (on a copy) before the PCA; off by default.
+    scale: bool = False
 
 
 class NeighborsRequest(BaseModel):
@@ -3094,6 +3095,34 @@ def run_log1p(request: Log1pRequest = Log1pRequest(), dataset: str | None = Quer
         raise HTTPException(status_code=400, detail=str(e))
 
 
+class HvgPreviewRequest(BaseModel):
+    n_top_genes: int | None = None
+    min_mean: float = 0.0125
+    max_mean: float = 3.0
+    min_disp: float = 0.5
+    flavor: str = 'seurat'
+    n_bins: int = 20
+    active_cell_indices: list[int] | None = None
+    cell_subset: str | None = None
+
+
+@router.post("/scanpy/highly_variable_genes/preview")
+def preview_highly_variable_genes(request: HvgPreviewRequest, dataset: str | None = Query(None)):
+    """Mean vs dispersion per gene, flagging the genes these settings would
+    select. Writes nothing."""
+    adaptor = get_adaptor(dataset)
+    try:
+        return adaptor.preview_highly_variable_genes(**request.model_dump())
+    except HTTPException:
+        raise
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        # scanpy raises plain ValueErrors / IndexErrors for settings it
+        # cannot bin; the modal shows the message under the plot.
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/scanpy/highly_variable_genes")
 def run_highly_variable_genes(request: HighlyVariableGenesRequest, dataset: str | None = Query(None)):
     """Identify highly variable genes.
@@ -3333,6 +3362,22 @@ def scanpy_sum_counts_by_species(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+class VarBooleanFromGenesRequest(BaseModel):
+    name: str
+    genes: list[str]
+    overwrite: bool = False
+
+
+@router.post("/var/boolean_from_genes")
+def var_boolean_from_genes(request: VarBooleanFromGenesRequest, dataset: str | None = Query(None)):
+    """Write a gene list (a gene set) as a boolean .var column."""
+    adaptor = get_adaptor(dataset)
+    try:
+        return adaptor.add_var_boolean_from_genes(request.name, request.genes, overwrite=request.overwrite)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 class AddVarBooleanRequest(BaseModel):
     name: str
     pattern: str
@@ -3419,6 +3464,7 @@ def run_pca(request: PcaRequest, dataset: str | None = Query(None)):
             gene_subset=gene_subset,
             active_cell_indices=request.active_cell_indices,
             cell_subset=request.cell_subset,
+            scale=request.scale,
         )
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))

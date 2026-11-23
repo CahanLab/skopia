@@ -14,6 +14,7 @@ import { useStore } from '../store'
 import { appendDataset, refreshCellSubsets, refreshSchema, useObsSummaries } from '../hooks/useData'
 import { datasetIdentity } from '../lib/datasetIdentity'
 import { dptBlocker, dptOutputName, dptParams, type DptInputs, type RootMode } from '../lib/diffusion'
+import NumberInput from './NumberInput'
 
 interface DiffmapInfo {
   key: string
@@ -284,7 +285,7 @@ export default function PseudotimeModal() {
               </div>
               <div style={dark.row}>
                 Components used
-                <input style={dark.input} type="number" min={2} max={nComps || undefined} value={nDcs}
+                <NumberInput style={dark.input} min={2} max={nComps || undefined} value={nDcs}
                   onChange={(e) => setNDcs(e.target.value)} />
                 <span style={{ color: '#777', fontSize: 11 }}>of {nComps} (scanpy&apos;s default is 10)</span>
               </div>

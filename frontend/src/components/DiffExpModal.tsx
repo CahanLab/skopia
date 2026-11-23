@@ -1,6 +1,7 @@
 import { useCallback, useState, useEffect } from 'react'
 import { useStore, DiffExpGene, cfgDefault } from '../store'
 import { useDiffExp, DiffExpParams, appendDataset } from '../hooks/useData'
+import NumberInput from './NumberInput'
 
 const styles = {
   backdrop: {
@@ -436,8 +437,7 @@ export default function DiffExpModal() {
                 </div>
                 <div style={{ ...styles.settingRow, marginBottom: 0 }}>
                   <span style={styles.settingLabel}>Top N:</span>
-                  <input
-                    type="number"
+                  <NumberInput
                     min="1"
                     max="500"
                     value={topN}
@@ -497,8 +497,7 @@ export default function DiffExpModal() {
                     <div style={styles.paramsGrid}>
                       <div style={styles.paramField}>
                         <label style={styles.paramLabel}>Min fold change</label>
-                        <input
-                          type="number"
+                        <NumberInput
                           step="0.1"
                           placeholder="none"
                           value={minFoldChange}
@@ -508,8 +507,7 @@ export default function DiffExpModal() {
                       </div>
                       <div style={styles.paramField}>
                         <label style={styles.paramLabel}>Max adjusted p-value</label>
-                        <input
-                          type="number"
+                        <NumberInput
                           step="0.01"
                           placeholder="none"
                           value={maxPvalAdj}
@@ -519,8 +517,7 @@ export default function DiffExpModal() {
                       </div>
                       <div style={styles.paramField}>
                         <label style={styles.paramLabel}>Min in-group fraction</label>
-                        <input
-                          type="number"
+                        <NumberInput
                           step="0.05"
                           min="0"
                           max="1"
@@ -532,8 +529,7 @@ export default function DiffExpModal() {
                       </div>
                       <div style={styles.paramField}>
                         <label style={styles.paramLabel}>Max out-group fraction</label>
-                        <input
-                          type="number"
+                        <NumberInput
                           step="0.05"
                           min="0"
                           max="1"

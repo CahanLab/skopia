@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { orderSelectedSets, groupLabel, folderSelectionState, restoreSelectedIds } from './heatmapGroups'
+import { orderSelectedSets, groupLabel, folderSelectionState, restoreSelectedIds, toggleGroupPick, cleanGroupPick } from './heatmapGroups'
 
 // A pathway is a folder of role sets in a fixed order (ligands, receptors,
 // …). The heatmap should show a picked pathway in that order, and when sets
@@ -66,5 +66,32 @@ describe('restoreSelectedIds', () => {
   it('does not guess between same-named sets without an id', () => {
     const applied = [{ name: 'ligands', genes: ['x'] }]
     expect(restoreSelectedIds(applied, sets).size).toBe(0)
+  })
+})
+
+describe('toggleGroupPick', () => {
+  const all = ['0', '1', '2', '3']
+  it('unticking one of all leaves the rest, in the column order', () => {
+    expect(toggleGroupPick(null, all, '1')).toEqual(['0', '2', '3'])
+  })
+  it('ticking the last missing one is "all" again (null)', () => {
+    expect(toggleGroupPick(['0', '2', '3'], all, '1')).toBeNull()
+  })
+  it('a pick keeps the column order whatever order it was clicked in', () => {
+    expect(toggleGroupPick(['3'], all, '0')).toEqual(['0', '3'])
+  })
+  it('the last group cannot be unticked', () => {
+    expect(toggleGroupPick(['2'], all, '2')).toEqual(['2'])
+  })
+})
+
+describe('cleanGroupPick', () => {
+  it('drops labels the column no longer has, and an emptied pick means all', () => {
+    expect(cleanGroupPick(['0', 'gone'], ['0', '1'])).toEqual(['0'])
+    expect(cleanGroupPick(['gone'], ['0', '1'])).toBeNull()
+    expect(cleanGroupPick(null, ['0'])).toBeNull()
+  })
+  it('leaves the pick alone while the labels are not known yet', () => {
+    expect(cleanGroupPick(['0'], [])).toEqual(['0'])
   })
 })

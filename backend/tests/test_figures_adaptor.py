@@ -358,7 +358,7 @@ def test_heatmap_figure_from_a_marker_key_resolves_the_groups():
     a, key = _with_markers()
     f = a.create_figure('expression_heatmap', inputs={'gene_sets': [], 'marker_key': key, 'obs_column': 'grp'})
     assert f['inputs']['marker_key'] == key and f['input_ids'][key] == a._marker_run_uid(key)
-    assert f['params']['marker_top_n'] == 10 and f['params']['marker_min_pct_in'] is None
+    assert f['params']['marker_top_n'] == 5 and f['params']['marker_min_pct_in'] is None
     d = a.figure_data(f['id'])
     assert d['row_groups'][:1] == ['a'] and set(d['row_groups']) == {'a', 'b', 'c'}
     assert d['row_labels'][0] in ('Col1a1', 'Col1a2', 'Col3a1')
@@ -404,7 +404,7 @@ def test_dotplot_figure_create_data_update():
     sets = [{'name': 'immune', 'genes': ['Ptprc', 'Cd3e', 'Cd19']}]
     f = a.create_figure('expression_dotplot', inputs={'gene_sets': sets, 'obs_column': 'grp', 'transform': 'log1p'})
     assert f['params'] == {
-        'marker_top_n': 10, 'marker_min_pct_in': None, 'marker_max_pct_out': None, 'marker_min_log2fc': None,
+        'marker_top_n': 5, 'marker_min_pct_in': None, 'marker_max_pct_out': None, 'marker_min_log2fc': None,
         'marker_max_padj': None, 'marker_rank_by': 'score', 'color_by': 'mean', 'standard_scale': 'none',
         'expression_cutoff': 0.0, 'gene_ordering': 'as_provided', 'group_ordering': 'as_given', 'swap_axes': False,
         'colormap': 'viridis', 'vmax': None, 'dot_max': None,

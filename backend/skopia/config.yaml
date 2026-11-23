@@ -22,8 +22,8 @@
 display:
   point_size: 1                     # slider 0.5–10
   point_opacity: 0.85               # slider 0.1–1
-  background_color: '#ffffff'       # hex color (white)
-  color_scale: reds                 # viridis|plasma|magma|inferno|cividis|coolwarm|blues|reds|sunset|ocean|grape|mint
+  background_color: '#1a1a2e'       # hex color (dark blue)
+  color_scale: viridis              # viridis|plasma|magma|inferno|cividis|coolwarm|blues|reds|sunset|ocean|grape|mint
   bivariate_colormap: default       # default|pinkgreen|orangepurple
   expression_transform: none        # none|log1p
   clip_percentile: 0.0              # color-ramp clip %, 0–5
@@ -76,7 +76,7 @@ scanpy:
     min_cells: 10
     max_cells: null
   normalize_total:
-    target_sum: 10000
+    target_sum: null                # null = each cell to the median total count (scanpy's default)
   # log1p: no parameters
   highly_variable_genes:
     n_top_genes: 2000
@@ -101,6 +101,7 @@ scanpy:
     n_comps: 50
     svd_solver: arpack              # arpack|randomized|auto
     gene_subset: null
+    scale: 'false'                  # 'true'|'false': z-score each gene before PCA (sc-best-practices: off)
   neighbors:
     use_rep: X_pca
     n_neighbors: 15
@@ -247,14 +248,14 @@ figures:
     gene_ordering: as_provided
     aggregate_gene_sets: false
     n_bins: 50
-    marker_top_n: 10                # when the rows come from a stored marker run: top N per group after the filters
+    marker_top_n: 5                 # when the rows come from a stored marker run: top N per group after the filters
     marker_min_pct_in: null         # fraction of the group's cells expressing (0..1); null = no filter
     marker_max_pct_out: null        # fraction of the other cells expressing; null = no filter
     marker_min_log2fc: null
     marker_max_padj: null
     marker_rank_by: score           # score (scanpy's Wilcoxon order) | log2fc
   expression_dotplot:
-    marker_top_n: 10
+    marker_top_n: 5
     marker_min_pct_in: null
     marker_max_pct_out: null
     marker_min_log2fc: null
@@ -300,6 +301,7 @@ heatmap:
   gene_ordering: as_provided        # as_provided|peak_position|similarity
   aggregate_gene_sets: false
   n_bins: 300
+  marker_top_n: 5                   # rows from a stored marker run: top N genes per group
 
 # ---------------------------------------------------------------------------
 # Tissue contour modal. (grid_res / smooth_sigma are auto-suggested per dataset.)
