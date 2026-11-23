@@ -248,7 +248,7 @@ export default function MarkerGenesModal() {
 
   // Config state
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set())
-  const [topN, setTopN] = useState(() => cfgDefault(['marker_genes', 'top_n'], 100))
+  const [topN, setTopN] = useState(() => cfgDefault(['marker_genes', 'top_n'], 5))
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [minInGroupFraction, setMinInGroupFraction] = useState(() => String(cfgDefault(['marker_genes', 'min_in_group_fraction'], '')))
   const [maxOutGroupFraction, setMaxOutGroupFraction] = useState(() => String(cfgDefault(['marker_genes', 'max_out_group_fraction'], '')))

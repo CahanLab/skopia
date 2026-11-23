@@ -68,3 +68,14 @@ def test_user_override_deep_merges_over_shipped_base(monkeypatch, tmp_path):
     assert cfg["display"]["color_scale"] == "viridis"
     # shipped scanpy defaults untouched by the display-only override
     assert cfg["scanpy"]["filter_cells"]["min_genes"] == 10
+
+
+def test_marker_top_n_is_five_but_enrichment_keeps_its_own_hundred(monkeypatch, tmp_path):
+    # Find Marker Genes' Top N is what Plot… hands the Expression tab, so it is
+    # the "genes per marker set" a plot starts with. Enrichment on each group's
+    # markers read the same key; 5 genes is too few for ORA, so it has its own.
+    monkeypatch.delenv("SKOPIA_CONFIG_PATH", raising=False)
+    monkeypatch.setattr(user_config.Path, "home", staticmethod(lambda: tmp_path))
+    cfg = user_config.load_user_config()
+    assert cfg["marker_genes"]["top_n"] == 5
+    assert cfg["enrichment"]["marker_top_n"] == 100

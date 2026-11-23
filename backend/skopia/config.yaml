@@ -177,7 +177,7 @@ scanpy:
 # Marker genes modal.
 # ---------------------------------------------------------------------------
 marker_genes:
-  top_n: 100
+  top_n: 5                          # genes per group shown, added as sets, and carried by Plot… to the Expression tab
   store_top_n: 500                  # rows kept per group in the stored run; top N and the filters read from these
   min_in_group_fraction: ''         # e.g. 0.25 (blank = unset)
   max_out_group_fraction: ''        # e.g. 0.75
@@ -207,6 +207,7 @@ enrichment:
   n_perm: 1000                      # gene permutations; p floors at about 2/n_perm
   weight: 1.0                       # running-sum exponent (0 = classic KS)
   padj_cutoff: 0.05                 # results table default filter
+  marker_top_n: 100                 # ORA on each group's markers: genes per group (its own key; marker_genes.top_n is 5)
 
 # ---------------------------------------------------------------------------
 # Figures: per-kind display defaults for new figures (Figures tab).
