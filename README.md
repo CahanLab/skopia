@@ -643,7 +643,7 @@ Typical workflow for "find DEGs by expression state in a region": lasso a region
 
 ### 9. Compare Cell Groups
 
-- Open the **Analyze** modal (top toolbar) → **Cell Analysis** → **Compare Cells**
+- Open the **Analyze** modal (top toolbar) → **Cells** → **DEG**
 - Select an .obs column (e.g., `leiden`) from the dropdown
 - Check 2 or more groups to compare:
   - **2 checked** → pairwise differential expression
@@ -875,7 +875,7 @@ To compare samples in one view (timepoints of a tissue, replicates, or any cross
 - Click `.h5ad` files in the browser to add them to the list — each file gets an editable label (defaults to the filename stem)
 - Choose the slot to load into, and — for spatial inputs — the gap (% of mean section width)
 - Click **Combine** — a new `sample` categorical `.obs` column tags each cell with its source file label
-- The combined dataset behaves like any other — color by `sample`, run Compare Cells across samples, etc.
+- The combined dataset behaves like any other — color by `sample`, run DEG across samples, etc.
 
 What happens depends on the inputs:
 - **All spatial** (each file has `spatial` or `X_spatial` coordinates, or names its array in `uns['skopia_spatial_key']`): sections are placed left-to-right along the spatial x-axis with the configured gap, and the result keeps only `X_spatial`.
