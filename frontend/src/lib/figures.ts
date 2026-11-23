@@ -147,6 +147,18 @@ export interface HeatmapConfigLike {
   markerSource?: MarkerSource | null
   dotplot?: Partial<DotplotOptions>
   plotType?: 'heatmap' | 'dotplot'
+  /** Heatmap only: labels of obsColumn to keep, in order; null = all. */
+  groups?: string[] | null
+}
+
+const CATEGORY_ORDERINGS: ReadonlySet<string> = new Set(['category', 'category_then_similarity', 'category_then_position'])
+
+/** The heatmap's group pick as sent: only under an ordering that groups the
+ * cells by obsColumn. The picker is shown only then, so a pick left from an
+ * earlier category ordering must not silently drop cells from another. */
+export function heatmapGroupsFor(cfg: Pick<HeatmapConfigLike, 'cellOrdering' | 'obsColumn' | 'groups'>): string[] | null {
+  if (!cfg.obsColumn || !CATEGORY_ORDERINGS.has(cfg.cellOrdering)) return null
+  return cfg.groups && cfg.groups.length ? cfg.groups : null
 }
 
 /** The cells a tab is showing, as figure inputs: a named subset when one is
@@ -175,7 +187,7 @@ export function heatmapFigureFromConfig(cfg: HeatmapConfigLike, cellSubset: stri
       gene_sets: (cfg.selectedGeneSets ?? []).map((g) => ({ name: g.name, genes: g.genes })),
       marker_key: src ? src.key : null,
       marker_restrict: src?.restrictTo ? restrictionWire(src.restrictTo) : null,
-      obs_column: cfg.obsColumn, line_name: cfg.lineName, transform,
+      obs_column: cfg.obsColumn, line_name: cfg.lineName, transform, groups: heatmapGroupsFor(cfg),
       ...cellInputs(cellSubset, cfg.cellIndices ?? null),
     },
     params: {

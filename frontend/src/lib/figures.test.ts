@@ -59,11 +59,27 @@ describe('tab configs become figure records', () => {
     }
     expect(heatmapFigureFromConfig(cfg, null, 'log1p')).toEqual({
       kind: 'expression_heatmap',
-      inputs: { gene_sets: [{ name: 'collagen', genes: ['Col1a1', 'Col1a2'] }], marker_key: null, marker_restrict: null, obs_column: 'leiden', line_name: 'L1', transform: 'log1p', cell_subset: null, cell_indices: [3, 4] },
+      inputs: { gene_sets: [{ name: 'collagen', genes: ['Col1a1', 'Col1a2'] }], marker_key: null, marker_restrict: null, obs_column: 'leiden', line_name: 'L1', transform: 'log1p', groups: null, cell_subset: null, cell_indices: [3, 4] },
       params: { cell_ordering: 'line_position', gene_ordering: 'peak_position', aggregate_gene_sets: true, n_bins: 20 },
     })
     // the tab never draws with the active subset, so callers pass null; the helper still honours one if given
     expect(heatmapFigureFromConfig({ ...cfg, cellIndices: null }, 'chondro').inputs.cell_subset).toBe('chondro')
     expect(heatmapFigureFromConfig(cfg, null).inputs.transform).toBeNull()
+  })
+  it('sends the heatmap groups only when the cells are grouped by the column', async () => {
+    const { heatmapFigureFromConfig, heatmapGroupsFor } = await import('./figures')
+    const base = {
+      selectedGeneSets: [{ name: 's', genes: ['A'] }], obsColumn: 'leiden', lineName: null,
+      geneOrdering: 'as_provided', aggregateGeneSets: false, nBins: 0, groups: ['2', '0'],
+    }
+    for (const ordering of ['category', 'category_then_similarity', 'category_then_position']) {
+      expect(heatmapGroupsFor({ ...base, cellOrdering: ordering })).toEqual(['2', '0'])
+    }
+    expect(heatmapFigureFromConfig({ ...base, cellOrdering: 'category' }, null).inputs.groups).toEqual(['2', '0'])
+    // an ordering that ignores the column ignores a pick left over from it
+    expect(heatmapGroupsFor({ ...base, cellOrdering: 'similarity' })).toBeNull()
+    expect(heatmapGroupsFor({ ...base, cellOrdering: 'category', groups: [] })).toBeNull()
+    expect(heatmapGroupsFor({ ...base, cellOrdering: 'category', obsColumn: null })).toBeNull()
+    expect(heatmapGroupsFor({ ...base, cellOrdering: 'category', groups: undefined })).toBeNull()
   })
 })

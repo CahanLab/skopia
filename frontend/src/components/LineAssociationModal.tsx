@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useStore, LineAssociationGene, LineAssociationModule } from '../store'
 import { useDataActions } from '../hooks/useData'
 import { describeGeneSubsetType } from '../lib/geneSubset'
+import NumberInput from './NumberInput'
 
 const PATTERN_COLORS: Record<string, string> = {
   increasing: '#4ecdc4',
@@ -1070,8 +1071,7 @@ export default function LineAssociationModal() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', fontSize: '11px', color: '#ccc' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span style={{ color: '#888' }}>Min R²</span>
-                  <input
-                    type="number"
+                  <NumberInput
                     min="0"
                     max="1"
                     step="0.05"
@@ -1092,8 +1092,7 @@ export default function LineAssociationModal() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span style={{ color: '#888' }}>Min amplitude</span>
-                  <input
-                    type="number"
+                  <NumberInput
                     min="0"
                     step="0.1"
                     value={filterMinAmplitude}
@@ -1113,8 +1112,7 @@ export default function LineAssociationModal() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span style={{ color: '#888' }}>Max FDR</span>
-                  <input
-                    type="number"
+                  <NumberInput
                     min="0.0001"
                     max={fdr_threshold}
                     step="0.005"

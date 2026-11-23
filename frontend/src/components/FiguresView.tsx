@@ -17,6 +17,7 @@ import ExpressionHeatmapFigure, { heatmapLegendFor } from './figures/ExpressionH
 import CnvHeatmapFigure, { cnvHeatmapLegendFor } from './figures/CnvHeatmapFigure'
 import ExpressionDotplotFigure from './figures/ExpressionDotplotFigure'
 import NewFigureModal from './figures/NewFigureModal'
+import NumberInput from './NumberInput'
 
 /** The Figures tab: a gallery of saved figure records (uns['skopia_figures']),
  *  each rendered from its stored inputs + params, with an editable params
@@ -93,8 +94,8 @@ function ParamInput({ field, value, onChange, dynamicOptions }: { field: ParamFi
   return (
     <>
       <label style={styles.label} title={field.help}>{field.label}{field.type === 'nullable-number' ? ' (blank = off)' : ''}</label>
-      <input
-        style={styles.input} type="number" min={field.min} max={field.max} step={field.step ?? (field.type === 'int' ? 1 : 'any')}
+      <NumberInput
+        style={styles.input} min={field.min} max={field.max} step={field.step ?? (field.type === 'int' ? 1 : 'any')}
         value={value == null ? '' : String(value)} onChange={(e) => onChange(e.target.value)}
       />
     </>

@@ -22,6 +22,7 @@ import GeneSubsetPicker, { useGeneSubset } from './GeneSubsetPicker'
 import { fitTransform, moduleColor, moduleGeneSets, nearestPoint, pointsInLasso } from '../lib/genePlot'
 import { clusterBands, similarityColor } from '../lib/metaPrograms'
 import type { LibraryEntry, Species } from '../lib/geneSetLibrary'
+import NumberInput from './NumberInput'
 
 const API_BASE = '/api'
 
@@ -268,7 +269,7 @@ export default function GeneMapModal() {
                 <select value={species} onChange={(e) => setSpecies(e.target.value as Species)} style={{ ...field, width: '100%' }}>
                   <option value="mouse">mouse</option><option value="human">human</option>
                 </select>
-                <input type="number" min={0} max={1000} step={50} value={stringScore} onChange={(e) => setStringScore(Math.min(1000, Math.max(0, Number(e.target.value) || 0)))} style={{ ...field, width: '100%', marginTop: 4 }} title="Minimum combined score (0–1000)" />
+                <NumberInput min={0} max={1000} step={50} value={stringScore} onChange={(e) => setStringScore(Math.min(1000, Math.max(0, Number(e.target.value) || 0)))} style={{ ...field, width: '100%', marginTop: 4 }} title="Minimum combined score (0–1000)" />
               </Channel>
               <Channel title="GO semantic" on={useGo} setOn={setUseGo} weight={goWeight} setWeight={setGoWeight} tip="Information-content-weighted similarity over the Gene Ontology (SimGIC): sharing a specific term counts for more than sharing a broad one">
                 {goCached ? (
@@ -282,8 +283,8 @@ export default function GeneMapModal() {
               </Channel>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-              <Labeled label="Neighbours" tip="kNN for modules and the UMAP"><input type="number" min={2} max={100} value={nNeighbors} onChange={(e) => setNNeighbors(Math.max(2, Number(e.target.value) || 2))} style={{ ...field, width: '100%' }} /></Labeled>
-              <Labeled label="Resolution" tip="Leiden; higher = more modules"><input type="number" min={0.1} step={0.1} value={resolution} onChange={(e) => setResolution(Math.max(0.05, Number(e.target.value) || 0.05))} style={{ ...field, width: '100%' }} /></Labeled>
+              <Labeled label="Neighbours" tip="kNN for modules and the UMAP"><NumberInput min={2} max={100} value={nNeighbors} onChange={(e) => setNNeighbors(Math.max(2, Number(e.target.value) || 2))} style={{ ...field, width: '100%' }} /></Labeled>
+              <Labeled label="Resolution" tip="Leiden; higher = more modules"><NumberInput min={0.1} step={0.1} value={resolution} onChange={(e) => setResolution(Math.max(0.05, Number(e.target.value) || 0.05))} style={{ ...field, width: '100%' }} /></Labeled>
               <Labeled label="Layout"><select value={embedding} onChange={(e) => setEmbedding(e.target.value)} style={{ ...field, width: '100%' }}><option value="umap">UMAP</option><option value="mds">MDS</option></select></Labeled>
               <Labeled label="Key"><input value={key} onChange={(e) => setKey(sanitizeKey(e.target.value))} style={{ ...field, width: '100%' }} /></Labeled>
             </div>
@@ -342,7 +343,7 @@ function Channel({ title, on, setOn, weight, setWeight, tip, children }: { title
         <label style={{ fontWeight: 600, color: dark.text }}><input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} /> {title}</label>
         <div style={{ flex: 1 }} />
         <span style={{ color: dark.dim }}>weight</span>
-        <input type="number" min={0} step={0.1} value={weight} onChange={(e) => setWeight(Math.max(0, Number(e.target.value) || 0))} style={{ ...field, width: 52 }} disabled={!on} />
+        <NumberInput min={0} step={0.1} value={weight} onChange={(e) => setWeight(Math.max(0, Number(e.target.value) || 0))} style={{ ...field, width: 52 }} disabled={!on} />
       </div>
       {children}
     </div>

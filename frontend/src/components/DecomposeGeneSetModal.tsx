@@ -20,6 +20,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useStore, cfgDefault } from '../store'
 import { appendDataset, pollTask, refreshSchema, useDataActions, useObsSummaries } from '../hooks/useData'
 import { coherenceVerdict, programWeight, programsToGeneSets, type Coherence, type Program } from '../lib/geneSetDecomposition'
+import NumberInput from './NumberInput'
 
 const API_BASE = '/api'
 
@@ -295,11 +296,11 @@ export default function DecomposeGeneSetModal() {
                 </select>
               </Field>
               <Field label={`Programs (k, ≤ ${kMax})`} tip="Defaults to the number of patterns the eigen-spectrum suggests">
-                <input type="number" min={1} max={kMax} value={k} onChange={(e) => { setKTouched(true); setK(Math.max(1, Math.min(kMax, Number(e.target.value) || 1))) }} style={field} />
+                <NumberInput min={1} max={kMax} value={k} onChange={(e) => { setKTouched(true); setK(Math.max(1, Math.min(kMax, Number(e.target.value) || 1))) }} style={field} />
               </Field>
               {method === 'pca' ? (
                 <Field label="Loading cut" tip="A gene joins a program when its loading is at least this fraction of the program's largest |loading|">
-                  <input type="number" min={0} max={1} step={0.05} value={threshold} onChange={(e) => setThreshold(Math.max(0, Math.min(1, Number(e.target.value) || 0)))} style={field} />
+                  <NumberInput min={0} max={1} step={0.05} value={threshold} onChange={(e) => setThreshold(Math.max(0, Math.min(1, Number(e.target.value) || 0)))} style={field} />
                 </Field>
               ) : <div />}
             </div>

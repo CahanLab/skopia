@@ -23,6 +23,7 @@ import { useStore } from '../store'
 import { appendDataset, pollTask, refreshSchema, useDataActions } from '../hooks/useData'
 import { defaultTransformFor, transformNoteFor, type NmfTransform } from '../lib/nmfTransform'
 import { clusterBands, similarityColor, coverageLabel } from '../lib/metaPrograms'
+import NumberInput from './NumberInput'
 
 const API_BASE = '/api'
 
@@ -432,13 +433,13 @@ export default function MetaProgramsModal() {
                 </Field>
                 <Field label="Ranks to sweep (k)" tip={TIPS.ks}>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <input type="number" min={2} value={kMin} onChange={(e) => setKMin(e.target.value)} style={field} />
+                    <NumberInput min={2} value={kMin} onChange={(e) => setKMin(e.target.value)} style={field} />
                     <span style={{ color: dark.dim, fontSize: 11 }}>to</span>
-                    <input type="number" min={2} value={kMax} onChange={(e) => setKMax(e.target.value)} style={field} />
+                    <NumberInput min={2} value={kMax} onChange={(e) => setKMax(e.target.value)} style={field} />
                   </div>
                 </Field>
                 <Field label="Meta-programs (nMP)" tip={TIPS.nMp}>
-                  <input type="number" min={1} value={nMp} onChange={(e) => setNMp(e.target.value)} style={field} />
+                  <NumberInput min={1} value={nMp} onChange={(e) => setNMp(e.target.value)} style={field} />
                 </Field>
               </div>
               <div style={{ flex: 1 }}>
@@ -499,13 +500,13 @@ export default function MetaProgramsModal() {
                 borderRadius: 4, padding: '12px 14px 2px', marginBottom: 12,
               }}>
                 <Field label="Specificity weight" tip={TIPS.specificity}>
-                  <input type="number" step="1" min={0} value={specificity} onChange={(e) => setSpecificity(e.target.value)} style={field} />
+                  <NumberInput step="1" min={0} value={specificity} onChange={(e) => setSpecificity(e.target.value)} style={field} />
                 </Field>
                 <Field label="Weight explained" tip={TIPS.weightExplained}>
-                  <input type="number" step="0.05" min={0.05} max={1} value={weightExplained} onChange={(e) => setWeightExplained(e.target.value)} style={field} />
+                  <NumberInput step="0.05" min={0.05} max={1} value={weightExplained} onChange={(e) => setWeightExplained(e.target.value)} style={field} />
                 </Field>
                 <Field label="Min gene confidence" tip={TIPS.minConfidence}>
-                  <input type="number" step="0.05" min={0} max={1} value={minConfidence} onChange={(e) => setMinConfidence(e.target.value)} style={field} />
+                  <NumberInput step="0.05" min={0} max={1} value={minConfidence} onChange={(e) => setMinConfidence(e.target.value)} style={field} />
                 </Field>
                 <Field label="Similarity metric" tip={TIPS.metric}>
                   <select value={metric} onChange={(e) => setMetric(e.target.value as 'cosine' | 'jaccard')} style={field}>
@@ -514,10 +515,10 @@ export default function MetaProgramsModal() {
                   </select>
                 </Field>
                 <Field label="Min cells per sample" tip={TIPS.minCells}>
-                  <input type="number" min={2} value={minCells} onChange={(e) => setMinCells(e.target.value)} style={field} />
+                  <NumberInput min={2} value={minCells} onChange={(e) => setMinCells(e.target.value)} style={field} />
                 </Field>
                 <Field label="Random seed" tip="Fixes the initialization so a run is reproducible.">
-                  <input type="number" value={seed} onChange={(e) => setSeed(e.target.value)} style={field} />
+                  <NumberInput value={seed} onChange={(e) => setSeed(e.target.value)} style={field} />
                 </Field>
               </div>
             )}

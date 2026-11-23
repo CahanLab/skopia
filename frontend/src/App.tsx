@@ -19,6 +19,7 @@ import DisplaySettings from './components/DisplaySettings'
 import DiffExpModal from './components/DiffExpModal'
 import LineAssociationModal from './components/LineAssociationModal'
 import ScanpyModal from './components/ScanpyModal'
+import GeneSetToVarColumnModal from './components/GeneSetToVarColumnModal'
 import MultiContourModal from './components/MultiContourModal'
 import AnalysisRecordPanel from './components/AnalysisRecordPanel'
 import LocalizeModal from './components/LocalizeModal'
@@ -61,6 +62,7 @@ import { buildCrumbs } from './lib/pathCrumbs'
 import { isDiffmapKey, diffmapAxisLabel } from './lib/diffusion'
 import { assertJsonResponse } from './lib/foreignServer'
 import { numericExtent } from './lib/numericExtent'
+import NumberInput from './components/NumberInput'
 
 // The Add dropdown: section headers group the tools by what they make.
 const addMenuStyles: Record<string, React.CSSProperties> = {
@@ -366,8 +368,7 @@ function RotateToolbar({ onRotate }: { onRotate: (deg: number) => void }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
       <button style={btnStyle} onClick={() => onRotate(-90)} title="Rotate 90° counter-clockwise">↺ 90°</button>
       <button style={btnStyle} onClick={() => onRotate(90)} title="Rotate 90° clockwise">↻ 90°</button>
-      <input
-        type="number"
+      <NumberInput
         value={deg}
         placeholder="±°"
         onChange={(e) => setDeg(e.target.value)}
@@ -2294,6 +2295,7 @@ export default function App() {
       <DiffExpModal />
       <LineAssociationModal />
       <ScanpyModal />
+      <GeneSetToVarColumnModal />
       <PyscnModal />
       <MultiContourModal />
       <AnalysisRecordPanel />
@@ -2451,8 +2453,7 @@ export default function App() {
                 )}
                 <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '11px', color: '#888' }}>Gap:</span>
-                  <input
-                    type="number"
+                  <NumberInput
                     min={0}
                     max={50}
                     step={1}

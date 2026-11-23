@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useStore, cfgDefault } from '../store'
 import { appendDataset, pollTask } from '../hooks/useData'
+import NumberInput from './NumberInput'
 
 const API_BASE = '/api'
 
@@ -314,21 +315,21 @@ export default function LigRecModal() {
                   </select>
                 </Field>
                 <Field label="Diffusion radius" tip={TIPS.radius}>
-                  <input type="number" value={radius} onChange={(e) => setRadius(e.target.value)} placeholder="auto" style={numInput} />
+                  <NumberInput value={radius} onChange={(e) => setRadius(e.target.value)} placeholder="auto" style={numInput} />
                 </Field>
                 <Field label="Permutations" tip={TIPS.n_perm}>
-                  <input type="number" value={nPerm} onChange={(e) => setNPerm(e.target.value)} placeholder="auto" style={numInput} />
+                  <NumberInput value={nPerm} onChange={(e) => setNPerm(e.target.value)} placeholder="auto" style={numInput} />
                 </Field>
               </div>
               <div style={{ flex: 1 }}>
                 <Field label="Min cells / gene" tip={TIPS.min_cells}>
-                  <input type="number" value={minCells} onChange={(e) => setMinCells(e.target.value)} placeholder="auto" style={numInput} />
+                  <NumberInput value={minCells} onChange={(e) => setMinCells(e.target.value)} placeholder="auto" style={numInput} />
                 </Field>
                 <Field label="p-value threshold" tip={TIPS.p_thresh}>
-                  <input type="number" step="0.01" value={pThresh} onChange={(e) => setPThresh(e.target.value)} style={numInput} />
+                  <NumberInput step="0.01" value={pThresh} onChange={(e) => setPThresh(e.target.value)} style={numInput} />
                 </Field>
                 <Field label="Max interactions" tip={TIPS.max_pairs}>
-                  <input type="number" value={maxPairs} onChange={(e) => setMaxPairs(e.target.value)} style={numInput} />
+                  <NumberInput value={maxPairs} onChange={(e) => setMaxPairs(e.target.value)} style={numInput} />
                 </Field>
               </div>
             </div>

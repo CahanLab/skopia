@@ -266,6 +266,14 @@ export type SelectByExpressionSource =
   | { type: 'gene'; gene: string }
   | { type: 'geneSet'; name: string; genes: string[] }
 
+// Target for "Save as .var column": a gene set written to the file as a
+// boolean .var column. genesDown is offered when the set is directional.
+export interface GeneSetToVarSource {
+  name: string
+  genes: string[]
+  genesDown?: string[]
+}
+
 // Target for the "Score with UCell" modal (one or more directional sets).
 export interface UcellScoreSource {
   sets: { name: string; up: string[]; down: string[] }[]
@@ -505,6 +513,9 @@ export interface HeatmapConfig {
   geneOrdering: 'as_provided' | 'peak_position' | 'similarity'
   aggregateGeneSets: boolean
   nBins: number
+  // Heatmap: the labels of obsColumn to show, in order (null/absent = all).
+  // Sent only under a category ordering; the dot plot keeps its own in dotplot.groups.
+  groups?: string[] | null
   // Restrict the heatmap to these cells (e.g. the subset a gene clustering
   // ran on). null/absent = every cell. cellLabel is shown in the toolbar.
   cellIndices?: number[] | null
@@ -906,6 +917,7 @@ interface AppState {
   } | null
   selectByExpressionSource: SelectByExpressionSource | null
   ucellScoreSource: UcellScoreSource | null
+  geneSetToVarSource: GeneSetToVarSource | null
   scoreGeneSetsSource: ScoreGeneSetsSource | null
 
   // Line association state
@@ -1184,6 +1196,7 @@ interface AppState {
   } | null) => void
   setSelectByExpressionSource: (src: SelectByExpressionSource | null) => void
   setUcellScoreSource: (src: UcellScoreSource | null) => void
+  setGeneSetToVarSource: (src: GeneSetToVarSource | null) => void
   setScoreGeneSetsSource: (src: ScoreGeneSetsSource | null) => void
 
   // Line association actions
@@ -1513,6 +1526,7 @@ export const useStore = create<AppState>((set, get) => {
     geneInfoTarget: null,
     selectByExpressionSource: null,
     ucellScoreSource: null,
+    geneSetToVarSource: null,
     scoreGeneSetsSource: null,
     lineAssociationResult: null,
     isLineAssociationLoading: false,
@@ -2267,6 +2281,7 @@ export const useStore = create<AppState>((set, get) => {
     setGeneInfoTarget: (t) => set({ geneInfoTarget: t }),
     setSelectByExpressionSource: (src) => set({ selectByExpressionSource: src }),
     setUcellScoreSource: (src) => set({ ucellScoreSource: src }),
+    setGeneSetToVarSource: (src) => set({ geneSetToVarSource: src }),
     setScoreGeneSetsSource: (src) => set({ scoreGeneSetsSource: src }),
 
     // Line association actions (global)

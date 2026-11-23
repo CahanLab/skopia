@@ -16,6 +16,7 @@ import {
   type TextAnnotation,
   type TextStyle,
 } from '../lib/textAnnotations'
+import NumberInput from './NumberInput'
 
 // Text annotations on a 2D embedding. Drawn on every plot; interactive only in
 // Add → Text mode, when this layer takes the pointer: a click on empty plot
@@ -338,8 +339,7 @@ function TextEditorCard({ left, top, text, style, isNew, onText, onStyle, onDone
       />
       <div style={styles.row}>
         <label style={styles.label} title="Font size in screen pixels">Size</label>
-        <input
-          type="number"
+        <NumberInput
           min={6}
           max={96}
           value={style.fontSize}
@@ -376,8 +376,7 @@ function TextEditorCard({ left, top, text, style, isNew, onText, onStyle, onDone
           >{icon}</button>
         ))}
         <label style={styles.label} title="Rotation in degrees, clockwise">Rotate</label>
-        <input
-          type="number"
+        <NumberInput
           min={-180}
           max={180}
           step={5}

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useStore, ColorScale, ExpressionTransform, BivariateColormap, GeneSetPerGeneNorm, GeneSetAggregation } from '../store'
 import { getBivariateColor } from '../lib/cellColors'
 import { appendDataset } from '../hooks/useData'
+import NumberInput from './NumberInput'
 
 const styles = {
   container: {
@@ -719,8 +720,7 @@ export default function DisplaySettings() {
                       Visium HD coordinates are already µm — enter 1. Leave
                       empty if unknown; the bar hides.
                     </div>
-                    <input
-                      type="number"
+                    <NumberInput
                       min={0}
                       step="any"
                       placeholder="unknown"

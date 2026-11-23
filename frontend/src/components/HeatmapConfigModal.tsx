@@ -14,13 +14,14 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { orderSelectedSets, groupLabel, folderSelectionState, restoreSelectedIds } from '../lib/heatmapGroups'
+import { orderSelectedSets, groupLabel, folderSelectionState, restoreSelectedIds, toggleGroupPick, cleanGroupPick } from '../lib/heatmapGroups'
 import { DEFAULT_DOTPLOT_OPTIONS, type DotplotOptions, type MarkerSource } from '../lib/markerSelection'
 import { useStore, HeatmapConfig, GeneSetCategoryType, cfgDefault } from '../store'
 import { getAllGeneSets, CATEGORY_ORDER, type FlatGeneSet } from '../lib/flatGeneSets'
 import RestrictionPicker from './RestrictionPicker'
 import { type MarkerRestriction } from '../lib/markerSelection'
 import { fetchMarkerRuns, appendDataset, useObsSummaries, type MarkerRunSummary } from '../hooks/useData'
+import NumberInput from './NumberInput'
 
 const CATEGORY_NAMES: Record<GeneSetCategoryType, string> = {
   manual: 'Manual',
@@ -105,36 +106,49 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
   const [nBins, setNBins] = useState(config?.nBins ?? cfgDefault(['heatmap', 'n_bins'], 300))
   const [keepCellSubset, setKeepCellSubset] = useState(true)
   const [dotplot, setDotplot] = useState<DotplotOptions>({ ...DEFAULT_DOTPLOT_OPTIONS, ...(config?.dotplot ?? {}) })
-  // The labels of the dot plot's grouping column, for the group picker.
+  // The heatmap's own pick of groups (the dot plot keeps its in dotplot.groups).
+  const [heatmapGroups, setHeatmapGroups] = useState<string[] | null>(config?.groups ?? null)
+  // The labels of the grouping column, for the group pickers.
   const { summaries } = useObsSummaries()
   const groupValues = useMemo(
     () => (obsColumn ? summaries?.find((s) => s.name === obsColumn)?.categories?.map((c) => c.value) ?? [] : []),
     [summaries, obsColumn],
   )
-  // Groups are sent in the column's order; a selection equal to every label is "all" (null).
-  const toggleGroup = (value: string) => {
-    const current = new Set(dotplot.groups ?? groupValues)
-    if (current.has(value)) {
-      if (current.size === 1) return   // at least one group stays
-      current.delete(value)
-    } else {
-      current.add(value)
-    }
-    const next = groupValues.filter((v) => current.has(v))
-    setDotplot({ ...dotplot, groups: next.length === groupValues.length ? null : next })
+  // A new column invalidates both picks.
+  const changeObsColumn = (col: string | null) => {
+    setObsColumn(col)
+    setDotplot((d) => ({ ...d, groups: null }))
+    setHeatmapGroups(null)
   }
-  // A pick made before the column changed must not name labels it lacks.
-  const cleanGroups = (groups: string[] | null): string[] | null => {
-    if (!groups || !groupValues.length) return groups
-    const kept = groups.filter((g) => groupValues.includes(g))
-    return kept.length ? kept : null
-  }
+  // "Groups to show": one checkbox per label, in the column's order.
+  const groupPicker = (pick: string[] | null, setPick: (next: string[] | null) => void, attr: string) => groupValues.length > 0 && (
+    <div style={{ marginTop: '8px' }} {...{ [`data-${attr}-groups`]: true }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+        <span style={styles.subTitle}>Groups to show</span>
+        <span style={styles.hint}>
+          {pick ? `${pick.length} of ${groupValues.length}` : `all ${groupValues.length}`}
+        </span>
+        <div style={{ flex: 1 }} />
+        {pick && (
+          <button type="button" style={styles.smallButton} onClick={() => setPick(null)}>all</button>
+        )}
+      </div>
+      <div style={styles.geneSetList}>
+        {groupValues.map((v) => (
+          <label key={v} style={styles.checkboxRow} {...{ [`data-${attr}-group`]: v }}>
+            <input type="checkbox" checked={pick === null || pick.includes(v)} onChange={() => setPick(toggleGroupPick(pick, groupValues, v))} />
+            <span style={styles.geneSetName}>{v}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  )
 
   // Marker source: a stored run and the selection on it (numbers kept as
   // strings so a half-typed threshold does not snap).
   const [markerRuns, setMarkerRuns] = useState<MarkerRunSummary[] | null>(null)
   const [markerKey, setMarkerKey] = useState<string>(config?.markerSource?.key ?? '')
-  const [markerTopN, setMarkerTopN] = useState<number>(config?.markerSource?.topN ?? 10)
+  const [markerTopN, setMarkerTopN] = useState<number>(config?.markerSource?.topN ?? cfgDefault(['heatmap', 'marker_top_n'], 5))
   const [minPctIn, setMinPctIn] = useState(config?.markerSource?.minPctIn != null ? String(config.markerSource.minPctIn) : '')
   const [maxPctOut, setMaxPctOut] = useState(config?.markerSource?.maxPctOut != null ? String(config.markerSource.maxPctOut) : '')
   const [minLog2fc, setMinLog2fc] = useState(config?.markerSource?.minLog2fc != null ? String(config.markerSource.minLog2fc) : '')
@@ -236,7 +250,8 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
       selectedGeneSets: selected.map((gs) => ({ id: gs.id, name: groupLabel(gs, selected), genes: gs.genes })),
       plotType,
       markerSource,
-      dotplot: { ...dotplot, groups: cleanGroups(dotplot.groups) },
+      dotplot: { ...dotplot, groups: cleanGroupPick(dotplot.groups, groupValues) },
+      groups: cleanGroupPick(heatmapGroups, groupValues),
       cellOrdering,
       obsColumn: plotType === 'dotplot' || needsCategory ? obsColumn : null,
       lineName: plotType === 'heatmap' && needsLine ? lineName : null,
@@ -258,14 +273,14 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
   const thresholdInput = (label: string, value: string, set: (v: string) => void, placeholder: string, title: string, step = 0.05) => (
     <label style={styles.thresholdRow} title={title}>
       <span style={{ flex: 1 }}>{label}</span>
-      <input type="number" step={step} value={value} placeholder={placeholder} onChange={(e) => set(e.target.value)} style={{ ...styles.numberInput, width: '72px' }} />
+      <NumberInput step={step} value={value} placeholder={placeholder} onChange={(e) => set(e.target.value)} style={{ ...styles.numberInput, width: '72px' }} />
     </label>
   )
 
   return (
     <div style={styles.container}>
       <div style={styles.panel}>
-        <h3 style={styles.title}>Configure {plotType === 'dotplot' ? 'Dot Plot' : 'Heatmap'}</h3>
+        <h3 style={styles.title}>Expression Plot Settings</h3>
 
         {/* Plot type */}
         <div style={styles.section}>
@@ -325,7 +340,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
                   </select>
                   <label style={styles.thresholdRow}>
                     <span style={{ flex: 1 }}>Top N per group</span>
-                    <input type="number" min={1} max={500} value={markerTopN} onChange={(e) => setMarkerTopN(Math.max(1, parseInt(e.target.value) || 1))} style={{ ...styles.numberInput, width: '72px' }} />
+                    <NumberInput min={1} max={500} value={markerTopN} onChange={(e) => setMarkerTopN(Math.max(1, parseInt(e.target.value) || 1))} style={{ ...styles.numberInput, width: '72px' }} />
                   </label>
                   {thresholdInput('Min % in group', minPctIn, setMinPctIn, 'e.g. 0.25', 'Fraction of the group\'s cells expressing the gene (0..1); blank = no filter')}
                   {thresholdInput('Max % in others', maxPctOut, setMaxPctOut, 'e.g. 0.5', 'Fraction of the other cells expressing the gene (0..1); blank = no filter')}
@@ -414,35 +429,11 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
               <select
                 style={{ ...styles.inlineSelect, marginLeft: 0 }}
                 value={obsColumn || ''}
-                onChange={(e) => { setObsColumn(e.target.value || null); setDotplot((d) => ({ ...d, groups: null })) }}
+                onChange={(e) => changeObsColumn(e.target.value || null)}
               >
                 {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-              {groupValues.length > 0 && (
-                <div style={{ marginTop: '8px' }} data-dotplot-groups>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <span style={styles.subTitle}>Groups to show</span>
-                    <span style={styles.hint}>
-                      {dotplot.groups ? `${dotplot.groups.length} of ${groupValues.length}` : `all ${groupValues.length}`}
-                    </span>
-                    <div style={{ flex: 1 }} />
-                    {dotplot.groups && (
-                      <button type="button" style={styles.smallButton} onClick={() => setDotplot({ ...dotplot, groups: null })}>all</button>
-                    )}
-                  </div>
-                  <div style={styles.geneSetList}>
-                    {groupValues.map((v) => {
-                      const on = dotplot.groups === null || dotplot.groups.includes(v)
-                      return (
-                        <label key={v} style={styles.checkboxRow} data-dotplot-group={v}>
-                          <input type="checkbox" checked={on} onChange={() => toggleGroup(v)} />
-                          <span style={styles.geneSetName}>{v}</span>
-                        </label>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
+              {groupPicker(dotplot.groups, (next) => setDotplot((d) => ({ ...d, groups: next })), 'dotplot')}
               <label style={{ ...styles.thresholdRow, marginTop: '8px' }} title="As given: the column's order (the chosen groups' order). Cluster: average-linkage on the per-gene standardised mean profiles, so groups that express the same genes sit together">
                 <span style={{ flex: 1 }}>Group order</span>
                 <select style={{ ...styles.inlineSelect, marginLeft: 0 }} value={dotplot.groupOrdering} onChange={(e) => setDotplot({ ...dotplot, groupOrdering: e.target.value as DotplotOptions['groupOrdering'] })} data-dotplot-group-ordering>
@@ -471,7 +462,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
               </label>
               <label style={styles.thresholdRow} title="A cell counts as expressing when its value exceeds this">
                 <span style={{ flex: 1 }}>Expressing above</span>
-                <input type="number" min={0} step={0.1} value={dotplot.expressionCutoff} onChange={(e) => setDotplot({ ...dotplot, expressionCutoff: Math.max(0, parseFloat(e.target.value) || 0) })} style={{ ...styles.numberInput, width: '72px' }} />
+                <NumberInput min={0} step={0.1} value={dotplot.expressionCutoff} onChange={(e) => setDotplot({ ...dotplot, expressionCutoff: Math.max(0, parseFloat(e.target.value) || 0) })} style={{ ...styles.numberInput, width: '72px' }} />
               </label>
               <label style={styles.thresholdRow}>
                 <span style={{ flex: 1 }}>Gene order</span>
@@ -509,7 +500,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
                   <span>Group by category</span>
                 </label>
                 {cellOrdering === 'category' && (
-                  <select style={styles.inlineSelect} value={obsColumn || ''} onChange={(e) => setObsColumn(e.target.value || null)}>
+                  <select style={styles.inlineSelect} value={obsColumn || ''} onChange={(e) => changeObsColumn(e.target.value || null)}>
                     {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 )}
@@ -527,7 +518,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
                 </label>
                 {cellOrdering === 'category_then_position' && (
                   <div style={{ marginLeft: '24px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <select style={styles.inlineSelect} value={obsColumn || ''} onChange={(e) => setObsColumn(e.target.value || null)}>
+                    <select style={styles.inlineSelect} value={obsColumn || ''} onChange={(e) => changeObsColumn(e.target.value || null)}>
                       {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
@@ -541,7 +532,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
                   <span>Category, then similarity</span>
                 </label>
                 {cellOrdering === 'category_then_similarity' && (
-                  <select style={{ ...styles.inlineSelect, marginLeft: '24px' }} value={obsColumn || ''} onChange={(e) => setObsColumn(e.target.value || null)}>
+                  <select style={{ ...styles.inlineSelect, marginLeft: '24px' }} value={obsColumn || ''} onChange={(e) => changeObsColumn(e.target.value || null)}>
                     {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 )}
@@ -551,6 +542,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
                   </select>
                 )}
               </div>
+              {needsCategory && groupPicker(heatmapGroups, setHeatmapGroups, 'heatmap')}
             </div>
 
             {/* Gene ordering */}
@@ -584,8 +576,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
             <div style={styles.section}>
               <div style={styles.sectionTitle}>Cell Bins</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  type="number"
+                <NumberInput
                   min={0}
                   max={2000}
                   value={nBins}

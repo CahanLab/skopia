@@ -218,6 +218,13 @@ def _scoped(method: str, only: tuple[str, ...] | None, inner):
 
 def _code_pca(step: Step) -> list[str] | Emission:
     p = step.params
+    if p.get('scale'):
+        # scanpy's pca has no scale flag; skopia copies the PCA's genes and
+        # cells out, scales that copy, and maps the result back. That is the
+        # adaptor's work, so the honest line is the adaptor call.
+        return Emission(
+            [_xcall('run_pca', p, ('n_comps', 'svd_solver', 'gene_subset', 'scale'))], SKOPIA,
+        )
     args = _splat({'n_comps': p.get('n_comps'), 'svd_solver': p.get('svd_solver')})
     subset = p.get('gene_subset')
     if subset is None:
@@ -569,11 +576,12 @@ REGISTRY: dict[str, ActionSpec] = {
     ),
     'pca': ActionSpec(
         label='PCA', fidelity=EXACT, imports=SCANPY,
-        code=_scoped('run_pca', ('n_comps', 'svd_solver', 'gene_subset'), _code_pca),
+        code=_scoped('run_pca', ('n_comps', 'svd_solver', 'gene_subset', 'scale'), _code_pca),
         summary=lambda p, r: (
             f"PCA to {_n(r.get('n_comps', p.get('n_comps')))} components "
             f"over {_n(r.get('n_genes_used'))} genes "
-            f"({r.get('gene_subset_type', 'default')} gene set)."
+            f"({r.get('gene_subset_type', 'default')} gene set"
+            f"{', each gene scaled to unit variance' if p.get('scale') else ''})."
         ),
     ),
     'neighbors': ActionSpec(
@@ -1185,6 +1193,17 @@ REGISTRY: dict[str, ActionSpec] = {
             f"Computed QC metrics over {p.get('qc_vars') or 'no'} gene flags → "
             f"{_n(r.get('n_obs_columns'))} new `.obs` and "
             f"{_n(r.get('n_var_columns'))} new `.var` columns."
+        ),
+    ),
+    'add_var_boolean_from_genes': ActionSpec(
+        label='Gene set as a .var column', fidelity=EXACT, imports=(),
+        code=lambda s: [
+            f"{ADATA}.var[{_lit(s.params.get('name'))}] = "
+            f"{ADATA}.var_names.isin({_lit(list(s.params.get('genes') or []))})"
+        ],
+        summary=lambda p, r: (
+            f"Flagged {_n(r.get('n_genes_matched'))} of {_n(r.get('n_genes_listed'))} listed genes "
+            f"in `.var['{p.get('name')}']`."
         ),
     ),
     'add_var_boolean_column': ActionSpec(

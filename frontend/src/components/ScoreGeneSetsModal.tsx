@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { appendDataset, refreshSchema } from '../hooks/useData'
 import { useStore, ScoreGeneSetsSource, GeneSetPerGeneNorm, GeneSetAggregation } from '../store'
+import NumberInput from './NumberInput'
 
 interface Props {
   source: ScoreGeneSetsSource | null
@@ -136,7 +137,7 @@ export function ScoreGeneSetsModal({ source, onClose, onScored }: Props) {
             </label>
             {perGeneNorm === 'minmax' && (
               <label style={label}>Per-gene clip percentile
-                <input type="number" style={control} step="0.5" min={0} max={50} value={perGeneClip}
+                <NumberInput style={control} step="0.5" min={0} max={50} value={perGeneClip}
                   onChange={(e) => setPerGeneClip(parseFloat(e.target.value) || 0)} />
               </label>
             )}

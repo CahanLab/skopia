@@ -60,3 +60,27 @@ export function folderSelectionState(
   if (n === 0) return 'none'
   return n === ids.length ? 'all' : 'some'
 }
+
+/** Tick or untick one label of a grouping column in a "groups to show"
+ * pick. `null` means every label; the result keeps the column's order, and
+ * a pick that is every label again collapses back to null. The last label
+ * cannot be unticked. Shared by the dot plot and the heatmap. */
+export function toggleGroupPick(pick: readonly string[] | null, all: readonly string[], value: string): string[] | null {
+  const current = new Set(pick ?? all)
+  if (current.has(value)) {
+    if (current.size === 1) return [...current]
+    current.delete(value)
+  } else {
+    current.add(value)
+  }
+  const next = all.filter((v) => current.has(v))
+  return next.length === all.length ? null : next
+}
+
+/** A pick made before the column changed must not name labels it lacks;
+ * while the labels are not loaded yet the pick is left alone. */
+export function cleanGroupPick(pick: readonly string[] | null, all: readonly string[]): string[] | null {
+  if (!pick || !all.length) return pick ? [...pick] : null
+  const kept = pick.filter((g) => all.includes(g))
+  return kept.length ? kept : null
+}

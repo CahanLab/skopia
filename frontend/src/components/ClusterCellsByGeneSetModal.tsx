@@ -13,6 +13,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useStore, cfgDefault } from '../store'
 import { appendDataset, pollTask, refreshSchema, useDataActions, useObsSummaries } from '../hooks/useData'
+import NumberInput from './NumberInput'
 
 const API_BASE = '/api'
 
@@ -231,13 +232,13 @@ export default function ClusterCellsByGeneSetModal() {
             </Field>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
               <Field label="PCs" tip="Clamped to the number of genes minus one">
-                <input type="number" min={1} max={100} value={nComps} onChange={(e) => setNComps(Math.max(1, Number(e.target.value) || 1))} style={field} />
+                <NumberInput min={1} max={100} value={nComps} onChange={(e) => setNComps(Math.max(1, Number(e.target.value) || 1))} style={field} />
               </Field>
               <Field label="Neighbours">
-                <input type="number" min={2} max={200} value={nNeighbors} onChange={(e) => setNNeighbors(Math.max(2, Number(e.target.value) || 2))} style={field} />
+                <NumberInput min={2} max={200} value={nNeighbors} onChange={(e) => setNNeighbors(Math.max(2, Number(e.target.value) || 2))} style={field} />
               </Field>
               <Field label="Resolution" tip="Higher = more clusters. A gene-set PCA fragments easily: at 1.0 a 33-gene set gave 100 clusters on 24k cells, so start low.">
-                <input type="number" min={0.05} max={10} step={0.1} value={resolution} onChange={(e) => setResolution(Math.max(0.05, Number(e.target.value) || 0.05))} style={field} />
+                <NumberInput min={0.05} max={10} step={0.1} value={resolution} onChange={(e) => setResolution(Math.max(0.05, Number(e.target.value) || 0.05))} style={field} />
               </Field>
             </div>
             <div style={{ display: 'flex', gap: 16, marginBottom: 10, color: dark.muted }}>

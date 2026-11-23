@@ -13,6 +13,7 @@ import {
 } from '../lib/enrichment'
 import { standaloneSvg, downloadText } from '../lib/svgExport'
 import { flattenGeneSets } from './GenePanel'
+import NumberInput from './NumberInput'
 
 /** Overlap (hypergeometric) enrichment and preranked GSEA against the
  *  gene-set libraries already in the source cache, plus the user's own sets.
@@ -552,7 +553,7 @@ export default function EnrichmentModal() {
             </select>
             <span style={styles.muted}>{batchNote}</span>
             <span style={{ fontSize: '12px', color: '#ccc' }}>Top N markers</span>
-            <input style={styles.input} type="number" min={2} value={markerTopN} onChange={(e) => setMarkerTopN(Math.max(2, Math.round(Number(e.target.value)) || 2))} />
+            <NumberInput style={styles.input} min={2} value={markerTopN} onChange={(e) => setMarkerTopN(Math.max(2, Math.round(Number(e.target.value)) || 2))} />
             <span style={{ fontSize: '12px', color: '#ccc' }}>Min in-group frac.</span>
             <input style={{ ...styles.input, width: '60px' }} value={markerMinIn} onChange={(e) => setMarkerMinIn(e.target.value)} placeholder="—" />
             <span style={{ fontSize: '12px', color: '#ccc' }}>Max out-group frac.</span>
@@ -565,11 +566,11 @@ export default function EnrichmentModal() {
       {setsBlock}
       <div style={styles.row}>
         <span style={{ fontSize: '12px', color: '#ccc' }}>Min overlap</span>
-        <input style={styles.input} type="number" min={1} value={minOverlap} onChange={(e) => setMinOverlap(Math.max(1, Number(e.target.value) || 1))} />
+        <NumberInput style={styles.input} min={1} value={minOverlap} onChange={(e) => setMinOverlap(Math.max(1, Number(e.target.value) || 1))} />
         <span style={{ fontSize: '12px', color: '#ccc' }}>Set size</span>
-        <input style={styles.input} type="number" min={1} value={oraMin} onChange={(e) => setOraMin(Math.max(1, Number(e.target.value) || 1))} />
+        <NumberInput style={styles.input} min={1} value={oraMin} onChange={(e) => setOraMin(Math.max(1, Number(e.target.value) || 1))} />
         <span style={styles.muted}>to</span>
-        <input style={styles.input} type="number" min={1} value={oraMax} onChange={(e) => setOraMax(Math.max(1, Number(e.target.value) || 1))} />
+        <NumberInput style={styles.input} min={1} value={oraMax} onChange={(e) => setOraMax(Math.max(1, Number(e.target.value) || 1))} />
       </div>
       <div style={styles.muted}>
         Hypergeometric test of each set's overlap with the query, Benjamini–Hochberg across sets. The universe is the dataset's genes (after the gene mask and the Universe column).
@@ -623,7 +624,7 @@ export default function EnrichmentModal() {
         ) : (
           <div style={{ ...styles.row, marginBottom: 0 }}>
             <span style={{ fontSize: '12px', color: '#ccc' }}>Component</span>
-            <input style={styles.input} type="number" min={1} max={Math.max(1, nPcs)} value={component} onChange={(e) => setComponent(Math.max(1, Number(e.target.value) || 1))} />
+            <NumberInput style={styles.input} min={1} max={Math.max(1, nPcs)} value={component} onChange={(e) => setComponent(Math.max(1, Number(e.target.value) || 1))} />
             <span style={styles.muted}>{nPcs > 0 ? `${nPcs} available in ${pcaKey}` : `no ${pcaKey}: run PCA first`}</span>
           </div>
         )}
@@ -631,15 +632,15 @@ export default function EnrichmentModal() {
       {setsBlock}
       <div style={styles.row}>
         <span style={{ fontSize: '12px', color: '#ccc' }}>Permutations</span>
-        <input style={styles.input} type="number" min={10} step={100} value={nPerm} onChange={(e) => setNPerm(Math.max(10, Number(e.target.value) || 10))} />
+        <NumberInput style={styles.input} min={10} step={100} value={nPerm} onChange={(e) => setNPerm(Math.max(10, Number(e.target.value) || 10))} />
         <span style={{ fontSize: '12px', color: '#ccc' }}>Set size</span>
-        <input style={styles.input} type="number" min={1} value={gMin} onChange={(e) => setGMin(Math.max(1, Number(e.target.value) || 1))} />
+        <NumberInput style={styles.input} min={1} value={gMin} onChange={(e) => setGMin(Math.max(1, Number(e.target.value) || 1))} />
         <span style={styles.muted}>to</span>
-        <input style={styles.input} type="number" min={1} value={gMax} onChange={(e) => setGMax(Math.max(1, Number(e.target.value) || 1))} />
+        <NumberInput style={styles.input} min={1} value={gMax} onChange={(e) => setGMax(Math.max(1, Number(e.target.value) || 1))} />
         <span style={{ fontSize: '12px', color: '#ccc' }}>Weight</span>
-        <input style={styles.input} type="number" min={0} step={0.5} value={weight} onChange={(e) => setWeight(Math.max(0, Number(e.target.value) || 0))} />
+        <NumberInput style={styles.input} min={0} step={0.5} value={weight} onChange={(e) => setWeight(Math.max(0, Number(e.target.value) || 0))} />
         <span style={{ fontSize: '12px', color: '#ccc' }}>Seed</span>
-        <input style={styles.input} type="number" value={seed} onChange={(e) => setSeed(Number(e.target.value) || 0)} />
+        <NumberInput style={styles.input} value={seed} onChange={(e) => setSeed(Number(e.target.value) || 0)} />
       </div>
       <div style={styles.muted}>Preranked GSEA (weighted running sum) with a gene-permutation null. p-values are empirical and floor at about 2/permutations; directional sets are tested as "set" and "set (down)".</div>
     </>

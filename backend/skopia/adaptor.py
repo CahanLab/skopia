@@ -1653,6 +1653,39 @@ class DataAdaptor:
         }, result)
         return result
 
+    def add_var_boolean_from_genes(
+        self, name: str, genes: list[str], overwrite: bool = False,
+    ) -> dict[str, Any]:
+        """Flag the listed genes in a boolean .var column, so a browser gene
+        set becomes something the file carries and every gene-subset picker
+        reads. Genes the dataset lacks are reported, not an error, unless
+        none are present.
+
+        An existing boolean column is replaced only with ``overwrite``; a
+        non-boolean one never is.
+        """
+        name = (name or '').strip()
+        if not name:
+            raise ValueError("column name must be non-empty")
+        if name in self.adata.var.columns:
+            if self.adata.var[name].dtype != bool:
+                raise ValueError(f"'{name}' already exists and is not boolean; choose another name")
+            if not overwrite:
+                raise ValueError(f"'{name}' already exists; choose another name or overwrite it")
+        wanted = list(dict.fromkeys(str(g) for g in genes))
+        mask = self.adata.var_names.isin(wanted)
+        n_matched = int(mask.sum())
+        if n_matched == 0:
+            raise ValueError(f"none of the {len(wanted)} genes are in this dataset")
+        present = set(self.adata.var_names[mask])
+        missing = [g for g in wanted if g not in present]
+        self.adata.var[name] = np.asarray(mask, dtype=bool)
+        result = {'name': name, 'n_genes_matched': n_matched, 'n_genes_listed': len(wanted),
+                  'missing': missing}
+        self._log_action('add_var_boolean_from_genes', {'name': name, 'genes': wanted},
+                         {k: v for k, v in result.items() if k != 'missing'} | {'n_missing': len(missing)})
+        return result
+
     def run_calculate_qc_metrics(
         self, qc_vars=None, percent_top=None, log1p: bool = True,
     ) -> dict[str, Any]:
@@ -7710,15 +7743,7 @@ class DataAdaptor:
                 transform = inputs.get('transform') or None
                 if transform not in (None, 'log1p'):
                     raise ValueError("inputs.transform must be null or 'log1p'")
-                groups = inputs.get('groups')
-                if groups is not None:
-                    if not isinstance(groups, list) or not groups or not all(isinstance(g, str) for g in groups):
-                        raise ValueError('inputs.groups must be a non-empty list of labels, or null for all of them')
-                    present = set(self.adata.obs[obs_column].astype(str).unique())
-                    unknown = [g for g in groups if g not in present]
-                    if unknown:
-                        raise ValueError(f"inputs.groups: {unknown} are not labels of '{obs_column}'")
-                    groups = list(dict.fromkeys(groups))
+                groups = self._figure_input_groups(inputs, obs_column)
                 return {'gene_sets': [{'name': str(s.get('name', '')), 'genes': [str(g) for g in s['genes']]} for s in sets],
                         'marker_key': str(marker_key) if marker_key else None, 'marker_restrict': restrict,
                         'obs_column': obs_column, 'transform': transform, 'groups': groups,
@@ -7729,10 +7754,11 @@ class DataAdaptor:
             transform = inputs.get('transform') or None
             if transform not in (None, 'log1p'):
                 raise ValueError("inputs.transform must be null or 'log1p'")
+            groups = self._figure_input_groups(inputs, obs_column)
             return {'gene_sets': [{'name': str(s.get('name', '')), 'genes': [str(g) for g in s['genes']]} for s in sets],
                     'marker_key': str(marker_key) if marker_key else None, 'marker_restrict': restrict,
                     'obs_column': obs_column, 'line_name': line_name, 'transform': transform,
-                    **self._figure_cell_inputs(inputs)}
+                    'groups': groups, **self._figure_cell_inputs(inputs)}
         if kind == 'cnv_heatmap':
             key = inputs.get('key')
             if not key or key not in self._cnv_store():
@@ -7878,7 +7904,7 @@ class DataAdaptor:
 
     def _marker_selection(self, params: dict[str, Any]) -> dict[str, Any]:
         return {
-            'top_n': int(params.get('marker_top_n') or 10),
+            'top_n': int(params.get('marker_top_n') or 5),
             'min_pct_in': params.get('marker_min_pct_in'), 'max_pct_out': params.get('marker_max_pct_out'),
             'min_log2fc': params.get('marker_min_log2fc'), 'max_padj': params.get('marker_max_padj'),
             'rank_by': str(params.get('marker_rank_by') or 'score'),
@@ -7905,6 +7931,35 @@ class DataAdaptor:
                 # the restriction's .var column was deleted after the figure was saved
                 raise FigureInputMissing(f"{e.args[0]}; the figure cannot be drawn") from e
         groups += [{'name': s_['name'], 'genes': list(s_['genes'])} for s_ in inp.get('gene_sets') or []]
+        return groups
+
+    def _figure_input_groups(self, inputs: dict[str, Any], obs_column: str | None) -> list[str] | None:
+        """``inputs.groups`` checked against the labels of ``obs_column``:
+        a non-empty list of labels it has (deduplicated, order kept), or None
+        for all of them."""
+        groups = inputs.get('groups')
+        if groups is None:
+            return None
+        if not isinstance(groups, list) or not groups or not all(isinstance(g, str) for g in groups):
+            raise ValueError('inputs.groups must be a non-empty list of labels, or null for all of them')
+        if not obs_column:
+            raise ValueError('inputs.groups needs inputs.obs_column to choose the groups from')
+        present = set(self.adata.obs[obs_column].astype(str).unique())
+        unknown = [g for g in groups if g not in present]
+        if unknown:
+            raise ValueError(f"inputs.groups: {unknown} are not labels of '{obs_column}'")
+        return list(dict.fromkeys(groups))
+
+    def _check_figure_groups_present(self, inp: dict[str, Any]) -> list[str] | None:
+        """The figure's recorded groups, or FigureInputMissing when a label
+        has since gone from its column (renamed, merged, cells deleted)."""
+        groups = inp.get('groups') or None
+        if groups:
+            present = set(self.adata.obs[inp['obs_column']].astype(str).unique())
+            gone = [g for g in groups if g not in present]
+            if gone:
+                raise FigureInputMissing(
+                    f"Label(s) {gone} no longer exist in '{inp['obs_column']}'; the figure cannot be drawn")
         return groups
 
     def _default_figure_title(self, kind: str, inputs: dict[str, Any]) -> str:
@@ -8174,6 +8229,7 @@ class DataAdaptor:
                 raise FigureInputMissing(f"Drawn line '{inp['line_name']}' no longer exists; the figure cannot be drawn")
             if inp.get('obs_column') and inp['obs_column'] not in self.adata.obs.columns:
                 raise FigureInputMissing(f"Column '{inp['obs_column']}' no longer exists; the figure cannot be drawn")
+            groups = self._check_figure_groups_present(inp)
             self._check_heatmap_params(inp, params)
             self._check_marker_params(params)
             row_groups = self._figure_row_groups(record, params)
@@ -8189,7 +8245,7 @@ class DataAdaptor:
                 aggregate_gene_sets=bool(params.get('aggregate_gene_sets')), cell_ordering=str(params.get('cell_ordering', 'category')),
                 obs_column=inp.get('obs_column'), line_name=inp.get('line_name'),
                 gene_ordering=str(params.get('gene_ordering', 'as_provided')), n_bins=int(params.get('n_bins', 0)),
-                transform=inp.get('transform'), cell_indices=self._figure_cells(inp))
+                transform=inp.get('transform'), cell_indices=self._figure_cells(inp), groups=groups)
             out['figure_id'] = figure_id
             out['kind'] = kind
             return out
@@ -8222,13 +8278,7 @@ class DataAdaptor:
             inp = record['inputs']
             if inp['obs_column'] not in self.adata.obs.columns:
                 raise FigureInputMissing(f"Column '{inp['obs_column']}' no longer exists; the figure cannot be drawn")
-            groups = inp.get('groups') or None
-            if groups:
-                present = set(self.adata.obs[inp['obs_column']].astype(str).unique())
-                gone = [g for g in groups if g not in present]
-                if gone:
-                    raise FigureInputMissing(
-                        f"Label(s) {gone} no longer exist in '{inp['obs_column']}'; the figure cannot be drawn")
+            groups = self._check_figure_groups_present(inp)
             self._check_marker_params(params)
             self._check_dotplot_params(params)
             row_groups = self._figure_row_groups(record, params)
@@ -9059,6 +9109,87 @@ class DataAdaptor:
             )
         return groups, skipped
 
+    def _hvg_input_for_cells(self, indices) -> anndata.AnnData:
+        """The cells' copy that HVG detection on a selection runs on.
+
+        Genes with zero expression in those cells are dropped, which avoids
+        degenerate bin edges in scanpy's dispersion binning. Shared by the run
+        and its preview so the preview cannot flag different genes.
+        """
+        adata_sub = self.adata[indices].copy()
+        gene_totals = np.asarray(adata_sub.X.sum(axis=0)).ravel()
+        return adata_sub[:, gene_totals > 0].copy()
+
+    HVG_FLAVORS = ('seurat', 'cell_ranger', 'seurat_v3')
+
+    def preview_highly_variable_genes(
+        self,
+        n_top_genes: int | None = None,
+        min_mean: float = 0.0125,
+        max_mean: float = 3.0,
+        min_disp: float = 0.5,
+        flavor: str = 'seurat',
+        n_bins: int = 20,
+        active_cell_indices: list[int] | None = None,
+        cell_subset: str | None = None,
+    ) -> dict[str, Any]:
+        """Per-gene mean and dispersion with the genes these settings would
+        flag, for the HVG modal's scatter. Nothing is written or recorded.
+
+        Runs the same scanpy call as :meth:`run_highly_variable_genes` with
+        ``inplace=False``, on the same cells, so the flags are the column a
+        run would write. The axes are the columns the thresholds cut:
+        ``means`` and ``dispersions_norm`` (seurat, cell_ranger; means are of
+        the log data, so the axis is linear), or raw-count ``means`` (log
+        axis) and ``variances_norm`` for seurat_v3. Genes without a value
+        (unexpressed ones) are left off the plot and counted; an infinite
+        normalized dispersion is drawn at the edge and marked ``off_scale``.
+        """
+        if flavor not in self.HVG_FLAVORS:
+            raise ValueError(f"flavor must be one of {', '.join(self.HVG_FLAVORS)}, got {flavor!r}")
+        indices, _ = self._resolve_cell_scope(cell_subset, active_cell_indices)
+        src = self.adata if indices is None else self._hvg_input_for_cells(indices)
+        df = sc.pp.highly_variable_genes(
+            src, n_top_genes=n_top_genes, min_mean=min_mean, max_mean=max_mean,
+            min_disp=min_disp, flavor=flavor, n_bins=n_bins, inplace=False,
+        )
+        df.index = src.var_names
+        v3 = flavor == 'seurat_v3'
+        y_col = 'variances_norm' if v3 else 'dispersions_norm'
+        x = df['means'].to_numpy(dtype=float)
+        y = df[y_col].to_numpy(dtype=float)
+        hv = df['highly_variable'].to_numpy(dtype=bool)
+        ok = np.isfinite(x) & ~np.isnan(y)
+        if v3:
+            ok &= x > 0  # a log axis
+        # cell_ranger gives +/-inf where a bin's MAD is zero, and flags the
+        # +inf genes. They are pinned to the plot's edge and marked, not
+        # dropped: a preview missing selected genes would undercount.
+        off = ok & np.isinf(y)
+        finite = ok & np.isfinite(y)
+        if off.any():
+            lo, hi = (float(y[finite].min()), float(y[finite].max())) if finite.any() else (0.0, 1.0)
+            y = np.where(y == np.inf, hi, np.where(y == -np.inf, lo, y))
+        return {
+            'flavor': flavor,
+            'x_label': 'mean expression (counts)' if v3 else 'mean expression (log)',
+            'x_log': v3,
+            'y_label': 'normalized variance' if v3 else 'normalized dispersion',
+            'genes': [str(g) for g in df.index[ok]],
+            'x': np.round(x[ok], 5).tolist(),
+            'y': np.round(y[ok], 5).tolist(),
+            'highly_variable': hv[ok].tolist(),
+            'off_scale': off[ok].tolist(),
+            'n_highly_variable': int(hv.sum()),
+            'n_genes': int(self.n_genes),
+            'n_plotted': int(ok.sum()),
+            'n_cells': int(src.n_obs),
+            # The cutoffs act only when no top-N is asked for, and seurat_v3
+            # has none; otherwise there is nothing to draw.
+            'thresholds': None if (v3 or n_top_genes) else {
+                'min_mean': float(min_mean), 'max_mean': float(max_mean), 'min_disp': float(min_disp)},
+        }
+
     def run_highly_variable_genes(
         self,
         n_top_genes: int | None = None,
@@ -9139,16 +9270,7 @@ class DataAdaptor:
                 "subset: the genes belong to the whole dataset.")
         out_column = 'highly_variable' if subset_name is None else f'highly_variable__{subset_name}'
         if indices is not None:
-            from scipy import sparse
-            adata_sub = self.adata[indices].copy()
-            # Drop genes with zero expression in the subset to avoid
-            # degenerate bin edges in scanpy's HVG binning step
-            if sparse.issparse(adata_sub.X):
-                gene_totals = np.asarray(adata_sub.X.sum(axis=0)).ravel()
-            else:
-                gene_totals = np.asarray(adata_sub.X.sum(axis=0)).ravel()
-            expressed_mask = gene_totals > 0
-            adata_hvg = adata_sub[:, expressed_mask].copy()
+            adata_hvg = self._hvg_input_for_cells(indices)
 
             # Compute HVGs on subset (always with subset=False to get annotations)
             sc.pp.highly_variable_genes(
@@ -9224,6 +9346,7 @@ class DataAdaptor:
         use_highly_variable: bool | None = None,
         active_cell_indices: list[int] | None = None,
         cell_subset: str | None = None,
+        scale: bool = False,
     ) -> dict[str, Any]:
         """Run PCA dimensionality reduction.
 
@@ -9245,6 +9368,12 @@ class DataAdaptor:
                 the dataset's own ``X_pca`` is not touched. With no
                 ``gene_subset`` the subset's own ``highly_variable__<name>``
                 column is used when it exists, then the pooled one.
+            scale: z-score each gene (clipped at 10 SD, scanpy's tutorial
+                value) on a copy before the PCA, so every gene weighs the same
+                in the components. Off by default, as in sc-best-practices:
+                unscaled, a gene's expression magnitude still counts as
+                information and lowly expressed genes do not get the same
+                pull as strongly expressed ones. ``.X`` is never changed.
 
         Returns:
             Dict with operation status and variance explained
@@ -9263,7 +9392,10 @@ class DataAdaptor:
                 gene_subset = own
                 auto_label = f'{own} (auto)'
 
-        # Resolve gene subset
+        # Resolve gene subset. gene_subset_applied: adata_pca is already a copy
+        # holding only the PCA's genes (so no mask_var, and loadings map back
+        # through gene_mask).
+        gene_subset_applied = gene_subset is not None
         if gene_subset is not None:
             # The gene mask is a session-only Gene-Panel view; it must not
             # silently change an embedding that gets written into the file.
@@ -9283,11 +9415,20 @@ class DataAdaptor:
             if 'highly_variable' in self.adata.var.columns:
                 n_genes_used = int(self.adata.var['highly_variable'].sum())
                 subset_type = 'highly_variable (auto)'
+            if scale:
+                # Scaling densifies the matrix, so copy out only the genes the
+                # PCA will use (scanpy would mask to highly_variable anyway),
+                # and from here on this is the explicit-subset path.
+                gene_mask = (self.adata.var['highly_variable'].values.astype(bool)
+                             if 'highly_variable' in self.adata.var.columns
+                             else np.ones(self.n_genes, dtype=bool))
+                adata_pca = self.adata[:, gene_mask].copy()
+                gene_subset_applied = True
 
         # Apply cell mask
         if cell_indices is not None:
             # Subset cells from the (possibly gene-subsetted) adata
-            if gene_subset is not None:
+            if gene_subset_applied:
                 adata_pca = adata_pca[cell_indices].copy()
             else:
                 adata_pca = self.adata[cell_indices].copy()
@@ -9298,13 +9439,18 @@ class DataAdaptor:
         max_comps = min(adata_pca.n_obs - 1, n_genes_used - 1)
         n_comps = min(n_comps, max_comps)
 
+        if scale:
+            # After the cell subset, so each gene is z-scored over the cells the
+            # PCA actually sees. adata_pca is a copy here; .X is untouched.
+            sc.pp.scale(adata_pca, max_value=10)
+
         # Run PCA on subset. An explicit gene subset must be used whole:
         # scanpy's mask_var defaults to the 'highly_variable' column whenever
         # one exists, which silently intersected 'spatially_variable' (or a
         # subset's own HVG column) with the pooled HVGs — and failed outright
         # when the two did not overlap.
         pca_kwargs: dict[str, Any] = {'n_comps': n_comps, 'svd_solver': svd_solver}
-        if gene_subset is not None:
+        if gene_subset_applied:
             pca_kwargs['mask_var'] = None
         sc.tl.pca(adata_pca, **pca_kwargs)
 
@@ -9330,7 +9476,7 @@ class DataAdaptor:
         # to be present and correctly shaped for self.adata.n_vars.
         if 'PCs' in adata_pca.varm:
             full_pcs = np.full((self.n_genes, n_comps), np.nan)
-            if gene_subset is not None:
+            if gene_subset_applied:
                 full_pcs[gene_mask, :] = adata_pca.varm['PCs']
             else:
                 full_pcs[:, :] = adata_pca.varm['PCs']
@@ -9350,6 +9496,7 @@ class DataAdaptor:
             'embedding_name': pca_key,
             'gene_subset_type': subset_type,
             'n_genes_used': n_genes_used,
+            'scaled': bool(scale),
         }
         # Clear derived PC subsets — they reference columns of the previous
         # X_pca and become stale on re-run. obsm and varm are NOT touched by
@@ -9395,13 +9542,15 @@ class DataAdaptor:
             'n_comps': n_comps,
             'svd_solver': svd_solver,
             'gene_subset': gene_subset,
+            'scale': bool(scale),
         }
         if subset_name is not None:
             result['cell_subset'] = subset_name
             params['cell_subset'] = subset_name
             self._subset_record_step(subset_name, 'pca', pca_key, {
                 'n_comps': n_comps, 'svd_solver': svd_solver,
-                'gene_subset_type': subset_type, 'n_genes_used': n_genes_used})
+                'gene_subset_type': subset_type, 'n_genes_used': n_genes_used,
+                'scale': bool(scale)})
         self._log_action('pca', params, result, subset=cell_indices)
         return result
 

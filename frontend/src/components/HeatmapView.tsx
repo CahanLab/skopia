@@ -12,7 +12,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useStore, HeatmapConfig } from '../store'
 import { useDataActions, appendDataset, createFigure, fetchDotplotData } from '../hooks/useData'
-import { heatmapFigureFromConfig, dotplotFigureFromConfig } from '../lib/figures'
+import { heatmapFigureFromConfig, dotplotFigureFromConfig, heatmapGroupsFor } from '../lib/figures'
 import { heatmapCellScope } from '../lib/heatmapCells'
 import { markerSummary, normalizeHeatmapConfig, rowsFromConfig } from '../lib/markerSelection'
 import HeatmapConfigModal from './HeatmapConfigModal'
@@ -154,6 +154,7 @@ export default function HeatmapView() {
           n_bins: config.nBins,
           transform,
           cell_indices: cellIndices,
+          groups: heatmapGroupsFor(config),
         }),
       })
 
@@ -227,7 +228,7 @@ export default function HeatmapView() {
               : 'No data to display. Check that selected gene sets contain valid genes.'}
         </div>
         <button style={hmStyles.settingsButton} onClick={() => setConfigOpen(true)}>
-          Configure {isDotplot ? 'Dot Plot' : 'Heatmap'}
+          Settings
         </button>
       </div>
     )

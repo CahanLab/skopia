@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useStore, cfgDefault } from '../store'
 import { runClusterGeneSet, useObsSummaries, appendDataset } from '../hooks/useData'
 import type { AutoClusterDiagnostics } from '../hooks/useData'
+import NumberInput from './NumberInput'
 
 interface LayerInfo {
   name: string
@@ -484,8 +485,7 @@ export default function ClusterGeneSetModal() {
               <label style={{ display: 'block', fontSize: '11px', color: '#888', marginBottom: '4px' }}>
                 Neighbor radius (eps)
               </label>
-              <input
-                type="number"
+              <NumberInput
                 min={0.05}
                 max={2}
                 step={0.05}
@@ -513,8 +513,7 @@ export default function ClusterGeneSetModal() {
               <label style={{ display: 'block', fontSize: '11px', color: '#888', marginBottom: '4px' }}>
                 Min samples
               </label>
-              <input
-                type="number"
+              <NumberInput
                 min={2}
                 max={maxMinSamples}
                 value={minSamples}
@@ -540,8 +539,7 @@ export default function ClusterGeneSetModal() {
           <label style={{ display: 'block', fontSize: '11px', color: '#888', marginBottom: '4px' }}>
             Number of clusters (K)
           </label>
-          <input
-            type="number"
+          <NumberInput
             min={2}
             max={maxK}
             value={k}

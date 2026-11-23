@@ -1169,6 +1169,27 @@ export async function fetchVarBooleanColumns(
   return res.json()
 }
 
+export interface VarColumnFromGenesResult {
+  name: string
+  n_genes_matched: number
+  n_genes_listed: number
+  missing: string[]
+}
+
+/** Write a gene list as a boolean .var column (POST /api/var/boolean_from_genes). */
+export async function createVarColumnFromGenes(
+  name: string,
+  genes: string[],
+  overwrite = false,
+  slot?: DatasetSlot,
+): Promise<VarColumnFromGenesResult> {
+  return fetchJson<VarColumnFromGenesResult>(appendDataset(`${API_BASE}/var/boolean_from_genes`, slot), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, genes, overwrite }),
+  })
+}
+
 /** Gene names where a boolean .var column is True. */
 export async function fetchVarColumnGenes(
   column: string,
