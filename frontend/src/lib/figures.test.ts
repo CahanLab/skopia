@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { defaultTitle, divergingColor, truncate, figureFilename, type FigureRecord } from './figures'
+import { defaultTitle, divergingColor, truncate, figureFilename, figureInk, type FigureRecord } from './figures'
 
 const rec = (over: Partial<FigureRecord> = {}): FigureRecord => ({
   id: 'fig_3', kind: 'enrichment_heatmap', title: 'Programs by cluster', caption: '', created_at: 't', updated_at: 't',
@@ -81,5 +81,25 @@ describe('tab configs become figure records', () => {
     expect(heatmapGroupsFor({ ...base, cellOrdering: 'category', groups: [] })).toBeNull()
     expect(heatmapGroupsFor({ ...base, cellOrdering: 'category', obsColumn: null })).toBeNull()
     expect(heatmapGroupsFor({ ...base, cellOrdering: 'category', groups: undefined })).toBeNull()
+  })
+})
+
+describe('figureInk', () => {
+  it('keeps the light ink the dark panel has always drawn with', () => {
+    expect(figureInk('#16213e')).toEqual({ title: '#eee', text: '#ccc', muted: '#aaa', grid: '#0f3460', mark: '#ccc', warn: '#e9a23b' })
+  })
+  it('switches to dark ink on a light background, three- or six-digit hex, either case', () => {
+    const dark = { title: '#111', text: '#333', muted: '#555', grid: '#d0d0d0', mark: '#666', warn: '#a66300' }
+    expect(figureInk('#ffffff')).toEqual(dark)
+    expect(figureInk('#FFF')).toEqual(dark)
+    expect(figureInk('#f5f0e1')).toEqual(dark)
+  })
+  it('picks whichever ink contrasts more: dark on yellow, light on black', () => {
+    expect(figureInk('#ffff00').text).toBe('#333')
+    expect(figureInk('#000000').text).toBe('#ccc')
+  })
+  it('falls back to the dark-panel ink for anything that is not hex', () => {
+    expect(figureInk('white').text).toBe('#ccc')
+    expect(figureInk(undefined).text).toBe('#ccc')
   })
 })

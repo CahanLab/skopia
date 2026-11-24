@@ -1,5 +1,5 @@
 import { forwardRef, useMemo } from 'react'
-import { divergingColor, sequentialColor, truncate, type ExpressionDotplotData } from '../../lib/figures'
+import { divergingColor, figureInk, hexColor, sequentialColor, truncate, type ExpressionDotplotData } from '../../lib/figures'
 
 /** Scanpy-style dot plot: one dot per gene × group, its area the fraction of
  *  the group's cells expressing the gene and its colour the mean expression.
@@ -12,6 +12,7 @@ export interface ExpressionDotplotFigureProps {
   params: Record<string, unknown>
   title?: string
   width?: number
+  /** Used when `params.background` is not a hex colour. */
   background?: string
   onGeneClick?: (gene: string) => void
 }
@@ -30,9 +31,11 @@ function runs(groups: (string | null)[]): { name: string; start: number; size: n
 }
 
 export const ExpressionDotplotFigure = forwardRef<SVGSVGElement, ExpressionDotplotFigureProps>(function ExpressionDotplotFigure(
-  { data, params, title, width, background = '#16213e', onGeneClick },
+  { data, params, title, width, background: fallbackBackground = '#16213e', onGeneClick },
   ref,
 ) {
+  const background = hexColor(params.background) ?? fallbackBackground
+  const ink = figureInk(background)
   const swap = Boolean(params.swap_axes)
   const colormap = String(params.colormap ?? 'viridis')
   const dotMax = typeof params.dot_max === 'number' && params.dot_max > 0 ? Math.min(1, params.dot_max) : 1
@@ -75,8 +78,8 @@ export const ExpressionDotplotFigure = forwardRef<SVGSVGElement, ExpressionDotpl
   if (nGenes === 0 || nCats === 0) {
     return (
       <svg ref={ref} data-figure-svg width={Math.max(width ?? 480, 480)} height={80} style={{ background, fontFamily: FONT }}>
-        {title && <text x={12} y={20} fill="#eee" fontSize={13} fontWeight={600}>{title}</text>}
-        <text x={12} y={titleH + 30} fill="#aaa" fontSize={12}>
+        {title && <text x={12} y={20} fill={ink.title} fontSize={13} fontWeight={600}>{title}</text>}
+        <text x={12} y={titleH + 30} fill={ink.muted} fontSize={12}>
           {data.n_genes_hidden ? `${data.n_genes_hidden} gene${data.n_genes_hidden === 1 ? ' is' : 's are'} hidden by the gene mask` : 'Nothing to draw'}
         </text>
       </svg>
@@ -95,7 +98,7 @@ export const ExpressionDotplotFigure = forwardRef<SVGSVGElement, ExpressionDotpl
 
   return (
     <svg ref={ref} data-figure-svg width={svgW} height={svgH} style={{ background, fontFamily: FONT, display: 'block' }}>
-      {title && <text x={12} y={17} fill="#eee" fontSize={13} fontWeight={600}>{title}</text>}
+      {title && <text x={12} y={17} fill={ink.title} fontSize={13} fontWeight={600}>{title}</text>}
       {/* gene-set / marker-group brackets */}
       {groupRuns.map((r) => swap ? (
         <g key={`${r.name}-${r.start}`}>
@@ -113,7 +116,7 @@ export const ExpressionDotplotFigure = forwardRef<SVGSVGElement, ExpressionDotpl
       {/* column labels, rotated */}
       {colNames.map((label, j) => (
         <text
-          key={j} fill="#ccc" fontSize={fontSize}
+          key={j} fill={ink.text} fontSize={fontSize}
           transform={`translate(${left + j * cell + cell / 2 + fontSize * 0.35}, ${top - (groupRuns.length && !swap ? 10 : 6)}) rotate(-45)`}
           textAnchor="start"
           style={!swap && onGeneClick ? { cursor: 'pointer' } : undefined}
@@ -129,7 +132,7 @@ export const ExpressionDotplotFigure = forwardRef<SVGSVGElement, ExpressionDotpl
             <rect x={left - 8} y={top + i * cell + cell / 2 - 4} width={5} height={8} fill={data.category_colors[i] ?? '#888'} />
           )}
           <text
-            x={left - 12} y={top + i * cell + cell / 2 + fontSize * 0.35} fill="#ccc" fontSize={fontSize} textAnchor="end"
+            x={left - 12} y={top + i * cell + cell / 2 + fontSize * 0.35} fill={ink.text} fontSize={fontSize} textAnchor="end"
             style={swap && onGeneClick ? { cursor: 'pointer' } : undefined}
             onClick={swap && onGeneClick ? () => onGeneClick(data.genes[i]) : undefined}
           >
@@ -140,10 +143,10 @@ export const ExpressionDotplotFigure = forwardRef<SVGSVGElement, ExpressionDotpl
       ))}
       {/* grid lines */}
       {Array.from({ length: nRows + 1 }, (_, i) => (
-        <line key={`h${i}`} x1={left} x2={left + gridW} y1={top + i * cell} y2={top + i * cell} stroke="#0f3460" strokeWidth={0.5} />
+        <line key={`h${i}`} x1={left} x2={left + gridW} y1={top + i * cell} y2={top + i * cell} stroke={ink.grid} strokeWidth={0.5} />
       ))}
       {Array.from({ length: nCols + 1 }, (_, j) => (
-        <line key={`v${j}`} x1={left + j * cell} x2={left + j * cell} y1={top} y2={top + gridH} stroke="#0f3460" strokeWidth={0.5} />
+        <line key={`v${j}`} x1={left + j * cell} x2={left + j * cell} y1={top} y2={top + gridH} stroke={ink.grid} strokeWidth={0.5} />
       ))}
       {/* dots */}
       {data.genes.map((gene, gi) => data.categories.map((cat, ci) => {
@@ -159,11 +162,11 @@ export const ExpressionDotplotFigure = forwardRef<SVGSVGElement, ExpressionDotpl
         )
       }))}
       {/* legends below the grid: dot size, colour, then the row groups */}
-      <text x={legendX} y={legendY + 4} fill="#ccc" fontSize={10}>Fraction of cells</text>
+      <text x={legendX} y={legendY + 4} fill={ink.text} fontSize={10}>Fraction of cells</text>
       {sizeStops.map((f, k) => (
         <g key={k}>
-          <circle cx={legendX + k * (2 * rMax + 34) + rMax + 2} cy={legendY + 14 + rMax} r={radius(f)} fill="#ccc" />
-          <text x={legendX + k * (2 * rMax + 34) + 2 * rMax + 8} y={legendY + 14 + rMax + 3.5} fill="#aaa" fontSize={9}>{`${Math.round(f * 100)}%`}</text>
+          <circle cx={legendX + k * (2 * rMax + 34) + rMax + 2} cy={legendY + 14 + rMax} r={radius(f)} fill={ink.mark} />
+          <text x={legendX + k * (2 * rMax + 34) + 2 * rMax + 8} y={legendY + 14 + rMax + 3.5} fill={ink.muted} fontSize={9}>{`${Math.round(f * 100)}%`}</text>
         </g>
       ))}
       <defs>
@@ -171,17 +174,17 @@ export const ExpressionDotplotFigure = forwardRef<SVGSVGElement, ExpressionDotpl
           {colorStops.map((s, k) => <stop key={k} offset={`${s * 100}%`} stopColor={color(s * vmax)} />)}
         </linearGradient>
       </defs>
-      <text x={colorLegendX} y={legendY + 4} fill="#ccc" fontSize={10}>{data.color_label}</text>
-      <rect x={colorLegendX} y={legendY + 10} width={legendW} height={10} fill="url(#dotplot-color-legend)" stroke="#0f3460" strokeWidth={0.5} />
-      <text x={colorLegendX} y={legendY + 31} fill="#aaa" fontSize={9}>0</text>
-      <text x={colorLegendX + legendW} y={legendY + 31} fill="#aaa" fontSize={9} textAnchor="end">{vmax >= 10 ? vmax.toFixed(0) : vmax.toFixed(2)}</text>
+      <text x={colorLegendX} y={legendY + 4} fill={ink.text} fontSize={10}>{data.color_label}</text>
+      <rect x={colorLegendX} y={legendY + 10} width={legendW} height={10} fill="url(#dotplot-color-legend)" stroke={ink.grid} strokeWidth={0.5} />
+      <text x={colorLegendX} y={legendY + 31} fill={ink.muted} fontSize={9}>0</text>
+      <text x={colorLegendX + legendW} y={legendY + 31} fill={ink.muted} fontSize={9} textAnchor="end">{vmax >= 10 ? vmax.toFixed(0) : vmax.toFixed(2)}</text>
       {groupNames.map((name, k) => {
         const x = legendX + (k % 3) * 110
         const y = legendY + 14 + 2 * rMax + 18 + Math.floor(k / 3) * 16
         return (
           <g key={name}>
             <rect x={x} y={y - 8} width={10} height={10} fill={groupColor(name)} />
-            <text x={x + 14} y={y} fill="#aaa" fontSize={9}>
+            <text x={x + 14} y={y} fill={ink.muted} fontSize={9}>
               <title>{name}</title>
               {truncate(name, 14)}
             </text>
@@ -189,7 +192,7 @@ export const ExpressionDotplotFigure = forwardRef<SVGSVGElement, ExpressionDotpl
         )
       })}
       {!!data.n_genes_hidden && (
-        <text x={legendX} y={legendY + 14 + 2 * rMax + 18 + groupLegendRows * 16} fill="#e9a23b" fontSize={9}>{`${data.n_genes_hidden} hidden by gene mask`}</text>
+        <text x={legendX} y={legendY + 14 + 2 * rMax + 18 + groupLegendRows * 16} fill={ink.warn} fontSize={9}>{`${data.n_genes_hidden} hidden by gene mask`}</text>
       )}
     </svg>
   )

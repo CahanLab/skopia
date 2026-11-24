@@ -214,6 +214,7 @@ export function dotplotFigureFromConfig(cfg: HeatmapConfigLike, cellSubset: stri
       ...(src ? markerParams(src) : {}),
       color_by: d.colorBy, standard_scale: d.standardScale, expression_cutoff: d.expressionCutoff, gene_ordering: d.geneOrdering,
       group_ordering: d.groupOrdering, swap_axes: d.swapAxes, colormap: d.colormap, vmax: d.vmax, dot_max: d.dotMax,
+      background: d.background,
     } as Record<string, unknown>,
   }
 }
@@ -353,6 +354,40 @@ export function sequentialColor(t: number, colormap: string): string {
   const f = pos - i
   const a = ramp[i], b = ramp[i + 1]
   return `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * f)).join(',')})`
+}
+
+export interface FigureInk { title: string; text: string; muted: string; grid: string; mark: string; warn: string }
+
+const LIGHT_INK: FigureInk = { title: '#eee', text: '#ccc', muted: '#aaa', grid: '#0f3460', mark: '#ccc', warn: '#e9a23b' }
+const DARK_INK: FigureInk = { title: '#111', text: '#333', muted: '#555', grid: '#d0d0d0', mark: '#666', warn: '#a66300' }
+
+/** `#rgb` or `#rrggbb` as given, else null. */
+export function hexColor(v: unknown): string | null {
+  return typeof v === 'string' && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(v) ? v : null
+}
+
+/** WCAG relative luminance of a hex colour. */
+function luminance(hex: string): number {
+  let h = hex.slice(1)
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('')
+  const [r, g, b] = [0, 2, 4].map((i) => {
+    const c = parseInt(h.slice(i, i + 2), 16) / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)
+
+/** Text, grid and legend colours for a figure drawn on `background`: the
+ *  dark panel's light ink or a dark one, whichever gives the body text more
+ *  contrast. A user-picked background can be anything, so a fixed light ink
+ *  would vanish on white. Anything but hex gets the light ink. */
+export function figureInk(background: unknown): FigureInk {
+  const bg = hexColor(background)
+  if (!bg) return LIGHT_INK
+  const l = luminance(bg)
+  return contrast(l, luminance(DARK_INK.text)) > contrast(l, luminance(LIGHT_INK.text)) ? DARK_INK : LIGHT_INK
 }
 
 export function truncate(label: string, n: number): string {

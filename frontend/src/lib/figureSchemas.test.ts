@@ -21,7 +21,7 @@ const BACKEND_DEFAULTS: Record<string, Record<string, unknown>> = {
   expression_dotplot: {
     marker_top_n: 5, marker_min_pct_in: null, marker_max_pct_out: null, marker_min_log2fc: null, marker_max_padj: null, marker_rank_by: 'score',
     color_by: 'mean', standard_scale: 'none', expression_cutoff: 0.0, gene_ordering: 'as_provided', group_ordering: 'as_given',
-    swap_axes: false, colormap: 'viridis', vmax: null, dot_max: null,
+    swap_axes: false, colormap: 'viridis', vmax: null, dot_max: null, background: '#16213e',
   },
 }
 
@@ -53,6 +53,10 @@ describe('FIGURE_SCHEMAS marker fields', () => {
 })
 
 describe('coerceParams', () => {
+  it('passes a colour field through as the string the picker gave', () => {
+    expect(coerceParams('expression_dotplot', { background: '#ffffff' })).toEqual({ background: '#ffffff' })
+    expect(FIGURE_SCHEMAS.expression_dotplot.find((f) => f.name === 'background')?.type).toBe('color')
+  })
   it('rounds integer fields, nulls blank nullable numbers, keeps booleans', () => {
     const out = coerceParams('enrichment_heatmap', { top_n: '3.7', padj_max: '0.1', vmax: '', show_values: true, cell_size: 12.4, value: 'nes' })
     expect(out).toEqual({ top_n: 4, padj_max: 0.1, vmax: null, show_values: true, cell_size: 12, value: 'nes' })

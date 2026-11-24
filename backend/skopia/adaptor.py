@@ -7665,7 +7665,8 @@ class DataAdaptor:
         'expression_heatmap': ('cell_ordering', 'gene_ordering', 'aggregate_gene_sets', 'n_bins') + _MARKER_PARAM_KEYS,
         'cnv_heatmap': ('row_mode', 'max_rows', 'group_order', 'vmax', 'colormap'),
         'expression_dotplot': _MARKER_PARAM_KEYS + ('color_by', 'standard_scale', 'expression_cutoff', 'gene_ordering',
-                                                    'group_ordering', 'swap_axes', 'colormap', 'vmax', 'dot_max'),
+                                                    'group_ordering', 'swap_axes', 'colormap', 'vmax', 'dot_max',
+                                                    'background'),
     }
 
     def _figure_store(self) -> dict[str, str]:
@@ -7901,6 +7902,11 @@ class DataAdaptor:
                 raise ValueError(f'{k} must be positive, or null for automatic')
         if params.get('dot_max') is not None and float(params['dot_max']) > 1:
             raise ValueError('dot_max is a fraction of cells: at most 1')
+        # Hex only: the renderer picks dark or light text from the colour's
+        # luminance, which a CSS name would need a lookup table to give.
+        bg = params.get('background')
+        if not isinstance(bg, str) or not re.fullmatch(r'#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})', bg):
+            raise ValueError(f"background must be a hex colour such as '#ffffff' (got {bg!r})")
 
     def _marker_selection(self, params: dict[str, Any]) -> dict[str, Any]:
         return {

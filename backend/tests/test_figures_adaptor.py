@@ -407,7 +407,7 @@ def test_dotplot_figure_create_data_update():
         'marker_top_n': 5, 'marker_min_pct_in': None, 'marker_max_pct_out': None, 'marker_min_log2fc': None,
         'marker_max_padj': None, 'marker_rank_by': 'score', 'color_by': 'mean', 'standard_scale': 'none',
         'expression_cutoff': 0.0, 'gene_ordering': 'as_provided', 'group_ordering': 'as_given', 'swap_axes': False,
-        'colormap': 'viridis', 'vmax': None, 'dot_max': None,
+        'colormap': 'viridis', 'vmax': None, 'dot_max': None, 'background': '#16213e',
     }
     d = a.figure_data(f['id'])
     assert d['kind'] == 'expression_dotplot' and d['genes'] == ['Ptprc', 'Cd3e', 'Cd19'] and d['categories'] == ['a', 'b', 'c']
@@ -438,6 +438,21 @@ def test_dotplot_figure_requires_a_categorical_column():
     del a.adata.obs['grp']
     with pytest.raises(FigureInputMissing):
         a.figure_data(f['id'])
+
+
+def test_dotplot_figure_background_is_a_param_and_must_be_a_hex_colour():
+    a = DataAdaptor('x.h5ad', adata=_adata_c())
+    sets = [{'name': 'immune', 'genes': ['Ptprc']}]
+    f = a.create_figure('expression_dotplot', inputs={'gene_sets': sets, 'obs_column': 'grp'},
+                        params={'background': '#FFFFFF'})
+    assert f['params']['background'] == '#FFFFFF'
+    assert a.update_figure(f['id'], params={'background': '#fff'})['params']['background'] == '#fff'
+    for bad in ('white', '#12345', 'ffffff', '', None, 7):
+        with pytest.raises(ValueError, match='background'):
+            a.update_figure(f['id'], params={'background': bad})
+    with pytest.raises(ValueError, match='background'):
+        a.create_figure('expression_dotplot', inputs={'gene_sets': sets, 'obs_column': 'grp'}, params={'background': 'red'})
+    assert a.get_figure(f['id'])['params']['background'] == '#fff'
 
 
 def test_every_figure_param_has_a_config_default():

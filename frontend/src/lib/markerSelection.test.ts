@@ -86,8 +86,17 @@ describe('figure builders', () => {
     expect(fig.inputs).toEqual({ gene_sets: [{ name: 'immune', genes: ['Ptprc', 'Cd3e'] }], marker_key: 'markers_leiden', marker_restrict: null, obs_column: 'leiden', transform: null, groups: null, cell_subset: 'half', cell_indices: null })
     expect(fig.params).toEqual({
       ...markerParams(src), color_by: 'mean_expressing', standard_scale: 'none', expression_cutoff: 0, gene_ordering: 'as_provided',
-      group_ordering: 'as_given', swap_axes: false, colormap: 'viridis', vmax: 2, dot_max: null,
+      group_ordering: 'as_given', swap_axes: false, colormap: 'viridis', vmax: 2, dot_max: null, background: '#16213e',
     })
+  })
+  it('a dot plot figure carries the chosen background', () => {
+    const fig = dotplotFigureFromConfig({ ...legacy, plotType: 'dotplot', markerSource: null, dotplot: { ...DEFAULT_DOTPLOT_OPTIONS, background: '#ffffff' } }, null, null)
+    expect(fig.params.background).toBe('#ffffff')
+  })
+  it('a dot plot config saved before the background option draws on the dark panel', () => {
+    const { background: _omit, ...older } = DEFAULT_DOTPLOT_OPTIONS
+    const cfg = normalizeHeatmapConfig({ ...legacy, plotType: 'dotplot', markerSource: null, dotplot: older as typeof DEFAULT_DOTPLOT_OPTIONS })
+    expect(cfg.dotplot.background).toBe('#16213e')
   })
   it('a dot plot figure carries the chosen groups as an input and the group order as a param', () => {
     const fig = dotplotFigureFromConfig({ ...legacy, plotType: 'dotplot', markerSource: null, dotplot: { ...DEFAULT_DOTPLOT_OPTIONS, groups: ['2', '0'], groupOrdering: 'cluster' } }, null, null)
