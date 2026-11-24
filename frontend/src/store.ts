@@ -229,7 +229,7 @@ export function userConfigGet<T>(cfg: Record<string, unknown>, path: string[], f
 // Convenience for modal `useState` initializers: read a config default from the
 // live store's userConfig. The config is fetched once at app launch (App.tsx),
 // so by the time any modal opens it is populated; a missing key yields `fallback`.
-//   const [topN, setTopN] = useState(() => cfgDefault(['marker_genes', 'top_n'], 100))
+//   const [topN, setTopN] = useState(() => cfgDefault(['marker_genes', 'top_n'], 5))
 export function cfgDefault<T>(path: string[], fallback: T): T {
   return userConfigGet(useStore.getState().userConfig, path, fallback)
 }

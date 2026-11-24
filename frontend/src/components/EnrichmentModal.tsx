@@ -176,7 +176,7 @@ export default function EnrichmentModal() {
   const [oraMax, setOraMax] = useState(() => cfgDefault(['enrichment', 'max_set_size'], 500))
   // ORA on the markers of every group
   const [markersColumn, setMarkersColumn] = useState('')
-  const [markerTopN, setMarkerTopN] = useState(() => cfgDefault(['marker_genes', 'top_n'], 100))
+  const [markerTopN, setMarkerTopN] = useState(() => cfgDefault(['enrichment', 'marker_top_n'], 100))
   const [markerMinIn, setMarkerMinIn] = useState(() => String(cfgDefault(['marker_genes', 'min_in_group_fraction'], '')))
   const [markerMaxOut, setMarkerMaxOut] = useState(() => String(cfgDefault(['marker_genes', 'max_out_group_fraction'], '')))
   const [markerMinFc, setMarkerMinFc] = useState(() => String(cfgDefault(['marker_genes', 'min_fold_change'], '')))
