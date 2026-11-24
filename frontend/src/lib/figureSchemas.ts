@@ -9,7 +9,7 @@ export interface ParamOption { value: string; label: string }
 export interface ParamField {
   name: string
   label: string
-  type: 'number' | 'int' | 'select' | 'bool' | 'nullable-number'
+  type: 'number' | 'int' | 'select' | 'bool' | 'nullable-number' | 'color'
   min?: number
   max?: number
   step?: number
@@ -98,6 +98,7 @@ export const FIGURE_SCHEMAS: Record<FigureKind, ParamField[]> = {
     { name: 'colormap', label: 'Colours', type: 'select', options: [{ value: 'viridis', label: 'viridis' }, { value: 'reds', label: 'white – red' }, { value: 'rdbu', label: 'blue – white – red' }] },
     { name: 'vmax', label: 'Colour limit', type: 'nullable-number', min: 0, step: 0.5, help: 'Blank = the data maximum.' },
     { name: 'dot_max', label: 'Largest dot at fraction', type: 'nullable-number', min: 0.05, max: 1, step: 0.05, help: 'Blank = 1.0 (a dot fills its cell when every cell in the group expresses).' },
+    { name: 'background', label: 'Background', type: 'color', help: 'Also the exported file\'s background. Text and grid lines turn dark on a light colour.' },
   ],
   cnv_heatmap: [
     { name: 'row_mode', label: 'Rows', type: 'select', options: [{ value: 'cells', label: 'cells, binned within each group' }, { value: 'groups', label: 'one mean row per group' }] },
@@ -117,7 +118,7 @@ export function coerceParams(kind: FigureKind, raw: Record<string, unknown>): Re
     const f = fields.get(name)
     if (!f) { out[name] = value; continue }
     if (f.type === 'bool') { out[name] = Boolean(value); continue }
-    if (f.type === 'select') { out[name] = value == null ? null : String(value); continue }
+    if (f.type === 'select' || f.type === 'color') { out[name] = value == null ? null : String(value); continue }
     if (f.type === 'nullable-number') {
       const s = value == null ? '' : String(value).trim()
       const n = Number(s)

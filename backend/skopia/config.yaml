@@ -271,6 +271,7 @@ figures:
     colormap: viridis               # viridis | reds | rdbu
     vmax: null                      # colour limit; null = data max
     dot_max: null                   # fraction that fills the largest dot; null = 1.0
+    background: '#16213e'           # hex; text and grid switch to dark on a light background
   cnv_heatmap:
     row_mode: cells                 # cells (binned within each group) | groups (one mean row per group)
     max_rows: 400                   # rows across all groups; each group gets rows in proportion, at least one

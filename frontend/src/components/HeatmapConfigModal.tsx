@@ -479,6 +479,15 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
                   <option value="rdbu">blue – white – red</option>
                 </select>
               </label>
+              <label style={styles.thresholdRow} title="Also the background of a saved figure and its exports. Text and grid lines turn dark on a light colour.">
+                <span style={{ flex: 1 }}>Background</span>
+                <input
+                  type="color" value={dotplot.background} data-dotplot-background
+                  onChange={(e) => setDotplot({ ...dotplot, background: e.target.value })}
+                  style={{ width: '40px', height: '22px', padding: 0, border: '1px solid #0f3460', borderRadius: '3px', backgroundColor: 'transparent', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '11px', color: '#888', width: '56px', fontFamily: 'monospace' }}>{dotplot.background}</span>
+              </label>
               <label style={styles.checkboxRow} title="Off: groups as rows and genes as columns, scanpy's layout">
                 <input type="checkbox" checked={dotplot.swapAxes} onChange={(e) => setDotplot({ ...dotplot, swapAxes: e.target.checked })} />
                 <span>Genes as rows</span>

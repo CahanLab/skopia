@@ -4,7 +4,7 @@ import {
   appendDataset, fetchFigures, fetchFigure, fetchFigureData, updateFigure, deleteFigure, createFigure, attachFigureToRecord,
 } from '../hooks/useData'
 import {
-  FIGURE_KIND_LABELS, figureFilename, svgToPngBlob, canvasToPngBlob, blobToBase64, downloadBlob, paramsToBarplotConfig,
+  FIGURE_KIND_LABELS, figureFilename, hexColor, svgToPngBlob, canvasToPngBlob, blobToBase64, downloadBlob, paramsToBarplotConfig,
   type FigureRecord, type FigureSummary, type FigureData, type EnrichmentHeatmapData, type EnrichmentNetworkData,
   type CrosstabData, type ExpressionHeatmapData, type CnvHeatmapData, type ExpressionDotplotData, inputsSummary,
 } from '../lib/figures'
@@ -76,6 +76,17 @@ function ParamInput({ field, value, onChange, dynamicOptions }: { field: ParamFi
       <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#ccc', margin: '8px 0 3px' }}>
         <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} /> {field.label}
       </label>
+    )
+  }
+  if (field.type === 'color') {
+    return (
+      <>
+        <label style={styles.label} title={field.help}>{field.label}</label>
+        <input
+          type="color" value={hexColor(value) ?? '#16213e'} onChange={(e) => onChange(e.target.value)} data-param={field.name}
+          style={{ width: '48px', height: '24px', padding: 0, border: '1px solid #1a1a2e', borderRadius: '4px', backgroundColor: 'transparent', cursor: 'pointer' }}
+        />
+      </>
     )
   }
   if (field.type === 'select') {
@@ -181,6 +192,8 @@ export default function FiguresView() {
   }, [activeSlot, activeFigureId])
 
   const coerced = useMemo(() => (record ? coerceParams(record.kind, form) : {}), [record, form])
+  // A kind with a `background` param (the dot plot) exports on its own colour.
+  const figureBg = hexColor(coerced.background) ?? BG
   const dirty = useMemo(() => {
     if (!record) return false
     if (title !== record.title || caption !== (record.caption ?? '')) return true
@@ -238,13 +251,13 @@ export default function FiguresView() {
       return canvasToPngBlob(canvasRef.current, { scale, title, legend, background: BG })
     }
     if (!svgRef.current) throw new Error('The figure has not drawn yet')
-    return svgToPngBlob(svgRef.current, scale, BG)
-  }, [isCanvasKind, data, title, record?.kind])
+    return svgToPngBlob(svgRef.current, scale, figureBg)
+  }, [isCanvasKind, data, title, record?.kind, figureBg])
 
   const exportSvg = useCallback(() => {
     if (!svgRef.current || !record || isCanvasKind) return
-    downloadText(figureFilename(record, 'svg'), standaloneSvg(svgRef.current.outerHTML, { background: BG }), 'image/svg+xml')
-  }, [record, isCanvasKind])
+    downloadText(figureFilename(record, 'svg'), standaloneSvg(svgRef.current.outerHTML, { background: figureBg }), 'image/svg+xml')
+  }, [record, isCanvasKind, figureBg])
 
   const exportPng = useCallback(async () => {
     if (!record) return

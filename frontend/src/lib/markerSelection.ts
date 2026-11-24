@@ -40,11 +40,14 @@ export interface DotplotOptions {
   colormap: 'viridis' | 'reds' | 'rdbu'
   vmax: number | null
   dotMax: number | null
+  /** Hex; the text and grid switch to dark ink on a light one (`figureInk`). */
+  background: string
 }
 
 export const DEFAULT_DOTPLOT_OPTIONS: DotplotOptions = {
   colorBy: 'mean', standardScale: 'none', expressionCutoff: 0, geneOrdering: 'as_provided',
   groups: null, groupOrdering: 'as_given', swapAxes: false, colormap: 'viridis', vmax: null, dotMax: null,
+  background: '#16213e',
 }
 
 export function defaultMarkerSource(key: string, label: string, topN = 10): MarkerSource {
