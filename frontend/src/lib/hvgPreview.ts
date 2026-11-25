@@ -1,5 +1,7 @@
 /** The Highly Variable Genes preview: request body, axes, summary line. */
 
+import type { GeneSubsetSpec } from './geneSubset'
+
 /** What POST /api/scanpy/highly_variable_genes/preview returns. */
 export interface HvgPreview {
   flavor: string
@@ -28,11 +30,14 @@ const NUMBER_KEYS = ['min_mean', 'max_mean', 'min_disp'] as const
  * and a field holding text that is not a number would 422.
  *
  * n_top_genes is always sent, null included, because an empty top N is a
- * setting (select by thresholds), not a missing one.
+ * setting (select by thresholds), not a missing one. The gene subset is the
+ * run's own (`resolveGeneSubset` over the picked columns), so the preview
+ * bins and ranks the same genes.
  */
 export function hvgPreviewBody(
   params: Record<string, unknown>,
   activeIndices: number[] | null,
+  geneSubset: GeneSubsetSpec = null,
 ): Record<string, unknown> | null {
   if (typeof params.split_by === 'string' && params.split_by !== '') return null
   const top = params.n_top_genes
@@ -46,6 +51,7 @@ export function hvgPreviewBody(
   }
   if (typeof params.flavor === 'string' && params.flavor) body.flavor = params.flavor
   if (activeIndices) body.active_cell_indices = activeIndices
+  if (geneSubset != null) body.gene_subset = geneSubset
   return body
 }
 

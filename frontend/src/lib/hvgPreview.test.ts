@@ -18,6 +18,22 @@ describe('hvgPreviewBody', () => {
     })
   })
 
+  it('carries the gene subset, as the run does', () => {
+    expect(hvgPreviewBody({ n_top_genes: 100, flavor: 'seurat' }, null, 'analysis_genes')).toEqual({
+      n_top_genes: 100, flavor: 'seurat', gene_subset: 'analysis_genes',
+    })
+    const both = { columns: ['analysis_genes', 'expressed'], operation: 'intersection' as const }
+    expect(hvgPreviewBody({ n_top_genes: 100, flavor: 'seurat' }, null, both)).toEqual({
+      n_top_genes: 100, flavor: 'seurat', gene_subset: both,
+    })
+  })
+
+  it('sends no gene subset when none is picked, meaning every gene', () => {
+    expect(hvgPreviewBody({ n_top_genes: 100, flavor: 'seurat' }, null, null)).toEqual({
+      n_top_genes: 100, flavor: 'seurat',
+    })
+  })
+
   it('has no preview for a split run, which detects within each group', () => {
     expect(hvgPreviewBody({ n_top_genes: 100, flavor: 'seurat', split_by: 'sample' }, null)).toBeNull()
   })

@@ -2523,6 +2523,12 @@ class NormalizeTotalRequest(BaseModel):
     active_cell_indices: list[int] | None = None
 
 
+class GeneSubsetSpec(BaseModel):
+    """Specification for combining multiple boolean columns."""
+    columns: list[str]
+    operation: str = 'intersection'  # 'intersection' (AND) or 'union' (OR)
+
+
 class HighlyVariableGenesRequest(BaseModel):
     n_top_genes: int | None = None
     min_mean: float = 0.0125
@@ -2540,12 +2546,8 @@ class HighlyVariableGenesRequest(BaseModel):
     #: A named cell subset (see /cell_subsets): compute on its cells only and
     #: write to highly_variable__<name>, leaving the pooled column alone.
     cell_subset: str | None = None
-
-
-class GeneSubsetSpec(BaseModel):
-    """Specification for combining multiple boolean columns."""
-    columns: list[str]
-    operation: str = 'intersection'  # 'intersection' (AND) or 'union' (OR)
+    #: The genes detection may consider; the full union the adaptor takes.
+    gene_subset: str | list[str] | GeneSubsetSpec | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -3189,6 +3191,7 @@ class HvgPreviewRequest(BaseModel):
     n_bins: int = 20
     active_cell_indices: list[int] | None = None
     cell_subset: str | None = None
+    gene_subset: str | list[str] | GeneSubsetSpec | None = None
 
 
 @router.post("/scanpy/highly_variable_genes/preview")
@@ -3239,6 +3242,7 @@ def run_highly_variable_genes(request: HighlyVariableGenesRequest, dataset: str 
             add_intersection=request.add_intersection,
             min_cells_per_group=request.min_cells_per_group,
             cell_subset=request.cell_subset,
+            gene_subset=_gene_subset_arg(request.gene_subset),
         )
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
