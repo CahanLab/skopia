@@ -187,3 +187,20 @@ export function categoryCentroids(coords: readonly [number, number][], values: r
   }
   return [...xs.keys()].map((label) => ({ label, x: median(xs.get(label)!), y: median(ys.get(label)!), n: xs.get(label)!.length }))
 }
+
+/** The cells a figure shows: the selection (in its order), or every cell when
+ *  nothing is selected, leaving out cells the embedding has no position for
+ *  (a subset's embedding is null outside the subset). */
+export function cellsForFigure(coords: readonly ([number, number] | null | undefined)[], selection: readonly number[] | null):
+  { indices: number[]; coordinates: [number, number][] } {
+  const pick = selection && selection.length > 0 ? selection : coords.map((_, i) => i)
+  const indices: number[] = []
+  const coordinates: [number, number][] = []
+  for (const i of pick) {
+    const c = coords[i]
+    if (!c || !Number.isFinite(c[0]) || !Number.isFinite(c[1])) continue
+    indices.push(i)
+    coordinates.push([c[0], c[1]])
+  }
+  return { indices, coordinates }
+}

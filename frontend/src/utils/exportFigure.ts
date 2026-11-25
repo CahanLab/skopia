@@ -1,5 +1,6 @@
 import { Figure } from '../store'
 import { hexToRgb } from '../lib/cellColors'
+import { figureInk } from '../lib/figures'
 
 // Composite all FigurePanel deck.gl canvases plus the figure-level styling
 // (background, titles) into a single PNG. We read pixels directly from each
@@ -109,27 +110,25 @@ export async function exportFigureAsPng(figure: Figure, scale: number = 1): Prom
       ctx.strokeRect(x, y, w, h)
     }
 
-    // Panel title overlay
+    // Category labels: the panel's label SVG, redrawn at its measured place
+    // with the same white-on-dark-halo style.
+    const labels = panelDiv.querySelector('svg[data-panel-labels]') as SVGSVGElement | null
+    if (labels) drawPanelLabels(ctx, labels, gridRect, outScale)
+
+    // Panel title, in the ink that reads on the panel's background (as drawn live)
     if (panel?.title) {
       ctx.font = `600 ${14 * outScale}px sans-serif`
-      ctx.fillStyle = '#fff'
-      // Shadow for legibility on any background
-      ctx.shadowColor = 'rgba(0,0,0,0.8)'
-      ctx.shadowBlur = 4 * outScale
+      ctx.fillStyle = figureInk(panel.background).title
       ctx.fillText(panel.title, x + 8 * outScale, y + 20 * outScale)
-      ctx.shadowBlur = 0
     }
   })
 
   // Figure-level title at top center
   if (figure.title) {
     ctx.font = `600 ${16 * outScale}px sans-serif`
-    ctx.fillStyle = '#fff'
+    ctx.fillStyle = figureInk(figure.background).title
     ctx.textAlign = 'center'
-    ctx.shadowColor = 'rgba(0,0,0,0.8)'
-    ctx.shadowBlur = 4 * outScale
     ctx.fillText(figure.title, outWidth / 2, 24 * outScale)
-    ctx.shadowBlur = 0
     ctx.textAlign = 'start'
   }
 
@@ -154,3 +153,39 @@ export async function exportFigureAsPng(figure: Figure, scale: number = 1): Prom
 
 // Re-export for consumers that want to construct legend colors etc.
 export { hexToRgb }
+
+/** Redraw a panel's category-label SVG (FigurePanel, `data-panel-labels`):
+ *  leader lines, then each name with a dark halo, at the positions the live
+ *  view placed them. */
+function drawPanelLabels(ctx: CanvasRenderingContext2D, svg: SVGSVGElement, gridRect: DOMRect, outScale: number) {
+  const r = svg.getBoundingClientRect()
+  const ox = (r.left - gridRect.left) * outScale
+  const oy = (r.top - gridRect.top) * outScale
+  const fontPx = Number(svg.dataset.fontPx) || 13
+  const num = (el: Element, a: string) => Number(el.getAttribute(a)) || 0
+  ctx.save()
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)'
+  ctx.lineWidth = 1 * outScale
+  svg.querySelectorAll('line').forEach((l) => {
+    ctx.beginPath()
+    ctx.moveTo(ox + num(l, 'x1') * outScale, oy + num(l, 'y1') * outScale)
+    ctx.lineTo(ox + num(l, 'x2') * outScale, oy + num(l, 'y2') * outScale)
+    ctx.stroke()
+  })
+  const family = getComputedStyle(svg).fontFamily || 'sans-serif'
+  ctx.font = `700 ${fontPx * outScale}px ${family}`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = 3.5 * outScale
+  ctx.strokeStyle = '#000'
+  ctx.fillStyle = '#fff'
+  svg.querySelectorAll('text').forEach((t) => {
+    const tx = ox + num(t, 'x') * outScale
+    const ty = oy + num(t, 'y') * outScale
+    const text = t.textContent ?? ''
+    ctx.strokeText(text, tx, ty)
+    ctx.fillText(text, tx, ty)
+  })
+  ctx.restore()
+}

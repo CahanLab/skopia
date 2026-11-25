@@ -1,5 +1,6 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react'
 import { layoutLabels } from '../lib/labelLayout'
+import { categoryCentroids } from '../lib/figurePanels'
 import DeckGL from '@deck.gl/react'
 import { ScatterplotLayer } from '@deck.gl/layers'
 import { OrthographicView, OrthographicViewState } from '@deck.gl/core'
@@ -1040,29 +1041,9 @@ export default function ScatterPlot({
 
   const categoryLabelData = useMemo(() => {
     if (!showCategoryLabels || !colorBy?.categories) return [] as { label: string; data: [number, number]; n: number }[]
-    const coords = embedding.coordinates
-    const values = colorBy.values
-    const cats = colorBy.categories
-    const xs: Record<string, number[]> = {}
-    const ys: Record<string, number[]> = {}
-    const n = Math.min(coords.length, values.length)
-    for (let i = 0; i < n; i++) {
-      const v = values[i]
-      if (v === null || v === undefined) continue
-      // Categorical .obs values arrive as numeric codes indexing `categories`.
-      const name = typeof v === 'number' ? (cats[v] ?? String(v)) : String(v)
-      if (name === 'unassigned' || name === 'nan' || name === 'NaN') continue
-      ;(xs[name] ||= []).push(coords[i][0])
-      ;(ys[name] ||= []).push(coords[i][1])
-    }
-    const median = (arr: number[]) => {
-      const s = [...arr].sort((a, b) => a - b)
-      const m = Math.floor(s.length / 2)
-      return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
-    }
-    return Object.keys(xs)
-      .filter((k) => xs[k].length > 0)
-      .map((k) => ({ label: k, data: [median(xs[k]), median(ys[k])] as [number, number], n: xs[k].length }))
+    // Median position per category (lib/figurePanels, shared with Panels).
+    return categoryCentroids(embedding.coordinates, colorBy.values, colorBy.categories)
+      .map((c) => ({ label: c.label, data: [c.x, c.y] as [number, number], n: c.n }))
   }, [showCategoryLabels, colorBy, embedding])
 
   // Freeze the currently displayed plot: capture each visible cell's

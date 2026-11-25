@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { defaultDisplayPreferences, type HighlightLayer } from '../store'
 import {
-  SPEC_NONE, autoPanelTitle, categoryCentroids, editableHighlightLayers, panelRequest, panelRouteTarget,
+  SPEC_NONE, autoPanelTitle, categoryCentroids, cellsForFigure, editableHighlightLayers, panelRequest, panelRouteTarget,
   specForBivariate, specForColumn, specForGenes, specForScore,
 } from './figurePanels'
 
@@ -96,5 +96,18 @@ describe('categoryCentroids', () => {
   })
   it('string values and nulls', () => {
     expect(categoryCentroids([[0, 0], [1, 1], [2, 2]], ['x', null, 'nan'], [])).toEqual([{ label: 'x', x: 0, y: 0, n: 1 }])
+  })
+})
+
+describe('cellsForFigure', () => {
+  const coords = [[0, 0], [null, null], [2, 3], [4, 5]] as unknown as [number, number][]
+  it('takes every cell with coordinates', () => {
+    expect(cellsForFigure(coords, null)).toEqual({ indices: [0, 2, 3], coordinates: [[0, 0], [2, 3], [4, 5]] })
+  })
+  it('or the selected ones, in selection order', () => {
+    expect(cellsForFigure(coords, [3, 1, 0])).toEqual({ indices: [3, 0], coordinates: [[4, 5], [0, 0]] })
+  })
+  it('an empty selection means every cell', () => {
+    expect(cellsForFigure(coords, []).indices).toEqual([0, 2, 3])
   })
 })
