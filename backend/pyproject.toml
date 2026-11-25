@@ -39,5 +39,5 @@ include = ["skopia*"]
 # used everywhere in development hides both.
 skopia = [
     "data/*.h5ad", "data/*.tsv.gz", "data/*.csv",
-    "data/gene_sets/*.json", "config.yaml",
+    "data/gene_sets/*.json", "data/gene_type_sets/*.yaml", "config.yaml",
 ]
