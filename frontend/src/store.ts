@@ -14,6 +14,7 @@ import type { Workspace } from './lib/workspaceLayout'
 import type { CellSubsetInfo } from './lib/cellSubsets'
 import type { EnrichmentSource } from './lib/enrichment'
 import type { FigureSummary } from './lib/figures'
+import { autoPanelTitle, panelRouteTarget, type PanelColorMode, type PanelColorSpec } from './lib/figurePanels'
 
 export interface Schema {
   n_cells: number
@@ -424,25 +425,21 @@ export type CenterPanelView = 'scatter' | 'heatmap' | 'figure' | 'barplot' | 'fi
 // freezes a snapshot of cell indices at creation time; each panel renders
 // the same cells with its own color mode + styling. Shared zoom/pan across
 // all panels in v1. Export via /utils/exportFigure.ts.
-export type FigureColorMode = 'none' | 'expression' | 'metadata' | 'bivariate'
+export type FigureColorMode = PanelColorMode
 
-export interface FigurePanel {
+/** One panel: its colouring (`PanelColorSpec`, set from the Genes and Cells
+ *  panes through `colorFigurePanel`) and its styling. */
+export interface FigurePanel extends PanelColorSpec {
   id: string
-  title: string                          // user-editable panel label (e.g. "Prrx1")
-  colorMode: FigureColorMode
-  selectedGenes: string[]                // gene(s) for expression coloring
-  selectedGeneSetName: string | null     // gene-set display name (null = single-gene)
-  selectedColorColumn: string | null     // obs column name for metadata coloring
-  bivariateSet1: string | null           // gene-set name for bivariate red axis
-  bivariateSet2: string | null           // gene-set name for bivariate blue axis
-  bivariateGene1?: string | null         // single gene for red axis (overrides bivariateSet1 when set)
-  bivariateGene2?: string | null         // single gene for blue axis (overrides bivariateSet2 when set)
+  title: string                          // follows the colouring (autoPanelTitle) until edited
+  titleEdited: boolean                   // the user named it; recolouring keeps the name
   colorScale: ColorScale
   bivariateColormap: BivariateColormap
-  expressionTransform: ExpressionTransform
   background: string                     // hex; per-panel background override
   showBorder: boolean
-  showHighlightOverlay: boolean          // if on, blend dataset's highlightLayers over base color
+  showHighlightOverlay: boolean          // draw the figure's overlayLayers on this panel
+  showLabels: boolean                    // category labels on the plot (metadata colouring)
+  labelFontSize: number
 }
 
 export interface Figure {
@@ -452,6 +449,14 @@ export interface Figure {
   cellIndices: number[]
   coordinates: [number, number][]        // length == cellIndices.length
   embeddingName: string                  // for display only
+  // The dataset the cells and colours come from. The figure fetches from it
+  // whatever dataset is active, and the panes colour it only while it is the
+  // active one (lib/figurePanels.panelRouteTarget).
+  slot: DatasetSlot
+  // Highlight layers drawn over every panel that shows the overlay; the Genes
+  // pane edits these instead of the dataset's while Panels is showing.
+  overlayLayers: HighlightLayer[]
+  activePanelId: string | null           // the panel the panes colour; null = the first
   dimX?: number                          // the embedding columns the coordinates came from
   dimY?: number                          // (text annotations are drawn only for that pair)
   panels: FigurePanel[]
@@ -1086,8 +1091,8 @@ interface AppState {
   //   activeTextId          the same, for per-dataset textAnnotations
   //   textStyleDefaults     a style, names nothing in any dataset
   //   activeTaskId          drives a progress indicator, nothing numerical
-  //   activeFigure          a figure composes panels *across* datasets — that
-  //                         is what the figure builder is for
+  //   activeFigure          one figure at a time, which records the dataset it
+  //                         was made on (Figure.slot) and fetches from it
   //   geneSets, geneSetCategories
   //                         user-level and cross-dataset by design
   //   heatmapConfig         names an .obs column and a drawn line, so it is
@@ -1342,6 +1347,14 @@ interface AppState {
   updateFigure: (patch: Partial<Omit<Figure, 'panels'>>) => void
   updateFigurePanel: (panelId: string, patch: Partial<Omit<FigurePanel, 'id'>>) => void
   setFigureLayout: (rows: number, cols: number) => void
+  /** Colour a panel; its title follows unless the user has named it. */
+  colorFigurePanel: (panelId: string, spec: PanelColorSpec) => void
+  /** Name a panel; a blank name returns it to the automatic title. */
+  setFigurePanelTitle: (panelId: string, title: string) => void
+  setActiveFigurePanel: (panelId: string | null) => void
+  /** Show other cells (a selection, or all of them again); keeps the panels. */
+  cropFigure: (cellIndices: number[], coordinates: [number, number][]) => void
+  copyEmbeddingHighlightsToFigure: () => void
   closeFigure: () => void
 
   // Layout mode actions
@@ -1408,6 +1421,35 @@ interface AppState {
   applyWorkspace: (w: Workspace) => void
 }
 
+function newFigurePanel(i: number, prefs: DisplayPreferences): FigurePanel {
+  return {
+    id: `panel_${Date.now().toString(36)}_${i}`,
+    title: '',
+    titleEdited: false,
+    colorMode: 'none',
+    selectedGenes: [],
+    selectedGeneSetName: null,
+    genesDown: [],
+    selectedColorColumn: null,
+    scoreSource: null,
+    bivariateSet1: null,
+    bivariateSet2: null,
+    bivariateGene1: null,
+    bivariateGene2: null,
+    bivariateGenes1: null,
+    bivariateGenes2: null,
+    bivariateLabel1: null,
+    bivariateLabel2: null,
+    colorScale: prefs.colorScale,
+    bivariateColormap: prefs.bivariateColormap,
+    background: prefs.backgroundColor,
+    showBorder: true,
+    showHighlightOverlay: true,
+    showLabels: true,
+    labelFontSize: prefs.labelFontSize,
+  }
+}
+
 export const useStore = create<AppState>((set, get) => {
   // Helper: dual-write a per-dataset patch to both flat fields and datasets[activeSlot]
   function dsUpdate(patch: Partial<DatasetState>): Partial<AppState> {
@@ -1438,6 +1480,15 @@ export const useStore = create<AppState>((set, get) => {
         [activeSlot]: { ...ds, ...patch },
       },
     } as Partial<AppState>
+  }
+
+  // Helper: apply an edit to the highlight layers the Genes pane is editing —
+  // the Panels figure's overlay while it routes, else the active dataset's.
+  function editHighlights(state: AppState, edit: (layers: HighlightLayer[]) => HighlightLayer[]): Partial<AppState> {
+    if (panelRouteTarget(state) && state.activeFigure) {
+      return { activeFigure: { ...state.activeFigure, overlayLayers: edit(state.activeFigure.overlayLayers) } }
+    }
+    return dsUpdate({ highlightLayers: edit(state.highlightLayers) })
   }
 
   // Helper: copy all per-dataset fields from a slot to flat top-level fields
@@ -1691,26 +1742,26 @@ export const useStore = create<AppState>((set, get) => {
 
     clearBivariateMode: () => set(dsUpdate({ bivariateData: null, colorMode: 'none', cellSortOrder: null, cellSortVersion: 0 })),
 
+    // While Panels is colouring a figure, the highlight tools edit the
+    // figure's overlay, not the dataset's (lib/figurePanels.panelRouteTarget).
     addHighlightLayer: (layer) =>
-      set(dsUpdateFn((state) => ({ highlightLayers: [...state.highlightLayers, layer] }))),
+      set((state) => editHighlights(state, (layers) => [...layers, layer])),
 
     removeHighlightLayer: (id) =>
-      set(dsUpdateFn((state) => ({ highlightLayers: state.highlightLayers.filter((l) => l.id !== id) }))),
+      set((state) => editHighlights(state, (layers) => layers.filter((l) => l.id !== id))),
 
     updateHighlightLayer: (id, patch) =>
-      set(dsUpdateFn((state) => ({
-        highlightLayers: state.highlightLayers.map((l) => {
-          if (l.id !== id) return l
-          const next: HighlightLayer = { ...l, ...patch, source: l.source }
-          if (patch.source) {
-            // Merge into existing source preserving discriminant.
-            next.source = { ...l.source, ...patch.source } as HighlightSource
-          }
-          return next
-        }),
+      set((state) => editHighlights(state, (layers) => layers.map((l) => {
+        if (l.id !== id) return l
+        const next: HighlightLayer = { ...l, ...patch, source: l.source }
+        if (patch.source) {
+          // Merge into existing source preserving discriminant.
+          next.source = { ...l.source, ...patch.source } as HighlightSource
+        }
+        return next
       }))),
 
-    clearAllHighlights: () => set(dsUpdate({ highlightLayers: [] })),
+    clearAllHighlights: () => set((state) => editHighlights(state, () => [])),
     // A diffusion map nobody has chosen axes on opens on DC1 × DC2: its column 0
     // is the stationary state, flat on a connected graph.
     setSelectedEmbedding: (name) => set(dsUpdateFn((state) => {
@@ -2993,27 +3044,10 @@ export const useStore = create<AppState>((set, get) => {
     setBarplotConfig: (config) => set(dsUpdate({ barplotConfig: config })),
 
     createFigure: (cellIndices, coordinates, embeddingName, rows = 2, cols = 2, dims = { x: 0, y: 1 }) => {
-      const total = rows * cols
-      const defaults = defaultDisplayPreferences()
+      const state = get()
+      const prefs = state.displayPreferences
       const panels: FigurePanel[] = []
-      for (let i = 0; i < total; i++) {
-        panels.push({
-          id: `panel_${Date.now().toString(36)}_${i}`,
-          title: `Panel ${i + 1}`,
-          colorMode: 'none',
-          selectedGenes: [],
-          selectedGeneSetName: null,
-          selectedColorColumn: null,
-          bivariateSet1: null,
-          bivariateSet2: null,
-          colorScale: defaults.colorScale,
-          bivariateColormap: defaults.bivariateColormap,
-          expressionTransform: defaults.expressionTransform,
-          background: defaults.backgroundColor,
-          showBorder: true,
-          showHighlightOverlay: false,
-        })
-      }
+      for (let i = 0; i < rows * cols; i++) panels.push(newFigurePanel(i, prefs))
       set({
         activeFigure: {
           cellIndices: [...cellIndices],
@@ -3021,13 +3055,16 @@ export const useStore = create<AppState>((set, get) => {
           embeddingName,
           dimX: dims.x,
           dimY: dims.y,
+          slot: state.activeSlot,
+          overlayLayers: [],
+          activePanelId: null,
           panels,
           rows,
           cols,
           title: '',
-          background: defaults.backgroundColor,
-          pointSize: defaults.pointSize,
-          pointOpacity: defaults.pointOpacity,
+          background: prefs.backgroundColor,
+          pointSize: prefs.pointSize,
+          pointOpacity: prefs.pointOpacity,
           showGrid: false,
           gridColor: '#888888',
           gridLineWidth: 0.5,
@@ -3058,39 +3095,76 @@ export const useStore = create<AppState>((set, get) => {
         }
       }),
 
+    colorFigurePanel: (panelId, spec) =>
+      set((state) => {
+        if (!state.activeFigure) return {}
+        return {
+          activeFigure: {
+            ...state.activeFigure,
+            panels: state.activeFigure.panels.map((p) =>
+              p.id === panelId ? { ...p, ...spec, title: p.titleEdited ? p.title : autoPanelTitle(spec) } : p
+            ),
+          },
+        }
+      }),
+
+    setFigurePanelTitle: (panelId, title) =>
+      set((state) => {
+        if (!state.activeFigure) return {}
+        const named = title.trim()
+        return {
+          activeFigure: {
+            ...state.activeFigure,
+            panels: state.activeFigure.panels.map((p) => {
+              if (p.id !== panelId) return p
+              return named ? { ...p, title, titleEdited: true } : { ...p, title: autoPanelTitle(p), titleEdited: false }
+            }),
+          },
+        }
+      }),
+
+    setActiveFigurePanel: (panelId) =>
+      set((state) => (state.activeFigure ? { activeFigure: { ...state.activeFigure, activePanelId: panelId } } : {})),
+
+    cropFigure: (cellIndices, coordinates) =>
+      set((state) => {
+        if (!state.activeFigure) return {}
+        return {
+          activeFigure: {
+            ...state.activeFigure,
+            cellIndices: [...cellIndices],
+            coordinates: coordinates.map((c) => [c[0], c[1]] as [number, number]),
+            sharedZoom: null,
+            sharedTargetX: null,
+            sharedTargetY: null,
+          },
+        }
+      }),
+
+    copyEmbeddingHighlightsToFigure: () =>
+      set((state) => {
+        if (!state.activeFigure) return {}
+        const ds = state.datasets[state.activeFigure.slot]
+        const layers = ds ? ds.highlightLayers : []
+        return { activeFigure: { ...state.activeFigure, overlayLayers: layers.map((l) => ({ ...l })) } }
+      }),
+
     setFigureLayout: (rows, cols) =>
       set((state) => {
         if (!state.activeFigure) return {}
         const total = rows * cols
         const current = state.activeFigure.panels
-        const defaults = defaultDisplayPreferences()
         let panels = current
         if (current.length < total) {
-          // Add blank panels
           panels = [...current]
-          for (let i = current.length; i < total; i++) {
-            panels.push({
-              id: `panel_${Date.now().toString(36)}_${i}`,
-              title: `Panel ${i + 1}`,
-              colorMode: 'none',
-              selectedGenes: [],
-              selectedGeneSetName: null,
-              selectedColorColumn: null,
-              bivariateSet1: null,
-              bivariateSet2: null,
-              colorScale: defaults.colorScale,
-              bivariateColormap: defaults.bivariateColormap,
-              expressionTransform: defaults.expressionTransform,
-              background: defaults.backgroundColor,
-              showBorder: true,
-              showHighlightOverlay: false,
-            })
-          }
+          for (let i = current.length; i < total; i++) panels.push(newFigurePanel(i, state.displayPreferences))
         } else if (current.length > total) {
           // Trim from the end — user can re-create if they want different panels back
           panels = current.slice(0, total)
         }
-        return { activeFigure: { ...state.activeFigure, rows, cols, panels } }
+        const activePanelId = panels.some((p) => p.id === state.activeFigure!.activePanelId)
+          ? state.activeFigure.activePanelId : null
+        return { activeFigure: { ...state.activeFigure, rows, cols, panels, activePanelId } }
       }),
 
     closeFigure: () => set({ activeFigure: null }),

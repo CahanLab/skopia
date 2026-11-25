@@ -79,7 +79,7 @@ async function fetchPanelData(panel: PanelType): Promise<PanelColorData> {
     const genes1 = panel.bivariateGene1 ? [panel.bivariateGene1] : lookupGeneSet(panel.bivariateSet1)
     const genes2 = panel.bivariateGene2 ? [panel.bivariateGene2] : lookupGeneSet(panel.bivariateSet2)
     if (genes1.length === 0 || genes2.length === 0) return { kind: 'none' }
-    const transform = panel.expressionTransform === 'log1p' ? 'log1p' : null
+    const transform = useStore.getState().displayPreferences.expressionTransform === 'log1p' ? 'log1p' : null
     const res = await fetch(appendDataset(`${API_BASE}/expression/bivariate`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -92,7 +92,7 @@ async function fetchPanelData(panel: PanelType): Promise<PanelColorData> {
 
   if (panel.colorMode === 'expression') {
     if (panel.selectedGenes.length === 0) return { kind: 'none' }
-    const transform = panel.expressionTransform === 'log1p' ? 'log1p' : undefined
+    const transform = useStore.getState().displayPreferences.expressionTransform === 'log1p' ? 'log1p' : undefined
     if (panel.selectedGenes.length === 1) {
       const qs = new URLSearchParams()
       if (transform) qs.set('transform', transform)
@@ -163,7 +163,7 @@ export default function FigurePanel({ figure, panel, staticView = false }: Props
     return () => {
       cancelled = true
     }
-  }, [panel.colorMode, panel.selectedGenes, panel.selectedColorColumn, panel.expressionTransform, panel.bivariateSet1, panel.bivariateSet2, panel.bivariateGene1, panel.bivariateGene2])
+  }, [panel.colorMode, panel.selectedGenes, panel.selectedColorColumn, panel.bivariateSet1, panel.bivariateSet2, panel.bivariateGene1, panel.bivariateGene2])
 
   // Bounds from the snapshotted coordinates — used for default viewState.
   const bounds = useMemo(() => boundsOf(figure.coordinates), [figure.coordinates])

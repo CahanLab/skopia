@@ -357,12 +357,6 @@ function PanelControls({
               {COLOR_SCALES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </ControlRow>
-          <ControlRow label="Transform">
-            <select value={panel.expressionTransform} onChange={(e) => onUpdate({ expressionTransform: e.target.value as 'none' | 'log1p' })} style={inputStyle}>
-              <option value="none">none</option>
-              <option value="log1p">log1p</option>
-            </select>
-          </ControlRow>
         </>
       )}
 
@@ -404,12 +398,6 @@ function PanelControls({
               <option value="pinkgreen">pink / green</option>
               <option value="orangepurple">orange / purple</option>
               <option value="custom">custom</option>
-            </select>
-          </ControlRow>
-          <ControlRow label="Transform">
-            <select value={panel.expressionTransform} onChange={(e) => onUpdate({ expressionTransform: e.target.value as 'none' | 'log1p' })} style={inputStyle}>
-              <option value="none">none</option>
-              <option value="log1p">log1p</option>
             </select>
           </ControlRow>
         </>
