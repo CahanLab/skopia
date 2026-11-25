@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveGeneSubset, geneSubsetLabel, describeGeneSubsetType, type GeneSubsetSelection } from './geneSubset'
+import { resolveGeneSubset, geneSubsetLabel, describeGeneSubsetType, type GeneSubsetSelection, geneColumnsAfterRefresh } from './geneSubset'
 
 const sel = (over: Partial<GeneSubsetSelection> = {}): GeneSubsetSelection => ({
   columns: [],
@@ -93,5 +93,28 @@ describe('describeGeneSubsetType', () => {
 
   it('passes through anything it does not recognise', () => {
     expect(describeGeneSubsetType('something_new')).toBe('something_new')
+  })
+})
+
+describe('geneColumnsAfterRefresh', () => {
+  const cols = ['analysis_genes', 'highly_variable']
+
+  it('shows the default until the user touches a pill, once its column exists', () => {
+    expect(geneColumnsAfterRefresh([], [], 'highly_variable', false)).toEqual([])
+    expect(geneColumnsAfterRefresh([], cols, 'highly_variable', false)).toEqual(['highly_variable'])
+    expect(geneColumnsAfterRefresh([], cols, null, false)).toEqual([])
+  })
+
+  it('keeps the picked columns when the column list is re-read after a run', () => {
+    expect(geneColumnsAfterRefresh(['analysis_genes'], cols, null, true)).toEqual(['analysis_genes'])
+    expect(geneColumnsAfterRefresh(['analysis_genes'], cols, 'highly_variable', true)).toEqual(['analysis_genes'])
+  })
+
+  it('drops a picked column that no longer exists', () => {
+    expect(geneColumnsAfterRefresh(['analysis_genes', 'gone'], cols, null, true)).toEqual(['analysis_genes'])
+  })
+
+  it('never re-imposes the default after the user cleared it', () => {
+    expect(geneColumnsAfterRefresh([], cols, 'highly_variable', true)).toEqual([])
   })
 })

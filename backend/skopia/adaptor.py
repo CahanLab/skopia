@@ -9282,7 +9282,7 @@ class DataAdaptor:
     def _run_hvg_split(
         self, *, split_by, n_top_genes, min_mean, max_mean, min_disp, flavor,
         n_bins, active_cell_indices, add_union, add_intersection,
-        min_cells_per_group,
+        min_cells_per_group, gene_subset=None, gene_mask=None,
     ) -> dict[str, Any]:
         """HVG detection within each group of ``split_by``. See the caller."""
         groups, skipped = self._prepare_hvg_groups(
@@ -9293,8 +9293,9 @@ class DataAdaptor:
         per_group: dict[str, Any] = {}
         masks: list[np.ndarray] = []
         for name, rows in groups:
+            cells = self.adata[rows] if gene_mask is None else self.adata[rows][:, gene_mask]
             mask = self._hvg_mask_for_cells(
-                self.adata[rows].copy(), n_top_genes=n_top_genes,
+                cells.copy(), n_top_genes=n_top_genes,
                 min_mean=min_mean, max_mean=max_mean, min_disp=min_disp,
                 flavor=flavor, n_bins=n_bins,
             )
@@ -9339,6 +9340,7 @@ class DataAdaptor:
             'add_union': add_union,
             'add_intersection': add_intersection,
             'min_cells_per_group': min_cells_per_group,
+            **({'gene_subset': gene_subset} if gene_subset is not None else {}),
         }, result, subset=active_cell_indices)
         return result
 
@@ -9407,16 +9409,34 @@ class DataAdaptor:
             )
         return groups, skipped
 
-    def _hvg_input_for_cells(self, indices) -> anndata.AnnData:
-        """The cells' copy that HVG detection on a selection runs on.
+    def _hvg_input_for_cells(self, indices, gene_mask=None) -> anndata.AnnData:
+        """The copy that HVG detection on a selection runs on.
 
-        Genes with zero expression in those cells are dropped, which avoids
-        degenerate bin edges in scanpy's dispersion binning. Shared by the run
-        and its preview so the preview cannot flag different genes.
+        ``gene_mask`` keeps only the genes HVG may consider (a gene subset);
+        ``indices`` the cells. On a cell selection, genes with zero expression
+        in those cells are dropped too, which avoids degenerate bin edges in
+        scanpy's dispersion binning. A gene subset alone drops nothing, so the
+        run is scanpy's own call on ``adata[:, mask]`` and the code export can
+        say exactly that. Shared by the run and its preview so the preview
+        cannot flag different genes.
         """
-        adata_sub = self.adata[indices].copy()
+        src = self.adata if gene_mask is None else self.adata[:, gene_mask]
+        if indices is None:
+            return src.copy()
+        adata_sub = src[indices].copy()
         gene_totals = np.asarray(adata_sub.X.sum(axis=0)).ravel()
         return adata_sub[:, gene_totals > 0].copy()
+
+    def _hvg_gene_mask(self, gene_subset) -> np.ndarray | None:
+        """The genes an HVG run may consider, or None for every gene.
+
+        Resolved as PCA resolves its subset, without the session-only gene
+        mask: the flags are written into the file.
+        """
+        if gene_subset is None:
+            return None
+        mask, _, _ = self._resolve_gene_mask(gene_subset, apply_visible_mask=False)
+        return mask
 
     HVG_FLAVORS = ('seurat', 'cell_ranger', 'seurat_v3')
 
@@ -9430,6 +9450,7 @@ class DataAdaptor:
         n_bins: int = 20,
         active_cell_indices: list[int] | None = None,
         cell_subset: str | None = None,
+        gene_subset: str | list[str] | dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Per-gene mean and dispersion with the genes these settings would
         flag, for the HVG modal's scatter. Nothing is written or recorded.
@@ -9446,7 +9467,9 @@ class DataAdaptor:
         if flavor not in self.HVG_FLAVORS:
             raise ValueError(f"flavor must be one of {', '.join(self.HVG_FLAVORS)}, got {flavor!r}")
         indices, _ = self._resolve_cell_scope(cell_subset, active_cell_indices)
-        src = self.adata if indices is None else self._hvg_input_for_cells(indices)
+        gene_mask = self._hvg_gene_mask(gene_subset)
+        src = (self.adata if indices is None and gene_mask is None
+               else self._hvg_input_for_cells(indices, gene_mask))
         df = sc.pp.highly_variable_genes(
             src, n_top_genes=n_top_genes, min_mean=min_mean, max_mean=max_mean,
             min_disp=min_disp, flavor=flavor, n_bins=n_bins, inplace=False,
@@ -9479,7 +9502,8 @@ class DataAdaptor:
             'highly_variable': hv[ok].tolist(),
             'off_scale': off[ok].tolist(),
             'n_highly_variable': int(hv.sum()),
-            'n_genes': int(self.n_genes),
+            # The genes in play: a gene subset's, else the dataset's.
+            'n_genes': int(self.n_genes if gene_mask is None else gene_mask.sum()),
             'n_plotted': int(ok.sum()),
             'n_cells': int(src.n_obs),
             # The cutoffs act only when no top-N is asked for, and seurat_v3
@@ -9503,6 +9527,7 @@ class DataAdaptor:
         add_intersection: bool = False,
         min_cells_per_group: int = 10,
         cell_subset: str | None = None,
+        gene_subset: str | list[str] | dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Identify highly variable genes.
 
@@ -9534,12 +9559,19 @@ class DataAdaptor:
                 the conservative choice for multi-sample work.
             min_cells_per_group: Groups smaller than this are skipped and
                 reported rather than contributing a noisy answer.
+            gene_subset: The genes detection may consider (a boolean .var
+                column such as the one Exclude Genes' Mark writes, several
+                combined, or a list), resolved as PCA's is. scanpy runs on
+                those genes alone, so only they compete for ``n_top_genes``
+                and fill the dispersion bins; every other gene is written
+                as not variable.
 
         Returns:
             Dict with operation status and number of HVGs. A split run returns
             ``groups`` (per-group counts), ``columns`` (everything written),
             ``skipped``, and the union / intersection sizes.
         """
+        gene_mask = self._hvg_gene_mask(gene_subset)
         if split_by is not None:
             if subset:
                 raise ValueError(
@@ -9559,6 +9591,7 @@ class DataAdaptor:
                 n_bins=n_bins, active_cell_indices=active_cell_indices,
                 add_union=add_union, add_intersection=add_intersection,
                 min_cells_per_group=min_cells_per_group,
+                gene_subset=gene_subset, gene_mask=gene_mask,
             )
 
         indices, subset_name = self._resolve_cell_scope(cell_subset, active_cell_indices)
@@ -9567,8 +9600,8 @@ class DataAdaptor:
                 "subset=True (drop non-variable genes) cannot be combined with a cell "
                 "subset: the genes belong to the whole dataset.")
         out_column = 'highly_variable' if subset_name is None else f'highly_variable__{subset_name}'
-        if indices is not None:
-            adata_hvg = self._hvg_input_for_cells(indices)
+        if indices is not None or gene_mask is not None:
+            adata_hvg = self._hvg_input_for_cells(indices, gene_mask)
 
             # Compute HVGs on subset (always with subset=False to get annotations)
             sc.pp.highly_variable_genes(
@@ -9588,7 +9621,9 @@ class DataAdaptor:
                 full_col.loc[adata_hvg.var_names] = adata_hvg.var['highly_variable'].values
                 self.adata.var[out_column] = full_col.values.astype(bool)
             else:
-                # Map results back to full gene set — unexpressed genes are not HVG
+                # Map results back to the full gene set: genes left out
+                # (unexpressed in the cells, or outside the gene subset) are
+                # not HVG.
                 for col in ['highly_variable', 'means', 'dispersions', 'dispersions_norm']:
                     if col in adata_hvg.var.columns:
                         default = False if col == 'highly_variable' else 0.0
@@ -9626,13 +9661,16 @@ class DataAdaptor:
             'flavor': flavor,
             'subset': subset,
         }
+        if gene_subset is not None:
+            params['gene_subset'] = gene_subset
+            result['n_genes_considered'] = int(gene_mask.sum())
         if subset_name is not None:
             result['column'] = out_column
             result['cell_subset'] = subset_name
             params['cell_subset'] = subset_name
             self._subset_record_step(subset_name, 'hvg', out_column, {
                 'n_top_genes': n_top_genes, 'min_mean': min_mean, 'max_mean': max_mean,
-                'min_disp': min_disp, 'flavor': flavor})
+                'min_disp': min_disp, 'flavor': flavor, 'gene_subset': gene_subset})
         self._log_action('highly_variable_genes', params, result, subset=indices)
         return result
 

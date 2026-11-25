@@ -10,6 +10,7 @@ import { FilterCellsQcPanel, FilterCellsDistributions } from './FilterCellsQcPan
 import { FilterGenesQcPanel, FilterGenesDistributions } from './FilterGenesQcPanel'
 import { HvgPreviewPanel } from './HvgPreviewPanel'
 import { hvgPreviewBody, type HvgPreview } from '../lib/hvgPreview'
+import { geneColumnsAfterRefresh, resolveGeneSubset } from '../lib/geneSubset'
 import { percentOfCells } from '../lib/percentOfCells'
 import { DEFAULT_EXCLUDE_GENE_PATTERNS, excludeGenePatternsFor } from '../lib/excludeGenes'
 import { EMPTY_SELECTION, excludeGenesBody, type GeneTypeSelection } from '../lib/geneTypes'
@@ -274,6 +275,7 @@ const SCANPY_FUNCTIONS: Record<string, CategoryDef> = {
           { name: 'max_mean', label: 'Max mean', type: 'number', default: 6, description: 'Maximum mean expression' },
           { name: 'min_disp', label: 'Min dispersion', type: 'number', default: 0.5, description: 'Minimum normalized dispersion' },
           { name: 'flavor', label: 'Method', type: 'select', default: 'cell_ranger', options: ['seurat', 'cell_ranger', 'seurat_v3'], description: 'HVG selection method' },
+          { name: 'gene_subset', label: 'Gene Subset', type: 'gene_subset', default: null, description: 'Detect HVGs only among genes where these .var columns are True, such as the column Exclude Genes → Mark writes. Only these genes compete for Top N and fill the dispersion bins; every other gene is written as not variable. Leave empty for every gene.' },
           { name: 'split_by', label: 'Detect within groups of', type: 'obs_column_select', default: '', description: 'Optional categorical .obs column (sample, section, donor). When set, HVGs are detected inside each group separately and written to highly_variable__<group> — pooled detection scores genes that differ between samples as readily as genes that vary within them, so a batch effect reads as biology. The pooled highly_variable column is left untouched.' },
           { name: 'add_union', label: 'Add union column', type: 'select', default: 'false', options: ['true', 'false'], description: 'Also write highly_variable__union — variable in any group.', visibleWhen: { param: 'split_by', value: '*' } },
           { name: 'add_intersection', label: 'Add intersection column', type: 'select', default: 'false', options: ['true', 'false'], description: 'Also write highly_variable__intersection — variable in every group. The conservative choice for multi-sample work.', visibleWhen: { param: 'split_by', value: '*' } },
@@ -1118,9 +1120,13 @@ export default function ScanpyModal() {
   const [hvgPreviewLoading, setHvgPreviewLoading] = useState(false)
   const hvgPreviewKey = useMemo(() => {
     if (selectedFunction !== 'highly_variable_genes') return null
-    const body = hvgPreviewBody(paramValues, activeCellMask ? indicesFromMask(activeCellMask) : null)
+    const body = hvgPreviewBody(
+      paramValues,
+      activeCellMask ? indicesFromMask(activeCellMask) : null,
+      resolveGeneSubset({ columns: selectedGeneColumns, geneSets: [], operation: geneSubsetOperation }),
+    )
     return body ? JSON.stringify(body) : null
-  }, [selectedFunction, paramValues, activeCellMask])
+  }, [selectedFunction, paramValues, activeCellMask, selectedGeneColumns, geneSubsetOperation])
   useEffect(() => {
     if (!hvgPreviewKey) { setHvgPreview(null); setHvgPreviewError(null); setHvgPreviewLoading(false); return }
     const ctrl = new AbortController()
@@ -1363,19 +1369,23 @@ export default function ScanpyModal() {
       .catch(() => setBooleanColumns([]))
   }, [isScanpyModalOpen, scanpyActionHistory])
 
-  // Reset gene subset selection when function changes, auto-select default if specified
+  // Gene subset pills. A function change starts over from its default; the
+  // column list is re-read after every run, and that only drops picks whose
+  // column is gone (geneColumnsAfterRefresh). Resetting on every re-read
+  // cleared an HVG run's subset, so the next run used every gene.
+  const geneSubsetFunction = useRef<string | null>(null)
+  const geneSubsetTouched = useRef(false)
   useEffect(() => {
-    if (functionDef) {
-      const geneSubsetParam = functionDef.params.find(p => p.type === 'gene_subset')
-      if (geneSubsetParam && typeof geneSubsetParam.default === 'string' && booleanColumns.some(c => c.name === geneSubsetParam.default)) {
-        setSelectedGeneColumns([geneSubsetParam.default as string])
-      } else {
-        setSelectedGeneColumns([])
-      }
-    } else {
-      setSelectedGeneColumns([])
+    if (geneSubsetFunction.current !== selectedFunction) {
+      geneSubsetFunction.current = selectedFunction
+      geneSubsetTouched.current = false
+      setGeneSubsetOperation('intersection')
     }
-    setGeneSubsetOperation('intersection')
+    const param = functionDef?.params.find(p => p.type === 'gene_subset')
+    const defaultColumn = param && typeof param.default === 'string' ? param.default : null
+    const available = booleanColumns.map(c => c.name)
+    const touched = geneSubsetTouched.current
+    setSelectedGeneColumns(prev => geneColumnsAfterRefresh(prev, available, defaultColumn, touched))
   }, [selectedFunction, functionDef, booleanColumns])
 
   // Handle category change
@@ -1615,16 +1625,10 @@ export default function ScanpyModal() {
 
       // Handle gene_subset parameter specially (only if visible)
       if (functionDef.params.some(p => p.type === 'gene_subset' && !hiddenParams.has(p.name))) {
-        if (selectedGeneColumns.length === 0) {
-          requestParams['gene_subset'] = null
-        } else if (selectedGeneColumns.length === 1) {
-          requestParams['gene_subset'] = selectedGeneColumns[0]
-        } else {
-          requestParams['gene_subset'] = {
-            columns: selectedGeneColumns,
-            operation: geneSubsetOperation,
-          }
-        }
+        // The HVG preview sends the same value, through the same rule.
+        requestParams['gene_subset'] = resolveGeneSubset({
+          columns: selectedGeneColumns, geneSets: [], operation: geneSubsetOperation,
+        })
       }
 
       // Handle exclude_genes: names, patterns and the ticked gene types
@@ -2850,6 +2854,7 @@ export default function ScanpyModal() {
                               <button
                                 key={col.name}
                                 onClick={() => {
+                                  geneSubsetTouched.current = true
                                   setSelectedGeneColumns((prev) =>
                                     isSelected
                                       ? prev.filter((c) => c !== col.name)

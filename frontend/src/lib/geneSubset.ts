@@ -84,3 +84,22 @@ export function describeGeneSubsetType(type: string): string {
   if (kind === 'union') return rest.split('+').join(' OR ')
   return rest
 }
+
+/** The column pills to show when the boolean `.var` columns are (re-)read.
+ *
+ *  The list is re-read after every run, and that must not undo the user's
+ *  pick: an HVG run on `analysis_genes` that cleared the pill would make the
+ *  next run, after a Top N tweak, use every gene. Until the user touches a
+ *  pill the function's default stands (once its column exists); after that,
+ *  the picks stay, less any column that no longer exists. Idempotent, so
+ *  StrictMode's double effects cannot lose a selection.
+ */
+export function geneColumnsAfterRefresh(
+  selected: string[],
+  available: string[],
+  defaultColumn: string | null,
+  touched: boolean,
+): string[] {
+  if (!touched) return defaultColumn && available.includes(defaultColumn) ? [defaultColumn] : []
+  return selected.filter((c) => available.includes(c))
+}
