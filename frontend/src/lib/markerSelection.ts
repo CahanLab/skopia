@@ -26,6 +26,9 @@ export interface MarkerSource {
   maxPadj: number | null
   rankBy: 'score' | 'log2fc'
   restrictTo: MarkerRestriction | null
+  /** The blocks' order when the user dragged them; absent/null = follow the
+   *  plot's cell groups (decided server-side, `_order_marker_blocks`). */
+  groupOrder?: string[] | null
 }
 
 export interface DotplotOptions {
@@ -63,6 +66,7 @@ export interface MarkerRequest {
   max_padj?: number
   rank_by: 'score' | 'log2fc'
   restrict_to?: MarkerRestrictionWire
+  group_order?: string[]
 }
 
 /** The `markers` field of a heatmap / dot plot request: blank thresholds are left out. */
@@ -73,7 +77,25 @@ export function markerRequest(src: MarkerSource): MarkerRequest {
   if (src.minLog2fc !== null) out.min_log2fc = src.minLog2fc
   if (src.maxPadj !== null) out.max_padj = src.maxPadj
   if (src.restrictTo) out.restrict_to = restrictionWire(src.restrictTo)
+  if (src.groupOrder && src.groupOrder.length) out.group_order = [...src.groupOrder]
   return out
+}
+
+/** The marker blocks in the order the server will draw them, for the
+ *  modal's drag list: the override, else the plot's cell groups when the
+ *  run was made on the plot's column, else the run's own order. Mirrors
+ *  `marker_genes.order_blocks` + `_order_marker_blocks`. */
+export function markerBlockOrder(
+  runGroups: readonly string[], override: readonly string[] | null | undefined,
+  runColumn: string | null, plotColumn: string | null, cellGroups: readonly string[] | null,
+): string[] {
+  const order = override && override.length ? override
+    : cellGroups && cellGroups.length && runColumn && runColumn === plotColumn ? cellGroups : null
+  if (!order) return [...runGroups]
+  const known = new Set(runGroups)
+  const head = [...new Set(order)].filter((g) => known.has(g))
+  const taken = new Set(head)
+  return [...head, ...runGroups.filter((g) => !taken.has(g))]
 }
 
 /** The same selection as figure params (the backend's `marker_*` keys). */
@@ -113,15 +135,25 @@ export function normalizeHeatmapConfig(cfg: HeatmapConfig): NormalizedHeatmapCon
   }
 }
 
+export interface GeneSetGroupWire { name: string; genes: string[]; genes_down?: string[] }
+
+/** A picked set as a request row group / figure input: its down genes ride
+ *  along when it has any (only a UCell aggregate row reads them). */
+export function geneSetGroupWire(gs: { name: string; genes: string[]; genesDown?: string[] }): GeneSetGroupWire {
+  return gs.genesDown && gs.genesDown.length
+    ? { name: gs.name, genes: gs.genes, genes_down: gs.genesDown }
+    : { name: gs.name, genes: gs.genes }
+}
+
 /** The rows fragment both `/api/heatmap/data` and `/api/dotplot/data` take. */
-export function rowsFromConfig(cfg: HeatmapConfig): { genes: string[]; gene_set_groups: { name: string; genes: string[] }[]; markers: MarkerRequest | null } {
+export function rowsFromConfig(cfg: HeatmapConfig): { genes: string[]; gene_set_groups: GeneSetGroupWire[]; markers: MarkerRequest | null } {
   const sets = cfg.selectedGeneSets ?? []
   const seen = new Set<string>()
   const genes: string[] = []
   for (const gs of sets) for (const g of gs.genes) if (!seen.has(g)) { seen.add(g); genes.push(g) }
   return {
     genes,
-    gene_set_groups: sets.map((gs) => ({ name: gs.name, genes: gs.genes })),
+    gene_set_groups: sets.map(geneSetGroupWire),
     markers: cfg.markerSource ? markerRequest(cfg.markerSource) : null,
   }
 }

@@ -1849,6 +1849,9 @@ class MarkerSelection(BaseModel):
 class MarkerSourceSpec(MarkerSelection):
     """A plot's row source: a stored marker run plus the selection on it."""
     key: str
+    # The blocks' order when the user dragged them; null = follow the plot's
+    # cell groups when the run was made on its column (_order_marker_blocks).
+    group_order: list[str] | None = None
 
 
 class ClusterGeneSetRequest(BaseModel):
@@ -2358,6 +2361,8 @@ def create_line_embedding(request: CreateLineEmbeddingRequest, dataset: str | No
 class HeatmapGeneSetGroup(BaseModel):
     name: str
     genes: list[str]
+    # A directional set's down genes: only a UCell-scored aggregate row reads them.
+    genes_down: list[str] = []
 
 
 class HeatmapRequest(BaseModel):
@@ -2376,6 +2381,12 @@ class HeatmapRequest(BaseModel):
     transform: str | None = None
     cell_indices: list[int] | None = None
     groups: list[str] | None = None       # labels of obs_column to keep, in this order; null = all
+    # How an aggregate row scores its set: the Display panel's options and
+    # defaults (config.yaml `display:`), so the row is the embedding's score.
+    gene_set_scoring_method: str = "mean"          # mean | ucell
+    gene_set_per_gene_norm: str = "zscore_mad"     # none | zscore_mad | zscore_sd | minmax | rank
+    gene_set_per_gene_clip: float = 1.0            # minmax only: percentile clip before the rescale
+    gene_set_aggregation: str = "mean"             # mean | median | sum | max
 
 
 @router.post("/heatmap/data")
@@ -2389,7 +2400,8 @@ def get_heatmap_data(request: HeatmapRequest, dataset: str | None = Query(None))
 
     adaptor = get_adaptor(dataset)
     try:
-        genes, gene_set_groups = _plot_rows(adaptor, request.genes, request.gene_set_groups, request.markers)
+        genes, gene_set_groups = _plot_rows(adaptor, request.genes, request.gene_set_groups, request.markers,
+                                            request.obs_column, request.groups)
         return compute_heatmap_data(
             adaptor,
             genes=genes,
@@ -2403,6 +2415,10 @@ def get_heatmap_data(request: HeatmapRequest, dataset: str | None = Query(None))
             transform=request.transform,
             cell_indices=request.cell_indices,
             groups=request.groups,
+            gene_set_scoring_method=request.gene_set_scoring_method,
+            gene_set_per_gene_norm=request.gene_set_per_gene_norm,
+            gene_set_per_gene_clip=request.gene_set_per_gene_clip,
+            gene_set_aggregation=request.gene_set_aggregation,
         )
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -2431,7 +2447,8 @@ def get_dotplot_data(request: DotplotRequest, dataset: str | None = Query(None))
     """Per gene per group: fraction of cells expressing and mean expression."""
     adaptor = get_adaptor(dataset)
     try:
-        genes, gene_set_groups = _plot_rows(adaptor, request.genes, request.gene_set_groups, request.markers)
+        genes, gene_set_groups = _plot_rows(adaptor, request.genes, request.gene_set_groups, request.markers,
+                                            request.obs_column, request.groups)
         return adaptor.dotplot_data(
             genes, gene_set_groups, request.obs_column,
             transform=request.transform, cell_indices=request.cell_indices, groups=request.groups,
@@ -2446,11 +2463,15 @@ def get_dotplot_data(request: DotplotRequest, dataset: str | None = Query(None))
 
 
 def _plot_rows(adaptor, genes: list[str], gene_set_groups: list[HeatmapGeneSetGroup] | None,
-               markers: MarkerSourceSpec | None) -> tuple[list[str], list[dict] | None]:
+               markers: MarkerSourceSpec | None, obs_column: str | None = None,
+               cell_groups: list[str] | None = None) -> tuple[list[str], list[dict] | None]:
     """Rows for an expression plot: the marker run's groups (resolved from the
-    stored ranking) ahead of the literal sets, genes deduplicated in that order."""
-    groups = adaptor.heatmap_groups_from_markers(markers.model_dump() if markers else None)
-    groups += [{"name": g.name, "genes": list(g.genes)} for g in (gene_set_groups or [])]
+    stored ranking, in the order of the plot's cell groups unless the request
+    overrides it) ahead of the literal sets, genes deduplicated in that order."""
+    groups = adaptor.heatmap_groups_from_markers(markers.model_dump() if markers else None,
+                                                 obs_column=obs_column, cell_groups=cell_groups)
+    groups += [{"name": g.name, "genes": list(g.genes), **({"genes_down": list(g.genes_down)} if g.genes_down else {})}
+               for g in (gene_set_groups or [])]
     ordered = [g for grp in groups for g in grp["genes"]] + list(genes)
     seen: set[str] = set()
     unique = [g for g in ordered if not (g in seen or seen.add(g))]

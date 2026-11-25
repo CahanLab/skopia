@@ -2242,6 +2242,8 @@ export interface MarkerRunSummary {
   label: string | null
   obs_column: string
   n_groups: number
+  /** The run's groups in its order (absent from an older backend). */
+  groups?: string[]
   n_cells_tested: number | null
   cell_subset: string | null
   n_cell_indices: number | null

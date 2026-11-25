@@ -59,8 +59,12 @@ describe('tab configs become figure records', () => {
     }
     expect(heatmapFigureFromConfig(cfg, null, 'log1p')).toEqual({
       kind: 'expression_heatmap',
-      inputs: { gene_sets: [{ name: 'collagen', genes: ['Col1a1', 'Col1a2'] }], marker_key: null, marker_restrict: null, obs_column: 'leiden', line_name: 'L1', transform: 'log1p', groups: null, cell_subset: null, cell_indices: [3, 4] },
-      params: { cell_ordering: 'line_position', gene_ordering: 'peak_position', aggregate_gene_sets: true, n_bins: 20 },
+      inputs: { gene_sets: [{ name: 'collagen', genes: ['Col1a1', 'Col1a2'] }], marker_key: null, marker_restrict: null, marker_group_order: null, obs_column: 'leiden', line_name: 'L1', transform: 'log1p', groups: null, cell_subset: null, cell_indices: [3, 4] },
+      params: {
+        cell_ordering: 'line_position', gene_ordering: 'peak_position', aggregate_gene_sets: true, n_bins: 20,
+        // no geneSetScoring on the config: the Display defaults
+        gene_set_scoring_method: 'mean', gene_set_per_gene_norm: 'zscore_mad', gene_set_per_gene_clip: 1, gene_set_aggregation: 'mean',
+      },
     })
     // the tab never draws with the active subset, so callers pass null; the helper still honours one if given
     expect(heatmapFigureFromConfig({ ...cfg, cellIndices: null }, 'chondro').inputs.cell_subset).toBe('chondro')

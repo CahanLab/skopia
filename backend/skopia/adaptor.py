@@ -2738,6 +2738,23 @@ class DataAdaptor:
         with no usable up-genes scores 0 everywhere (UCell property). Returns
         values + min/max + counts of genes used.
         """
+        scores, n_up, n_down, eff_max_rank = self._ucell_signature(up, down, layer, max_rank, w_neg)
+        return {
+            "values": [float(v) for v in scores],
+            "min": float(scores.min()) if scores.size else 0.0,
+            "max": float(scores.max()) if scores.size else 0.0,
+            "n_up_used": n_up,
+            "n_down_used": n_down,
+            "max_rank": eff_max_rank,
+        }
+
+    def ucell_scores(self, up: list[str], down: list[str] | None = None, layer: str = 'counts',
+                     max_rank: int = 1500, w_neg: float = 1.0) -> np.ndarray:
+        """``ucell_score_values`` as an array (n_cells,): the score the
+        embedding colours by, for callers that index it (heatmap rows)."""
+        return self._ucell_signature(up, down, layer, max_rank, w_neg)[0]
+
+    def _ucell_signature(self, up, down, layer, max_rank, w_neg):
         down = down or []
         var_index = self.adata.var.index
         up_g = [g for g in up if g in var_index]
@@ -2751,14 +2768,7 @@ class DataAdaptor:
             scores = np.zeros(self.adata.shape[0], dtype=np.float64)
         else:
             scores = self._ucell_score_one(up_idx, down_idx, ranks, eff_max_rank, w_neg)
-        return {
-            "values": [float(v) for v in scores],
-            "min": float(scores.min()) if scores.size else 0.0,
-            "max": float(scores.max()) if scores.size else 0.0,
-            "n_up_used": len(up_idx),
-            "n_down_used": len(down_idx),
-            "max_rank": eff_max_rank,
-        }
+        return scores, len(up_idx), len(down_idx), eff_max_rank
 
     @staticmethod
     def _sanitize_obs_name(name: str) -> str:
@@ -7307,6 +7317,7 @@ class DataAdaptor:
                 '_order': order,
                 'key': r.get('key'), 'uid': r.get('uid'), 'label': r.get('label'),
                 'obs_column': r.get('obs_column'), 'n_groups': len(r.get('groups') or []),
+                'groups': [str(g) for g in (r.get('groups') or [])],
                 'n_cells_tested': p.get('n_cells_tested'), 'cell_subset': p.get('cell_subset'),
                 'n_cell_indices': p.get('n_cell_indices'), 'gene_subset': p.get('gene_subset'),
                 'store_top_n': p.get('store_top_n'), 'created_at': r.get('created_at'),
@@ -7436,15 +7447,31 @@ class DataAdaptor:
         out['transform'] = transform
         return out
 
-    def heatmap_groups_from_markers(self, markers: dict[str, Any] | None) -> list[dict[str, Any]]:
-        """``{key, **selection}`` from a plot request → row groups; [] when absent."""
+    def heatmap_groups_from_markers(self, markers: dict[str, Any] | None, obs_column: str | None = None,
+                                    cell_groups: list[str] | None = None) -> list[dict[str, Any]]:
+        """``{key, group_order?, **selection}`` from a plot request → row groups; [] when absent.
+        The blocks are ordered by ``_marker_block_order``."""
         if not markers:
             return []
         spec = dict(markers)
         key = spec.pop('key', None)
+        override = spec.pop('group_order', None)
         if not key:
             raise ValueError('markers.key must name a stored marker run')
-        return self.marker_gene_set_groups(str(key), **{k: v for k, v in spec.items() if v is not None})
+        blocks = self.marker_gene_set_groups(str(key), **{k: v for k, v in spec.items() if v is not None})
+        return self._order_marker_blocks(str(key), blocks, override, obs_column, cell_groups)
+
+    def _order_marker_blocks(self, key: str, blocks: list[dict[str, Any]], override: list[str] | None,
+                             obs_column: str | None, cell_groups: list[str] | None) -> list[dict[str, Any]]:
+        """Marker blocks follow the plot's cell groups when the run was made on
+        the plot's own column, so a reordered heatmap or dot plot keeps its
+        diagonal; an explicit ``override`` (the user dragged the blocks) wins.
+        Otherwise the run's own group order."""
+        from skopia import marker_genes as mg  # noqa: PLC0415
+        order = override or None
+        if order is None and cell_groups and obs_column and self.get_marker_run(key).get('obs_column') == obs_column:
+            order = cell_groups
+        return mg.order_blocks(blocks, order)
 
     def _put_enrichment(self, key: str, result: dict[str, Any]) -> None:
         """Replace a reserved placeholder with the real record, keeping its uid."""
@@ -7656,13 +7683,21 @@ class DataAdaptor:
     # so they are tuned live and recorded, and never re-run the test.
     _MARKER_PARAM_KEYS = ('marker_top_n', 'marker_min_pct_in', 'marker_max_pct_out', 'marker_min_log2fc',
                           'marker_max_padj', 'marker_rank_by')
+    # How an aggregate row scores its set (heatmap.compute_heatmap_data).
+    _GENE_SET_SCORING_KEYS = ('gene_set_scoring_method', 'gene_set_per_gene_norm', 'gene_set_per_gene_clip',
+                              'gene_set_aggregation')
+    # A heatmap figure saved before those params existed was drawn with a
+    # plain mean of the unscaled values; it keeps that look.
+    _LEGACY_HEATMAP_SCORING = {'gene_set_scoring_method': 'mean', 'gene_set_per_gene_norm': 'none',
+                               'gene_set_per_gene_clip': 0.0, 'gene_set_aggregation': 'mean'}
     _FIGURE_PARAM_KEYS = {
         'enrichment_heatmap': ('value', 'padj_max', 'top_n', 'direction', 'collapse_jaccard', 'row_order',
                                'col_order', 'colormap', 'vmax', 'show_values', 'label_max_chars', 'cell_size'),
         'enrichment_network': ('value', 'padj_max', 'top_n', 'direction', 'set_edge_jaccard', 'layout', 'seed',
                                'node_size_by', 'edge_width_by', 'label_max_chars', 'colormap'),
         'composition_barplot': ('order', 'share_of', 'normalize', 'min_cells', 'show_values'),
-        'expression_heatmap': ('cell_ordering', 'gene_ordering', 'aggregate_gene_sets', 'n_bins') + _MARKER_PARAM_KEYS,
+        'expression_heatmap': ('cell_ordering', 'gene_ordering', 'aggregate_gene_sets', 'n_bins') + _MARKER_PARAM_KEYS
+                              + _GENE_SET_SCORING_KEYS,
         'cnv_heatmap': ('row_mode', 'max_rows', 'group_order', 'vmax', 'colormap'),
         'expression_dotplot': _MARKER_PARAM_KEYS + ('color_by', 'standard_scale', 'expression_cutoff', 'gene_ordering',
                                                     'group_ordering', 'swap_axes', 'colormap', 'vmax', 'dot_max',
@@ -7732,6 +7767,16 @@ class DataAdaptor:
                 restrict = {'label': str(restrict.get('label', ''))} | (
                     {'genes': [str(g) for g in restrict['genes']]} if restrict.get('genes') is not None
                     else {'var_column': str(restrict['var_column'])})
+            # Absent unless the user dragged the marker blocks: they then
+            # follow the cell groups (_order_marker_blocks).
+            block_order: dict[str, Any] = {}
+            if inputs.get('marker_group_order') is not None:
+                order = inputs['marker_group_order']
+                if not marker_key:
+                    raise ValueError('inputs.marker_group_order needs inputs.marker_key')
+                if not isinstance(order, list) or not order or not all(isinstance(g, str) for g in order):
+                    raise ValueError('inputs.marker_group_order must be a non-empty list of group names, or null')
+                block_order = {'marker_group_order': list(dict.fromkeys(order))}
             obs_column = inputs.get('obs_column') or None
             if obs_column and obs_column not in self.adata.obs.columns:
                 raise ValueError(f"inputs.obs_column '{obs_column}' is not an .obs column")
@@ -7745,7 +7790,7 @@ class DataAdaptor:
                 if transform not in (None, 'log1p'):
                     raise ValueError("inputs.transform must be null or 'log1p'")
                 groups = self._figure_input_groups(inputs, obs_column)
-                return {'gene_sets': [{'name': str(s.get('name', '')), 'genes': [str(g) for g in s['genes']]} for s in sets],
+                return {'gene_sets': self._figure_gene_sets(sets), **block_order,
                         'marker_key': str(marker_key) if marker_key else None, 'marker_restrict': restrict,
                         'obs_column': obs_column, 'transform': transform, 'groups': groups,
                         **self._figure_cell_inputs(inputs)}
@@ -7756,7 +7801,7 @@ class DataAdaptor:
             if transform not in (None, 'log1p'):
                 raise ValueError("inputs.transform must be null or 'log1p'")
             groups = self._figure_input_groups(inputs, obs_column)
-            return {'gene_sets': [{'name': str(s.get('name', '')), 'genes': [str(g) for g in s['genes']]} for s in sets],
+            return {'gene_sets': self._figure_gene_sets(sets), **block_order,
                     'marker_key': str(marker_key) if marker_key else None, 'marker_restrict': restrict,
                     'obs_column': obs_column, 'line_name': line_name, 'transform': transform,
                     'groups': groups, **self._figure_cell_inputs(inputs)}
@@ -7814,6 +7859,10 @@ class DataAdaptor:
             raise ValueError(f"cell_ordering '{ordering}' needs a drawn line, and this figure has none")
         if ordering in ('category', 'category_then_position', 'category_then_similarity') and not inputs.get('obs_column'):
             raise ValueError(f"cell_ordering '{ordering}' needs an .obs column, and this figure has none")
+        from skopia.heatmap import _check_gene_set_scoring  # noqa: PLC0415
+        _check_gene_set_scoring(params.get('gene_set_scoring_method', 'mean'),
+                                params.get('gene_set_per_gene_norm', 'zscore_mad'),
+                                params.get('gene_set_per_gene_clip', 1.0), params.get('gene_set_aggregation', 'mean'))
 
     def _figure_cells(self, inputs: dict[str, Any]) -> list[int] | None:
         """Resolve at draw time; a subset that has since been deleted is a
@@ -7932,12 +7981,28 @@ class DataAdaptor:
                 raise FigureInputMissing(f"Marker run '{key}' was replaced by a later run; the figure cannot be drawn")
             restrict = inp.get('marker_restrict') or None
             try:
-                groups += self.marker_gene_set_groups(key, restrict_to=restrict, **self._marker_selection(params))
+                blocks = self.marker_gene_set_groups(key, restrict_to=restrict, **self._marker_selection(params))
             except KeyError as e:
                 # the restriction's .var column was deleted after the figure was saved
                 raise FigureInputMissing(f"{e.args[0]}; the figure cannot be drawn") from e
-        groups += [{'name': s_['name'], 'genes': list(s_['genes'])} for s_ in inp.get('gene_sets') or []]
+            groups += self._order_marker_blocks(key, blocks, inp.get('marker_group_order'),
+                                                inp.get('obs_column'), inp.get('groups'))
+        groups += [{'name': s_['name'], 'genes': list(s_['genes']),
+                    **({'genes_down': list(s_['genes_down'])} if s_.get('genes_down') else {})}
+                   for s_ in inp.get('gene_sets') or []]
         return groups
+
+    @staticmethod
+    def _figure_gene_sets(sets: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Name and genes of each set, plus its down genes when it has any:
+        a UCell-scored aggregate row uses them, as the embedding colour does."""
+        out = []
+        for s_ in sets:
+            row: dict[str, Any] = {'name': str(s_.get('name', '')), 'genes': [str(g) for g in s_['genes']]}
+            if s_.get('genes_down'):
+                row['genes_down'] = [str(g) for g in s_['genes_down']]
+            out.append(row)
+        return out
 
     def _figure_input_groups(self, inputs: dict[str, Any], obs_column: str | None) -> list[str] | None:
         """``inputs.groups`` checked against the labels of ``obs_column``:
@@ -8196,7 +8261,9 @@ class DataAdaptor:
         kind = record['kind']
         # Defaults underneath, so a record written before a kind gained a
         # param (the marker_* keys, 2026-11) still validates and draws.
-        params = {**self._figure_defaults(kind), **record['params'], **(params_override or {})}
+        legacy = (self._LEGACY_HEATMAP_SCORING
+                  if kind == 'expression_heatmap' and 'gene_set_per_gene_norm' not in record['params'] else {})
+        params = {**self._figure_defaults(kind), **legacy, **record['params'], **(params_override or {})}
         allowed = set(self._FIGURE_PARAM_KEYS[kind])
         unknown = sorted(set(params_override or {}) - allowed)
         if unknown:
@@ -8251,7 +8318,8 @@ class DataAdaptor:
                 aggregate_gene_sets=bool(params.get('aggregate_gene_sets')), cell_ordering=str(params.get('cell_ordering', 'category')),
                 obs_column=inp.get('obs_column'), line_name=inp.get('line_name'),
                 gene_ordering=str(params.get('gene_ordering', 'as_provided')), n_bins=int(params.get('n_bins', 0)),
-                transform=inp.get('transform'), cell_indices=self._figure_cells(inp), groups=groups)
+                transform=inp.get('transform'), cell_indices=self._figure_cells(inp), groups=groups,
+                **{k: params[k] for k in self._GENE_SET_SCORING_KEYS if k in params})
             out['figure_id'] = figure_id
             out['kind'] = kind
             return out

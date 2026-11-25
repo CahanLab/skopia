@@ -83,7 +83,7 @@ describe('figure builders', () => {
   it('a dot plot figure names its kind, column and options', () => {
     const fig = dotplotFigureFromConfig({ ...legacy, plotType: 'dotplot', markerSource: src, dotplot: { ...DEFAULT_DOTPLOT_OPTIONS, colorBy: 'mean_expressing', vmax: 2 } }, 'half', null)
     expect(fig.kind).toBe('expression_dotplot')
-    expect(fig.inputs).toEqual({ gene_sets: [{ name: 'immune', genes: ['Ptprc', 'Cd3e'] }], marker_key: 'markers_leiden', marker_restrict: null, obs_column: 'leiden', transform: null, groups: null, cell_subset: 'half', cell_indices: null })
+    expect(fig.inputs).toEqual({ gene_sets: [{ name: 'immune', genes: ['Ptprc', 'Cd3e'] }], marker_key: 'markers_leiden', marker_restrict: null, marker_group_order: null, obs_column: 'leiden', transform: null, groups: null, cell_subset: 'half', cell_indices: null })
     expect(fig.params).toEqual({
       ...markerParams(src), color_by: 'mean_expressing', standard_scale: 'none', expression_cutoff: 0, gene_ordering: 'as_provided',
       group_ordering: 'as_given', swap_axes: false, colormap: 'viridis', vmax: 2, dot_max: null, background: '#16213e',
@@ -153,5 +153,48 @@ describe('restriction', () => {
   it('inputsSummary collapses gene lists', () => {
     expect(inputsSummary({ gene_sets: [{ name: 'immune', genes: ['a', 'b'] }], marker_key: 'markers_x', marker_restrict: { label: 'TFs', genes: ['a'] }, obs_column: 'leiden', transform: null }))
       .toBe('gene_sets: immune (2 genes) · marker_key: markers_x · in TFs · obs_column: leiden')
+  })
+})
+
+describe('marker block order', () => {
+  it('an override travels as group_order; none means follow the cell groups (server-side)', () => {
+    expect(markerRequest({ ...src, groupOrder: ['2', '0'] }).group_order).toEqual(['2', '0'])
+    expect(markerRequest({ ...src, groupOrder: null })).not.toHaveProperty('group_order')
+    expect(markerRequest(src)).not.toHaveProperty('group_order')
+  })
+  it('the modal shows the order the server will draw', async () => {
+    const { markerBlockOrder } = await import('./markerSelection')
+    const run = ['0', '1', '2', '3']
+    // follows the cell groups when the run is on the plot's column
+    expect(markerBlockOrder(run, null, 'leiden', 'leiden', ['2', '0'])).toEqual(['2', '0', '1', '3'])
+    // another column, or no pick: the run's own order
+    expect(markerBlockOrder(run, null, 'leiden', 'sample', ['2', '0'])).toEqual(run)
+    expect(markerBlockOrder(run, null, 'leiden', 'leiden', null)).toEqual(run)
+    // an override wins; names the run lacks are skipped
+    expect(markerBlockOrder(run, ['3', 'x', '1'], 'leiden', 'leiden', ['2', '0'])).toEqual(['3', '1', '0', '2'])
+  })
+  it('a figure keeps an override as an input and its sets keep their down genes', () => {
+    const cfg: HeatmapConfig = {
+      selectedGeneSets: [{ id: 'x', name: 'dir', genes: ['A'], genesDown: ['B'] }], markerSource: { ...src, groupOrder: ['1', '0'] },
+      cellOrdering: 'category', obsColumn: 'leiden', lineName: null, geneOrdering: 'as_provided', aggregateGeneSets: false, nBins: 0,
+    }
+    expect(heatmapFigureFromConfig(cfg, null).inputs.marker_group_order).toEqual(['1', '0'])
+    expect(dotplotFigureFromConfig(cfg, null).inputs.marker_group_order).toEqual(['1', '0'])
+    expect(heatmapFigureFromConfig(cfg, null).inputs.gene_sets).toEqual([{ name: 'dir', genes: ['A'], genes_down: ['B'] }])
+    expect(heatmapFigureFromConfig({ ...cfg, markerSource: src }, null).inputs.marker_group_order).toBeNull()
+    expect(rowsFromConfig(cfg).gene_set_groups).toEqual([{ name: 'dir', genes: ['A'], genes_down: ['B'] }])
+  })
+  it('a heatmap figure records how its aggregates were scored', () => {
+    const cfg: HeatmapConfig = {
+      selectedGeneSets: sets, cellOrdering: 'none', obsColumn: null, lineName: null, geneOrdering: 'as_provided',
+      aggregateGeneSets: true, nBins: 0,
+      geneSetScoring: { scoringMethod: 'mean', perGeneNorm: 'rank', perGeneClip: 1, aggregation: 'median' },
+    }
+    expect(heatmapFigureFromConfig(cfg, null).params).toMatchObject({
+      gene_set_scoring_method: 'mean', gene_set_per_gene_norm: 'rank', gene_set_per_gene_clip: 1, gene_set_aggregation: 'median',
+    })
+    // a config from before the option: the Display defaults
+    const { geneSetScoring: _, ...old } = cfg
+    expect(heatmapFigureFromConfig(old, null).params).toMatchObject({ gene_set_per_gene_norm: 'zscore_mad', gene_set_aggregation: 'mean' })
   })
 })

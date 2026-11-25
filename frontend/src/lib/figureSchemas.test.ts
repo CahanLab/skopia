@@ -16,6 +16,7 @@ const BACKEND_DEFAULTS: Record<string, Record<string, unknown>> = {
   expression_heatmap: {
     cell_ordering: 'category', gene_ordering: 'as_provided', aggregate_gene_sets: false, n_bins: 50,
     marker_top_n: 5, marker_min_pct_in: null, marker_max_pct_out: null, marker_min_log2fc: null, marker_max_padj: null, marker_rank_by: 'score',
+    gene_set_scoring_method: 'mean', gene_set_per_gene_norm: 'zscore_mad', gene_set_per_gene_clip: 1.0, gene_set_aggregation: 'mean',
   },
   cnv_heatmap: { row_mode: 'cells', max_rows: 400, group_order: 'cnv_score', vmax: null, colormap: 'rdbu' },
   expression_dotplot: {

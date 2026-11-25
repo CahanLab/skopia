@@ -135,3 +135,16 @@ def select_markers(record: dict[str, Any], *, top_n: int = 10,
         results.append({'group': g, 'genes': picked, 'n_candidates': len(kept)})
     return {'results': results, 'n_stored_per_group': n_stored, 'truncated': truncated,
             'restricted': allowed is not None}
+
+
+def order_blocks(blocks: list[dict[str, Any]], order: list[str] | None) -> list[dict[str, Any]]:
+    """A marker run's row blocks with the ones ``order`` names first, in that
+    order, and the rest after in their own order. A name with no block is
+    skipped: a run re-made under the same key may have other groups, and a
+    saved order must not stop the plot drawing."""
+    if not order:
+        return list(blocks)
+    by_name = {b['name']: b for b in blocks}
+    named = [by_name[n] for n in dict.fromkeys(str(o) for o in order) if n in by_name]
+    taken = {b['name'] for b in named}
+    return named + [b for b in blocks if b['name'] not in taken]

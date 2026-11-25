@@ -95,3 +95,57 @@ describe('cleanGroupPick', () => {
     expect(cleanGroupPick(['0'], [])).toEqual(['0'])
   })
 })
+
+// Dragging: the picker lists every label in a display order the user can
+// rearrange; the pick sent is the ticked labels in that order.
+describe('dragging groups', () => {
+  const all = ['0', '1', '2', '3']
+  it('moveItem moves one entry to an index, the others keep their order', async () => {
+    const { moveItem } = await import('./heatmapGroups')
+    expect(moveItem(['a', 'b', 'c', 'd'], 'd', 0)).toEqual(['d', 'a', 'b', 'c'])
+    expect(moveItem(['a', 'b', 'c', 'd'], 'a', 2)).toEqual(['b', 'c', 'a', 'd'])
+    expect(moveItem(['a', 'b', 'c'], 'a', 9)).toEqual(['b', 'c', 'a'])
+    expect(moveItem(['a', 'b'], 'zz', 0)).toEqual(['a', 'b'])
+  })
+  it('the display order is the column order until a pick is out of it', async () => {
+    const { groupDisplayOrder } = await import('./heatmapGroups')
+    expect(groupDisplayOrder(null, null, all)).toEqual(all)
+    // a pick made by ticking is in column order: nobody jumps
+    expect(groupDisplayOrder(null, ['0', '2'], all)).toEqual(all)
+    // a pick restored from a dragged config: its order first, the rest after
+    expect(groupDisplayOrder(null, ['3', '1'], all)).toEqual(['3', '1', '0', '2'])
+    // a dragged order wins, minus gone labels, plus new ones at the end
+    expect(groupDisplayOrder(['2', 'gone', '0'], null, all)).toEqual(['2', '0', '1', '3'])
+  })
+  it('a pick follows the display order, and only the column order collapses to all', async () => {
+    const { pickInOrder } = await import('./heatmapGroups')
+    expect(pickInOrder(null, ['3', '2', '1', '0'], all)).toEqual(['3', '2', '1', '0'])
+    expect(pickInOrder(['0', '2'], ['2', '1', '0', '3'], all)).toEqual(['2', '0'])
+    expect(pickInOrder(['3', '2', '1', '0'], all, all)).toBeNull()
+  })
+  it('ticking in a dragged order keeps the dragged order', () => {
+    const order = ['3', '1', '0', '2']
+    expect(toggleGroupPick(['3', '1'], all, '2', order)).toEqual(['3', '1', '2'])
+    expect(toggleGroupPick(null, all, '1', order)).toEqual(['3', '0', '2'])
+    // every label ticked but out of column order is a pick, not "all"
+    expect(toggleGroupPick(['3', '1', '0'], all, '2', order)).toEqual(['3', '1', '0', '2'])
+  })
+})
+
+describe('gene-set row order', () => {
+  const sets = [
+    { id: 'a', name: 'A', genes: ['x'] }, { id: 'b', name: 'B', genes: ['y'] },
+    { id: 'c', name: 'C', genes: ['z'] }, { id: 'd', name: 'D', genes: ['w'] },
+  ]
+  it('a dragged order wins; sets ticked after the drag follow in list order', () => {
+    const picked = new Set(['a', 'c', 'd'])
+    expect(orderSelectedSets(sets, picked, ['d', 'a']).map((s) => s.id)).toEqual(['d', 'a', 'c'])
+    expect(orderSelectedSets(sets, picked, ['b', 'd', 'a', 'c']).map((s) => s.id)).toEqual(['d', 'a', 'c'])
+    expect(orderSelectedSets(sets, picked, null).map((s) => s.id)).toEqual(['a', 'c', 'd'])
+  })
+  it('a saved config in list order restores no custom order; a dragged one restores it', async () => {
+    const { restoreSetOrder } = await import('./heatmapGroups')
+    expect(restoreSetOrder([{ id: 'a', name: 'A', genes: ['x'] }, { id: 'c', name: 'C', genes: ['z'] }], sets)).toBeNull()
+    expect(restoreSetOrder([{ id: 'c', name: 'C', genes: ['z'] }, { id: 'a', name: 'A', genes: ['x'] }], sets)).toEqual(['c', 'a'])
+  })
+})
