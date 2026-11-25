@@ -274,7 +274,18 @@ All adjustments persist on the backend and are saved on h5ad export.
 - Go to **Preprocessing** and run in order:
   1. **Normalize Total** — normalize counts per cell
   2. **Log1p** — log-transform the data
-  3. **Highly Variable Genes** — identify informative genes
+  3. **Exclude Genes** (optional) — remove genes by name, regex pattern, or
+     type. *By gene type* ticks GENCODE classes (lncRNA, pseudogene, small RNA,
+     Ig/TCR, other) and named sets (among them predicted gene models,
+     ribosomal, mitochondrial, hemoglobin, histone, X- and Y-linked), from
+     shipped GENCODE tables for mouse and human or from the file's own
+     `gene_class` annotation. *Protein-coding only* ticks every non-coding
+     class and the mitochondrial, ribosomal and predicted sets. **Mark** removes nothing
+     and instead writes the kept genes to a boolean `.var` column
+     (`analysis_genes` by default).
+  4. **Highly Variable Genes** — identify informative genes. Pick a **Gene
+     Subset** column, such as the one Mark wrote, to detect HVGs among those
+     genes only; every other gene is marked not variable.
 
 ### Which scale is my data on?
 
@@ -1075,7 +1086,7 @@ carries its own provenance and re-opening it continues the history.
 - **Quilt mode** — lasso and rearrange tissue pieces: drag to translate, shift+drag to rotate, flip to reflect selected cell subsets
 - **Display settings** — adjust point size, opacity, colormaps, bivariate coloring, and an optional coordinate grid behind the plot (with data-coordinate tick labels along the bottom/left axes for visual reference and troubleshooting)
 - **Highlight overlay** — stack one or more colored layers on top of the active coloring without replacing it. Each layer is either a gene-set expression threshold (above / below / between, with a draggable histogram cutoff) or a frozen cell-set mask (current selection or category value). Useful for marking e.g. epithelium in green while keeping bivariate coloring on the rest.
-- **Figure builder** — compose multi-panel publication figures from a cell selection (or the full dataset). Each panel renders the same cells colored independently (single gene, gene set, bivariate — each axis a gene or a gene set — or metadata column), with its own color scale and title. Per-figure point size, opacity, background, and optional N×N grid overlay are shared so panels stay visually consistent. Per-panel "show highlight layers" toggle blends the dataset's current Highlight overlays into the panel. Shared pan/zoom keeps panels aligned. Export to PNG at 1×–4× DPI from the new **Figure** tab.
+- **Panels** — multi-panel embedding figures in the **Panels** tab. Opening it makes a 2×2 figure of every cell on the current embedding (*Crop to selection* narrows it). While it shows, clicking a gene, a set's 🎨, bivariate coloring or a Cells-pane *Color* button colors the active panel instead of the Embedding, as Display would color it. Each panel has its own color scale and an automatic title (click it to rename); a category panel labels its groups. One overlay of highlight layers spans the figure, with a per-panel off switch. Point size, opacity, background and the grid are shared, shared pan/zoom keeps panels aligned, and the figure exports as a PNG.
 - **Multi-dataset support** — load two datasets (h5ad, h5, rds, 10x matrix folders, or prefixed 10x file trios from GEO), switch between them, or view side by side in split mode
 - **Localize** — predict where dissociated cells came from. Load a spatial dataset alongside an scRNA-seq one and each scRNA-seq cell is placed by its nearest transcriptional neighbours among the spatial cells, producing a new embedding you can then explore like any other. Two confidence scores say which placements to believe — whether the cell resembles the reference at all, and whether its neighbours agree on a location — because a dispersed cell type produces a smooth, convincing map of nowhere. A built-in hold-out check reports accuracy against random and centroid baselines before you trust it. **Analyze → Spatial → Localize**
 - **Analysis record** — every operation you run is recorded (parameters, result, and the cell selection it ran on), and exports as a **Jupyter notebook you can execute** or a Markdown methods supplement, with your own notes and figures captured from the plot. Each step is labelled with how faithfully it reproduces — `exact` (the emitted line is the scanpy call skopia really made), `skopia` (needs skopia's Python API), or `manual` — and the document opens by stating that split in numbers, so nobody has to trust it blindly. **File → Analysis record…**
