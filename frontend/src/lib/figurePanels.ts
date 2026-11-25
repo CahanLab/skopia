@@ -80,18 +80,38 @@ export function autoPanelTitle(p: PanelColorSpec): string {
   }
 }
 
+interface SchemaLike { filename?: string | null; n_cells: number }
+type DatasetsLike = Record<string, { schema?: SchemaLike | null } | undefined>
+interface FigureLike { slot: string; datasetKey: string | null }
+
 interface RouteState {
   centerPanelView: string
   activeSlot: string
+  datasets: DatasetsLike
   highlightLayers?: HighlightLayer[]
-  activeFigure: { slot: string; activePanelId: string | null; panels: { id: string }[]; overlayLayers?: HighlightLayer[] } | null
+  activeFigure: (FigureLike & { activePanelId: string | null; panels: { id: string }[]; overlayLayers?: HighlightLayer[] }) | null
+}
+
+/** What a figure's cell indices are numbered against: the file in its slot
+ *  and that file's cell count. Another file loaded into the slot, or cells
+ *  deleted or filtered, changes it, and the figure's indices mean nothing. */
+export function figureDatasetKey(schema: SchemaLike | null | undefined): string | null {
+  return schema ? `${schema.filename ?? ''}|${schema.n_cells}` : null
+}
+
+/** Whether the figure's cells still are the cells in its slot. */
+export function figureMatchesDataset(fig: FigureLike, datasets: DatasetsLike): boolean {
+  const key = figureDatasetKey(datasets[fig.slot]?.schema)
+  return key !== null && key === fig.datasetKey
 }
 
 /** The panel the panes colour right now, or null when they colour the
- *  Embedding: not on Panels, no figure, or a figure of another dataset. */
+ *  Embedding: not on Panels, no figure, a figure of another dataset, or one
+ *  whose dataset's cells have changed under it. */
 export function panelRouteTarget(s: RouteState): string | null {
   const fig = s.activeFigure
   if (s.centerPanelView !== 'figure' || !fig || fig.slot !== s.activeSlot || fig.panels.length === 0) return null
+  if (!figureMatchesDataset(fig, s.datasets)) return null
   return (fig.panels.find((p) => p.id === fig.activePanelId) ?? fig.panels[0]).id
 }
 

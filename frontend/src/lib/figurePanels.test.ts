@@ -1,17 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { defaultDisplayPreferences, type HighlightLayer } from '../store'
 import {
-  SPEC_NONE, autoPanelTitle, categoryCentroids, cellsForFigure, editableHighlightLayers, panelRequest, panelRouteTarget,
+  SPEC_NONE, autoPanelTitle, categoryCentroids, cellsForFigure, figureDatasetKey, editableHighlightLayers, panelRequest, panelRouteTarget,
   specForBivariate, specForColumn, specForGenes, specForScore,
 } from './figurePanels'
 
 const fig = (slot: string, activePanelId: string | null, ids: string[], overlayLayers: HighlightLayer[] = []) => ({
-  slot, activePanelId, panels: ids.map((id) => ({ id })), overlayLayers,
+  slot, activePanelId, panels: ids.map((id) => ({ id })), overlayLayers, datasetKey: 'demo.h5ad|700',
 })
+const DATASETS = { primary: { schema: { filename: 'demo.h5ad', n_cells: 700 } }, secondary: { schema: { filename: 'toy.h5ad', n_cells: 1000 } } }
 const layer = (id: string): HighlightLayer => ({ id, color: '#fff', intensity: 1, source: { kind: 'cellset', label: id, mask: new Uint8Array(1) } })
 
 describe('panelRouteTarget', () => {
-  const base = { centerPanelView: 'figure', activeSlot: 'primary', highlightLayers: [] as HighlightLayer[] }
+  const base = { centerPanelView: 'figure', activeSlot: 'primary', highlightLayers: [] as HighlightLayer[], datasets: DATASETS }
   it('names the active panel, or the first when none or a stale one is active', () => {
     expect(panelRouteTarget({ ...base, activeFigure: fig('primary', null, ['p1', 'p2']) })).toBe('p1')
     expect(panelRouteTarget({ ...base, activeFigure: fig('primary', 'p2', ['p1', 'p2']) })).toBe('p2')
@@ -22,11 +23,18 @@ describe('panelRouteTarget', () => {
     expect(panelRouteTarget({ ...base, activeFigure: null })).toBeNull()
     expect(panelRouteTarget({ ...base, activeSlot: 'secondary', activeFigure: fig('primary', null, ['p1']) })).toBeNull()
   })
+  it('routes nothing once the cells under the figure changed: another file in its slot, or cells deleted', () => {
+    const replaced = { ...DATASETS, primary: { schema: { filename: 'other.h5ad', n_cells: 700 } } }
+    expect(panelRouteTarget({ ...base, datasets: replaced, activeFigure: fig('primary', null, ['p1']) })).toBeNull()
+    const deleted = { ...DATASETS, primary: { schema: { filename: 'demo.h5ad', n_cells: 650 } } }
+    expect(panelRouteTarget({ ...base, datasets: deleted, activeFigure: fig('primary', null, ['p1']) })).toBeNull()
+    expect(panelRouteTarget({ ...base, datasets: {}, activeFigure: fig('primary', null, ['p1']) })).toBeNull()
+  })
 })
 
 describe('editableHighlightLayers', () => {
   it("is the figure's overlay while Panels routes, else the dataset's layers", () => {
-    const state = { centerPanelView: 'figure', activeSlot: 'primary', highlightLayers: [layer('ds')], activeFigure: fig('primary', null, ['p1'], [layer('fig')]) }
+    const state = { centerPanelView: 'figure', activeSlot: 'primary', datasets: DATASETS, highlightLayers: [layer('ds')], activeFigure: fig('primary', null, ['p1'], [layer('fig')]) }
     expect(editableHighlightLayers(state).map((l) => l.id)).toEqual(['fig'])
     expect(editableHighlightLayers({ ...state, centerPanelView: 'scatter' }).map((l) => l.id)).toEqual(['ds'])
   })
@@ -109,5 +117,12 @@ describe('cellsForFigure', () => {
   })
   it('an empty selection means every cell', () => {
     expect(cellsForFigure(coords, []).indices).toEqual([0, 2, 3])
+  })
+})
+
+describe('figureDatasetKey', () => {
+  it('names the file and its cell count', () => {
+    expect(figureDatasetKey({ filename: 'demo.h5ad', n_cells: 700 })).toBe('demo.h5ad|700')
+    expect(figureDatasetKey(null)).toBeNull()
   })
 })

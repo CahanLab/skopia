@@ -6,7 +6,7 @@ import BivariateAxisPicker from './BivariateAxisPicker'
 import FigurePanel from './FigurePanel'
 import NumberInput from './NumberInput'
 import { exportFigureAsPng } from '../utils/exportFigure'
-import { cellsForFigure, SPEC_NONE, specForBivariate, specForColumn, specForGenes, type PanelColorSpec } from '../lib/figurePanels'
+import { cellsForFigure, figureMatchesDataset, SPEC_NONE, specForBivariate, specForColumn, specForGenes, type PanelColorSpec } from '../lib/figurePanels'
 import { datasetLabel } from '../lib/datasetSlots'
 import { figureInk } from '../lib/figures'
 
@@ -72,6 +72,21 @@ export default function FigureBuilder() {
       <div style={emptyStyle}>
         <div style={{ fontSize: '14px', color: '#aaa', marginBottom: '8px' }}>No embedding to compose.</div>
         <div style={{ fontSize: '12px', color: '#888' }}>Load a dataset with an embedding to compose panels.</div>
+      </div>
+    )
+  }
+
+  // The figure's indices number the cells as they were; once cells are
+  // deleted or filtered, or another file fills its slot, drawing it would
+  // colour old positions with new values. Say so instead of drawing.
+  if (!figureMatchesDataset(figure, datasets)) {
+    return (
+      <div style={emptyStyle} data-figure-stale>
+        <div style={{ fontSize: '14px', color: '#aaa', marginBottom: '8px' }}>The cells under this figure have changed.</div>
+        <div style={{ fontSize: '12px', color: '#888', marginBottom: '12px', maxWidth: '420px', textAlign: 'center' }}>
+          Cells were deleted or filtered, or another file was loaded in its place, so its panels can no longer be drawn.
+        </div>
+        <button onClick={closeFigure} style={primaryButtonStyle}>New figure</button>
       </div>
     )
   }

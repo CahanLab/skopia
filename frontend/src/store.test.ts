@@ -834,6 +834,18 @@ describe('the Panels figure', () => {
     expect(useStore.getState().activeFigure!.panels[3].showHighlightOverlay).toBe(true)
   })
 
+  it("stops routing to the figure when its dataset's cells change", () => {
+    makeFigure()
+    useStore.getState().addHighlightLayer(layer('figure'))
+    expect(useStore.getState().activeFigure!.overlayLayers).toHaveLength(1)
+    // cells deleted: the dataset reloads its schema with fewer cells
+    useStore.getState().loadDatasetIntoSlot('primary', { ...PRIMARY, n_cells: 4000 })
+    useStore.setState({ centerPanelView: 'figure' })
+    useStore.getState().addHighlightLayer(layer('after'))
+    expect(useStore.getState().activeFigure!.overlayLayers.map((l) => l.id)).toEqual(['figure'])
+    expect(useStore.getState().highlightLayers.map((l) => l.id)).toContain('after')
+  })
+
   it('crops to new cells and refits the view', () => {
     makeFigure()
     useStore.getState().updateFigure({ sharedZoom: 3, sharedTargetX: 1, sharedTargetY: 1 })

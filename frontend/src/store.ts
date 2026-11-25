@@ -14,7 +14,7 @@ import type { Workspace } from './lib/workspaceLayout'
 import type { CellSubsetInfo } from './lib/cellSubsets'
 import type { EnrichmentSource } from './lib/enrichment'
 import type { FigureSummary } from './lib/figures'
-import { autoPanelTitle, panelRouteTarget, type PanelColorMode, type PanelColorSpec } from './lib/figurePanels'
+import { autoPanelTitle, figureDatasetKey, panelRouteTarget, type PanelColorMode, type PanelColorSpec } from './lib/figurePanels'
 
 export interface Schema {
   n_cells: number
@@ -453,6 +453,10 @@ export interface Figure {
   // whatever dataset is active, and the panes colour it only while it is the
   // active one (lib/figurePanels.panelRouteTarget).
   slot: DatasetSlot
+  // The file and cell count the indices refer to (lib/figurePanels
+  // figureDatasetKey); a mismatch stops routing and the Panels pane asks
+  // for a new figure.
+  datasetKey: string | null
   // Highlight layers drawn over every panel that shows the overlay; the Genes
   // pane edits these instead of the dataset's while Panels is showing.
   overlayLayers: HighlightLayer[]
@@ -3063,6 +3067,7 @@ export const useStore = create<AppState>((set, get) => {
           dimX: dims.x,
           dimY: dims.y,
           slot: state.activeSlot,
+          datasetKey: figureDatasetKey(state.datasets[state.activeSlot]?.schema ?? state.schema),
           overlayLayers: [],
           activePanelId: null,
           panels,
