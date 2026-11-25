@@ -27,7 +27,7 @@ _ROWS = [
     ('ENSMUSG00000000005', '1700001C02Rik', 'protein_coding', 'chr1'),
     ('ENSMUSG00000000006', 'Hba-a1', 'protein_coding', 'chr11'),
     ('ENSMUSG00000000007', 'Pbsn', 'processed_pseudogene', 'chrX'),
-    ('ENSMUSG00000000008', 'Or5b3', 'protein_coding', 'chr7'),
+    ('ENSMUSG00000000008', 'Or5p60', 'protein_coding', 'chr7'),
     ('ENSMUSG00000000009', 'Tecg1', 'TEC', 'chr2'),
     ('ENSMUSG00000000010', 'Ighv1-1', 'IG_V_gene', 'chr12'),
     ('ENSMUSG00000000011', 'Oddg1', 'a_biotype_nobody_mapped', 'chr5'),
@@ -36,7 +36,7 @@ _ROWS = [
 ]
 
 GENES = ['Gnai3', 'Rpl13', 'mt-Co1', 'Gm42418', '1700001C02Rik', 'Hba-a1', 'Pbsn',
-         'Or5b3', 'Tecg1', 'Ighv1-1', 'Oddg1', 'Rps6ka1', 'tdTomato']
+         'Or5p60', 'Tecg1', 'Ighv1-1', 'Oddg1', 'Rps6ka1', 'tdTomato']
 
 # What the frontend's Protein-coding only preset sends for this dataset.
 PRESET = {'classes': ['lncRNA', 'pseudogene', 'small_rna', 'ig_tr', 'other'],
