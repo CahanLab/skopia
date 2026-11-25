@@ -43,16 +43,18 @@ export interface GeneTypeSelection {
 
 export const EMPTY_SELECTION: GeneTypeSelection = { classes: [], sets: [], species: null }
 
-/** Classes *Protein-coding only* leaves alone: the coding genes themselves,
- * and the genes no annotation knows (reporters, transgenes, cryten's
- * `exogenous`), which are not among the types the preset names. */
-const KEEP_CLASSES = new Set(['protein_coding', 'unannotated', 'exogenous'])
+/** The classes *Protein-coding only* ticks: GENCODE's non-coding classes,
+ * and only those. Not `protein_coding`, not `unannotated`, and never a class
+ * the panel does not know (cryten's `exogenous`, another tool's
+ * `protein-coding`, a missing value written as the text `nan`): a one-click
+ * preset must not remove genes whose class it cannot read. */
+const PRESET_CLASSES = new Set(['lncRNA', 'pseudogene', 'small_rna', 'ig_tr', 'other'])
 const PRESET_SETS = ['mt', 'ribo', 'predicted']
 
 export function proteinCodingOnly(summary: GeneTypeSummary): GeneTypeSelection {
   const offered = new Set(summary.sets.map((s) => s.name))
   return {
-    classes: summary.classes.map((c) => c.name).filter((c) => !KEEP_CLASSES.has(c)),
+    classes: summary.classes.map((c) => c.name).filter((c) => PRESET_CLASSES.has(c)),
     sets: PRESET_SETS.filter((s) => offered.has(s)),
     species: summary.species,
   }
@@ -106,4 +108,13 @@ export function mitoWarning(sel: GeneTypeSelection): string | null {
   return sel.sets.includes('mt')
     ? 'Removing mitochondrial genes before Filter Cells means its % mito threshold can no longer be used.'
     : null
+}
+
+/** A note when the guessed species matched none of the gene names, so the
+ * species select is worth a look (or the names are not GENCODE symbols). */
+export function speciesNote(summary: GeneTypeSummary): string | null {
+  if (summary.source?.kind !== 'gencode' || !summary.matched) return null
+  if (summary.matched.ensembl_id + summary.matched.symbol > 0) return null
+  return `None of the ${fmt(summary.n_genes)} gene names matched the ${summary.species} table. `
+    + 'If the species is wrong, choose the other one; otherwise every gene is unannotated.'
 }

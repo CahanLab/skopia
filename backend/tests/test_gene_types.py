@@ -26,8 +26,10 @@ _MOUSE_ROWS = [
     ('ENSMUSG00000000010', 'Ighv1-1', 'IG_V_gene', 'chr12'),
     ('ENSMUSG00000000011', 'Oddg1', 'a_biotype_nobody_mapped', 'chr5'),
     ('ENSMUSG00000000012', 'Rps6ka1', 'protein_coding', 'chr4'),
-    # retired 10x 2020-A name of Or5p60: after every current symbol
+    ('ENSMUSG00000000013', 'Spmap1', 'protein_coding', 'chr1'),
+    # retired 10x 2020-A names: after every current symbol
     ('ENSMUSG00000000008', 'Olfr484', 'protein_coding', 'chr7'),
+    ('ENSMUSG00000000013', '1700001P01Rik', 'protein_coding', 'chr1'),
 ]
 
 _HUMAN_ROWS = [
@@ -182,3 +184,43 @@ def test_load_sets_has_descriptions_and_the_class_map():
 def test_sets_are_bool_arrays(tmp_path):
     ann = gt.annotate_from_table(['Gnai3', 'Rpl13'], None, 'mouse', table=_mouse(tmp_path))
     assert all(isinstance(v, np.ndarray) and v.dtype == bool for v in ann.sets.values())
+
+
+def test_a_renamed_gene_is_judged_by_its_current_symbol(tmp_path):
+    """A 10x 2020-A placeholder that M39 has named is no longer `predicted`:
+    a gene's sets must not depend on which of its names the dataset used.
+    The dataset's own name still counts for a gene the table does not know."""
+    table = _mouse(tmp_path)
+    ann = gt.annotate_from_table(['1700001P01Rik', '1700001C02Rik', 'Gm99999'], None, 'mouse', table=table)
+    assert ann.gene_class == ['protein_coding', 'protein_coding', 'unannotated']
+    assert ann.sets['predicted'].tolist() == [False, True, True]
+    # the same through the id column
+    ann = gt.annotate_from_table(['1700001P01Rik'], ['ENSMUSG00000000013.2'], 'mouse', table=table)
+    assert ann.sets['predicted'].tolist() == [False]
+
+
+def test_genes_lists_still_match_either_name(tmp_path):
+    """Curated lists carry old and new symbols; a listed old name still counts."""
+    rows = [('ENSMUSG00000000020', 'Cenpu', 'protein_coding', 'chr8'),
+            ('ENSMUSG00000000020', 'Mlf1ip', 'protein_coding', 'chr8')]
+    ann = gt.annotate_from_table(['Mlf1ip'], None, 'mouse', table=_table(tmp_path, 'mouse', rows))
+    assert ann.sets['cell_cycle_s'].tolist() == [True]
+
+
+def test_missing_written_as_text_is_unannotated():
+    """`.astype(str)`, a common fix for an h5ad write error, turns a missing
+    class into the text 'nan'; it is still a gene with no class."""
+    names = ['A', 'B', 'C', 'D', 'E']
+    var = pd.DataFrame({'gene_class': ['protein_coding', 'nan', 'None', 'NA', '']}, index=names)
+    ann = gt.annotate_from_var(var, names, 'mouse')
+    assert ann.gene_class == ['protein_coding'] + ['unannotated'] * 4
+
+
+def test_a_nullable_boolean_set_column_with_missing_values():
+    """Missing in a nullable-boolean set column means not in the set."""
+    names = ['Rpl13', 'Gnai3', 'Actb']
+    var = pd.DataFrame({'gene_class': ['protein_coding'] * 3,
+                        'ribo': pd.array([True, None, False], dtype='boolean')}, index=names)
+    ann = gt.annotate_from_var(var, names, 'mouse')
+    assert ann.sets['ribo'].tolist() == [True, False, False]
+    assert ann.set_source['ribo'] == 'file'

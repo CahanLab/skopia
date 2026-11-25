@@ -5,6 +5,7 @@ import {
   mitoWarning,
   proteinCodingOnly,
   selectionIsEmpty,
+  speciesNote,
   summaryLine,
   type GeneTypeSummary,
 } from './geneTypes'
@@ -38,6 +39,11 @@ describe('proteinCodingOnly', () => {
     const sel = proteinCodingOnly(summary([...GENCODE_CLASSES, 'exogenous'], ['mt', 'ribo', 'predicted']))
     expect(sel.classes).not.toContain('exogenous')
     expect(sel.classes).not.toContain('unannotated')
+  })
+
+  it("never ticks a class it does not know, such as another tool's vocabulary or a missing value written as text", () => {
+    const sel = proteinCodingOnly(summary([...GENCODE_CLASSES, 'protein-coding', 'nan'], ['mt']))
+    expect(sel.classes).toEqual(['lncRNA', 'pseudogene', 'small_rna', 'ig_tr', 'other'])
   })
 
   it('ticks only the sets the summary offers', () => {
@@ -93,5 +99,21 @@ describe('mitoWarning', () => {
   it('warns only when the mt set is ticked', () => {
     expect(mitoWarning({ classes: [], sets: ['mt'], species: null })).toMatch(/Filter Cells/)
     expect(mitoWarning({ classes: ['lncRNA'], sets: ['ribo'], species: null })).toBeNull()
+  })
+})
+
+describe('speciesNote', () => {
+  it('says so when no gene matched the guessed species table', () => {
+    const s = summary(GENCODE_CLASSES, [])
+    s.matched = { ensembl_id: 0, symbol: 0, file: 0, unmatched: 100 }
+    expect(speciesNote(s)).toMatch(/None of the 100 gene names matched the mouse table/)
+  })
+
+  it('is silent when genes matched, or when the file is its own source', () => {
+    expect(speciesNote(summary(GENCODE_CLASSES, []))).toBeNull()
+    const f = summary(GENCODE_CLASSES, [])
+    f.source = { kind: 'file', label: "this file's annotation", species: 'mouse' }
+    f.matched = { ensembl_id: 0, symbol: 0, file: 0, unmatched: 100 }
+    expect(speciesNote(f)).toBeNull()
   })
 })

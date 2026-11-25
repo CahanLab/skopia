@@ -73,6 +73,7 @@ def load_sets(species: str) -> tuple[dict[str, dict], dict[str, str]]:
 @dataclass
 class GeneTable:
     """Rows of a gene-type table and the lookups into them."""
+    gene_id: list[str]
     symbol: list[str]
     gene_type: list[str]
     chromosome: list[str]
@@ -82,6 +83,7 @@ class GeneTable:
 
 
 def _read_table(path: Path) -> GeneTable:
+    gene_id: list[str] = []
     symbol: list[str] = []
     gene_type: list[str] = []
     chromosome: list[str] = []
@@ -93,6 +95,7 @@ def _read_table(path: Path) -> GeneTable:
             raise ValueError(f'{path.name} has an unexpected header')
         for i, line in enumerate(fh):
             gid, sym, gtype, chrom = line.rstrip('\n').split('\t')
+            gene_id.append(gid)
             symbol.append(sym)
             gene_type.append(gtype)
             chromosome.append(chrom)
@@ -102,7 +105,7 @@ def _read_table(path: Path) -> GeneTable:
             by_id.setdefault(gid, i)
             by_symbol.setdefault(sym, i)
             by_upper.setdefault(sym.upper(), i)
-    return GeneTable(symbol, gene_type, chromosome, by_id, by_symbol, by_upper)
+    return GeneTable(gene_id, symbol, gene_type, chromosome, by_id, by_symbol, by_upper)
 
 
 @lru_cache(maxsize=None)
@@ -136,25 +139,24 @@ def _strip_version(gene_id: str) -> str:
     return gene_id.split('.', 1)[0]
 
 
-def _set_mask(d: dict, names: pd.Series, symbols: pd.Series | None,
+def _set_mask(d: dict, pattern_labels: pd.Series, gene_labels: list[pd.Series],
               chrom: pd.Series | None, biotype: pd.Series | None) -> np.ndarray:
     """A gene is in a set if any of its conditions holds.
 
-    ``pattern`` and ``genes`` test the dataset's own name **or** the matched
-    table symbol: the name keeps them working for genes no table knows, the
-    symbol for a dataset indexed by Ensembl ids.
+    ``pattern`` tests one label per gene (for a table source, the gene's
+    current symbol when the table knows it, else the dataset's name);
+    ``genes`` tests every label given, since the curated lists carry old and
+    new symbols alike.
     """
-    m = np.zeros(len(names), dtype=bool)
-    label_series = [names] if symbols is None else [names, symbols]
+    m = np.zeros(len(pattern_labels), dtype=bool)
     if d.get('pattern'):
         # re.search, not Series.str.contains: the same matching, without
         # pandas' warning about the capture group in `predicted`.
         rx = re.compile(d['pattern'])
-        for s in label_series:
-            m |= np.fromiter((isinstance(v, str) and rx.search(v) is not None for v in s),
-                             dtype=bool, count=len(s))
+        m |= np.fromiter((isinstance(v, str) and rx.search(v) is not None for v in pattern_labels),
+                         dtype=bool, count=len(pattern_labels))
     if d.get('genes'):
-        for s in label_series:
+        for s in gene_labels:
             m |= s.isin(d['genes']).to_numpy(dtype=bool)
     if d.get('chrom') and chrom is not None:
         m |= chrom.isin(d['chrom']).to_numpy(dtype=bool)
@@ -194,11 +196,17 @@ def annotate_from_table(names, ids, species: str, table: GeneTable | None = None
 
     gene_type = [None if r is None else table.gene_type[r] for r in rows]
     gene_class = [UNANNOTATED if t is None else class_of.get(t, OTHER) for t in gene_type]
-    sym = pd.Series([None if r is None else table.symbol[r] for r in rows], dtype=object)
+    # The current symbol of each matched gene: a pattern judges the gene by
+    # its name now, not by the 10x 2020-A placeholder (Gm38394 is Zbed6 in
+    # M39), and on an id-indexed dataset by its symbol rather than its id.
+    # An unmatched gene keeps its own name.
+    current = [None if r is None else table.symbol[table.by_id[table.gene_id[r]]] for r in rows]
+    sym = pd.Series(current, dtype=object)
+    pattern_labels = pd.Series([c if c is not None else n for c, n in zip(current, names)], dtype=object)
     chrom = pd.Series([None if r is None else table.chromosome[r] for r in rows], dtype=object)
     biotype = pd.Series(gene_type, dtype=object)
     name_s = pd.Series(names, dtype=object)
-    sets = {k: _set_mask(d, name_s, sym, chrom, biotype) for k, d in sets_def.items()}
+    sets = {k: _set_mask(d, pattern_labels, [name_s, sym], chrom, biotype) for k, d in sets_def.items()}
     return GeneTypeAnnotation(
         gene_type=gene_type,
         gene_class=gene_class,
@@ -207,6 +215,15 @@ def annotate_from_table(names, ids, species: str, table: GeneTable | None = None
         source={'kind': 'gencode', 'label': RELEASES[species], 'species': species},
         matched=matched,
     )
+
+
+# A missing class written out as text: `.astype(str)`, a common fix for an
+# h5ad write error, turns NaN into 'nan' and None into 'None'.
+_MISSING_TEXT = {'', 'nan', 'none', 'na', '<na>', 'null'}
+
+
+def _is_missing(v: Any) -> bool:
+    return v is None or (not isinstance(v, str) and pd.isna(v)) or str(v).strip().lower() in _MISSING_TEXT
 
 
 def _is_bool_column(s: pd.Series) -> bool:
@@ -228,7 +245,7 @@ def annotate_from_var(var: pd.DataFrame, names, species: str | None) -> GeneType
         return None
     names = [str(x) for x in names]
     cls = var['gene_class']
-    gene_class = [UNANNOTATED if pd.isna(v) or str(v) == '' else str(v) for v in cls.tolist()]
+    gene_class = [UNANNOTATED if _is_missing(v) else str(v) for v in cls.tolist()]
     if 'biotype' in var.columns:
         gene_type = [None if pd.isna(v) else str(v) for v in var['biotype'].tolist()]
     else:
@@ -252,11 +269,12 @@ def annotate_from_var(var: pd.DataFrame, names, species: str | None) -> GeneType
     n_file_sets = 0
     for k, d in sets_def.items():
         if k in var.columns and _is_bool_column(var[k]):
-            sets[k] = var[k].to_numpy(dtype=bool)
+            # na_value: a nullable-boolean column may hold <NA>; it is not in the set
+            sets[k] = var[k].to_numpy(dtype=bool, na_value=False)
             set_source[k] = 'file'
             n_file_sets += 1
         elif species is not None:
-            sets[k] = _set_mask(d, name_s, None, chrom, biotype)
+            sets[k] = _set_mask(d, name_s, [name_s], chrom, biotype)
             set_source[k] = 'skopia'
 
     n_un = sum(c == UNANNOTATED for c in gene_class)

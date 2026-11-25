@@ -130,6 +130,13 @@ adaptor.
   keeps `predicted` and `ribo` working for unannotated genes; the table
   symbol makes them work on a dataset indexed by Ensembl ids, where the name
   is `ENSMUSG...`.
+  *Amended at the final review (2026-11-25):* for a gene the table knows, a
+  `pattern` tests the gene's **current** symbol only; the dataset's name is
+  tested only for genes the table does not know. `genes` lists still test
+  both names. Under "either", a 10x 2020-A placeholder that M39 has since
+  named stayed `predicted` (Grosswendt demo: 323 genes, 287 protein-coding,
+  e.g. Gm38394 = Zbed6), so a gene's sets depended on which of its names the
+  dataset used.
 
 ### A file's own annotation
 

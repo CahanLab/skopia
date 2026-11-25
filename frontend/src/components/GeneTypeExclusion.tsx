@@ -6,6 +6,7 @@ import {
   excludeGenesBody,
   mitoWarning,
   proteinCodingOnly,
+  speciesNote,
   summaryLine,
   type GeneTypeCount,
   type GeneTypeSelection,
@@ -47,7 +48,7 @@ function sourceText(s: GeneTypeSummary): string {
     return `${s.source.label} · ${fmt(s.matched.file)} of ${fmt(s.n_genes)} genes annotated`
   }
   const hit = s.matched.ensembl_id + s.matched.symbol
-  return `${s.species} · ${s.source.label} · ${fmt(hit)} of ${fmt(s.n_genes)} genes matched`
+  return `${s.source.label} · ${fmt(hit)} of ${fmt(s.n_genes)} genes matched`
 }
 
 function toggle(list: string[], name: string): string[] {
@@ -216,8 +217,21 @@ export function GeneTypeExclusion({ selection, onChange, namesText, patternsText
     <div style={dark.box}>
       <div style={dark.head}>
         <span style={dark.title}>By gene type</span>
+        {!isFile && (
+          // The guess can be wrong (and is meaningless for names that are not
+          // GENCODE symbols), so the table's species is always a choice.
+          <select
+            style={dark.select}
+            value={summary.species ?? ''}
+            title="Which species' GENCODE table to match the gene names against"
+            onChange={(e) => onChange({ ...EMPTY_SELECTION, species: e.target.value || null })}
+          >
+            {summary.available_species.map((sp) => <option key={sp} value={sp}>{sp}</option>)}
+          </select>
+        )}
         <span style={dark.source}>{sourceText(summary)}</span>
       </div>
+      {speciesNote(summary) && <div style={{ ...dark.warn, marginTop: 0, marginBottom: '6px' }}>{speciesNote(summary)}</div>}
       <div style={dark.cols}>
         <div>
           <div style={dark.colTitle}>{isFile ? 'Class (this file)' : 'Class (GENCODE biotype)'}</div>
