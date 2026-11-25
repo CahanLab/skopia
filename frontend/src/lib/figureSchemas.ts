@@ -3,6 +3,7 @@
  *  pins the two lists together so a form field can never 400. */
 
 import type { FigureKind } from './figures'
+import { SCORING_METHOD_OPTIONS, PER_GENE_NORM_OPTIONS, AGGREGATION_OPTIONS } from './geneSetScoring'
 
 export interface ParamOption { value: string; label: string }
 
@@ -84,6 +85,10 @@ export const FIGURE_SCHEMAS: Record<FigureKind, ParamField[]> = {
     { name: 'cell_ordering', label: 'Cell order', type: 'select', options: [{ value: 'none', label: 'none' }, { value: 'category', label: 'by category' }, { value: 'line_position', label: 'by line position' }, { value: 'line_distance', label: 'by line distance' }, { value: 'category_then_position', label: 'category, then position' }, { value: 'similarity', label: 'by similarity (clustered)' }, { value: 'category_then_similarity', label: 'category, then similarity' }] },
     { name: 'gene_ordering', label: 'Gene order', type: 'select', options: [{ value: 'as_provided', label: 'as provided' }, { value: 'peak_position', label: 'by peak position' }, { value: 'similarity', label: 'by similarity (clustered)' }] },
     { name: 'aggregate_gene_sets', label: 'Aggregate gene sets', type: 'bool' },
+    { name: 'gene_set_scoring_method', label: 'Aggregate scoring', type: 'select', options: SCORING_METHOD_OPTIONS.map(({ value, label }) => ({ value, label })), help: 'How an aggregate row scores its set, as Display colours the embedding by it.' },
+    { name: 'gene_set_per_gene_norm', label: 'Per-gene normalization', type: 'select', options: PER_GENE_NORM_OPTIONS.map(({ value, label }) => ({ value, label })), help: 'Mean scoring only. Statistics are over every cell, as for the embedding colour.' },
+    { name: 'gene_set_per_gene_clip', label: 'Per-gene clip %', type: 'number', min: 0, max: 5, step: 0.5, help: 'Min-max only: each gene is clipped at this percentile at both ends before the rescale.' },
+    { name: 'gene_set_aggregation', label: 'Aggregation across genes', type: 'select', options: AGGREGATION_OPTIONS.map(({ value, label }) => ({ value, label })), help: 'Mean scoring only. Each row is rescaled to 0..1 afterwards, so Sum draws the same as Mean.' },
     { name: 'n_bins', label: 'Bins', type: 'int', min: 0, max: 1000 },
     ...MARKER_FIELDS,
   ],

@@ -19,6 +19,13 @@ CELL_ORDERINGS = (
     "category_then_similarity",
 )
 
+# A gene-set aggregate row is scored as the Display panel colours the
+# embedding by the set (adaptor._aggregate_gene_set_scores / UCell); the
+# option names and defaults are the Display's (config.yaml `display:`).
+GENE_SET_SCORING_METHODS = ("mean", "ucell")
+GENE_SET_PER_GENE_NORMS = ("none", "zscore_mad", "zscore_sd", "minmax", "rank")
+GENE_SET_AGGREGATIONS = ("mean", "median", "sum", "max")
+
 # Average linkage needs the full condensed distance matrix (n²/2 doubles:
 # 100 MB at 5k cells, 40 GB at 100k), so above this many cells the cells
 # are first collapsed to k-means centroids and the centroids are clustered.
@@ -42,14 +49,25 @@ def compute_heatmap_data(
     transform: str | None = None,
     cell_indices: list[int] | None = None,
     groups: list[str] | None = None,
+    gene_set_scoring_method: str = "mean",
+    gene_set_per_gene_norm: str = "zscore_mad",
+    gene_set_per_gene_clip: float = 1.0,
+    gene_set_aggregation: str = "mean",
 ) -> dict[str, Any]:
     """Compute expression heatmap matrix.
 
     Args:
         adaptor: DataAdaptor instance
         genes: List of gene names to include
-        gene_set_groups: Gene set grouping: [{"name": "set1", "genes": ["g1", "g2"]}, ...]
-        aggregate_gene_sets: If True, each row is a gene set mean instead of per-gene
+        gene_set_groups: Gene set grouping: [{"name": "set1", "genes": ["g1", "g2"]}, ...];
+            a set may carry ``genes_down``, which only a UCell aggregate reads
+        aggregate_gene_sets: If True, each row is one gene set's score instead of per-gene
+            rows, scored like the embedding colour: ``gene_set_scoring_method``
+            (``mean`` pipeline or ``ucell``), then for the mean pipeline
+            ``gene_set_per_gene_norm`` (with ``gene_set_per_gene_clip`` for
+            minmax) and ``gene_set_aggregation`` across genes. Per-gene
+            statistics are over every cell, so the row is the embedding's
+            score for the plotted cells.
         cell_ordering: "none", "category", "line_position", "line_distance",
             "category_then_position", "similarity" (average-linkage clustering
             of the cells on the selected genes, in dendrogram leaf order) or
@@ -75,6 +93,8 @@ def compute_heatmap_data(
     """
     adata = adaptor.adata
 
+    _check_gene_set_scoring(gene_set_scoring_method, gene_set_per_gene_norm, gene_set_per_gene_clip,
+                            gene_set_aggregation)
     if cell_ordering not in CELL_ORDERINGS:
         raise ValueError(
             f"cell_ordering must be one of {', '.join(CELL_ORDERINGS)}, got {cell_ordering!r}"
@@ -141,7 +161,9 @@ def compute_heatmap_data(
     # Gene set aggregation
     if aggregate_gene_sets and gene_set_groups:
         expr, row_labels, row_groups = _aggregate_gene_sets(
-            expr, valid_genes, gene_set_groups
+            adaptor, ordered_idx, valid_genes, gene_set_groups, transform=transform,
+            scoring_method=gene_set_scoring_method, per_gene_norm=gene_set_per_gene_norm,
+            per_gene_clip=gene_set_per_gene_clip, aggregation=gene_set_aggregation,
         )
     else:
         row_labels = list(valid_genes)
@@ -369,21 +391,50 @@ def _find_line(adaptor, line_name):
 # ---------------------------------------------------------------------------
 
 
-def _aggregate_gene_sets(expr, gene_names, gene_set_groups):
-    """Aggregate expression by gene set mean. expr is (cells, genes)."""
-    name_to_idx = {g: i for i, g in enumerate(gene_names)}
+def _check_gene_set_scoring(scoring_method, per_gene_norm, per_gene_clip, aggregation) -> None:
+    if scoring_method not in GENE_SET_SCORING_METHODS:
+        raise ValueError(f"gene_set_scoring_method must be one of {', '.join(GENE_SET_SCORING_METHODS)}, "
+                         f"got {scoring_method!r}")
+    if per_gene_norm not in GENE_SET_PER_GENE_NORMS:
+        raise ValueError(f"gene_set_per_gene_norm must be one of {', '.join(GENE_SET_PER_GENE_NORMS)}, "
+                         f"got {per_gene_norm!r}")
+    if aggregation not in GENE_SET_AGGREGATIONS:
+        raise ValueError(f"gene_set_aggregation must be one of {', '.join(GENE_SET_AGGREGATIONS)}, "
+                         f"got {aggregation!r}")
+    clip = float(per_gene_clip)
+    if not 0.0 <= clip < 50.0:
+        raise ValueError(f"gene_set_per_gene_clip must be a percentile in [0, 50), got {per_gene_clip!r}")
+
+
+def _aggregate_gene_sets(adaptor, cells, visible_genes, gene_set_groups, *, transform,
+                         scoring_method, per_gene_norm, per_gene_clip, aggregation):
+    """One row per gene set: its per-cell score over every cell, as the
+    embedding colours by it, read at ``cells`` (the plotted cells in plot
+    order). Only the set's genes that are rows (present, not masked) count;
+    a UCell score also counts the set's visible down genes. Returns
+    (cells × sets, labels, groups)."""
+    visible = set(visible_genes)
+    src = adaptor.normalized_adata.X if transform == "log1p" else adaptor.adata.X
     rows, labels, groups = [], [], []
 
     for gs in gene_set_groups:
-        idxs = [name_to_idx[g] for g in gs["genes"] if g in name_to_idx]
-        if not idxs:
+        up = [g for g in dict.fromkeys(gs["genes"]) if g in visible]
+        if not up:
             continue
-        rows.append(np.nanmean(expr[:, idxs], axis=1))
+        if scoring_method == "ucell":
+            down_known = [g for g in dict.fromkeys(gs.get("genes_down") or []) if g in adaptor.adata.var.index]
+            down, _ = adaptor._filter_to_visible(down_known)
+            scores = adaptor.ucell_scores(up, down)
+        else:
+            scores = adaptor._aggregate_gene_set_scores(
+                up, src, per_gene_norm=per_gene_norm, per_gene_clip=float(per_gene_clip), aggregation=aggregation,
+            )
+        rows.append(np.asarray(scores, dtype=np.float64)[cells])
         labels.append(gs["name"])
         groups.append(gs["name"])
 
     if not rows:
-        return np.zeros((expr.shape[0], 0)), [], []
+        return np.zeros((len(cells), 0)), [], []
     return np.column_stack(rows), labels, groups
 
 

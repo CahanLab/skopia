@@ -14,8 +14,15 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { orderSelectedSets, groupLabel, folderSelectionState, restoreSelectedIds, toggleGroupPick, cleanGroupPick } from '../lib/heatmapGroups'
-import { DEFAULT_DOTPLOT_OPTIONS, type DotplotOptions, type MarkerSource } from '../lib/markerSelection'
+import {
+  orderSelectedSets, groupLabel, folderSelectionState, restoreSelectedIds, toggleGroupPick, cleanGroupPick,
+  restoreSetOrder, groupDisplayOrder, pickInOrder,
+} from '../lib/heatmapGroups'
+import { DEFAULT_DOTPLOT_OPTIONS, markerBlockOrder, type DotplotOptions, type MarkerSource } from '../lib/markerSelection'
+import {
+  scoringFromDisplay, optionHint, SCORING_METHOD_OPTIONS, PER_GENE_NORM_OPTIONS, AGGREGATION_OPTIONS, type GeneSetScoring,
+} from '../lib/geneSetScoring'
+import DragOrderList from './DragOrderList'
 import { useStore, HeatmapConfig, GeneSetCategoryType, cfgDefault } from '../store'
 import { getAllGeneSets, CATEGORY_ORDER, type FlatGeneSet } from '../lib/flatGeneSets'
 import RestrictionPicker from './RestrictionPicker'
@@ -77,6 +84,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
   const isMarkerGenesModalOpen = useStore((s) => s.isMarkerGenesModalOpen)
   const setMarkerGenesColumn = useStore((s) => s.setMarkerGenesColumn)
   const setMarkerGenesModalOpen = useStore((s) => s.setMarkerGenesModalOpen)
+  const displayPreferences = useStore((s) => s.displayPreferences)
   const nActive = activeCellMask ? activeCellMask.reduce((n, b) => n + (b ? 1 : 0), 0) : 0
 
   const allGeneSets = getAllGeneSets(geneSetCategories)
@@ -98,16 +106,23 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     () => restoreSelectedIds(config?.selectedGeneSets ?? [], nonEmptySets)
   )
+  // The row blocks' order once dragged (set ids); null = the Gene Panel's order.
+  const [setOrder, setSetOrder] = useState<string[] | null>(() => restoreSetOrder(config?.selectedGeneSets ?? [], nonEmptySets))
   const [cellOrdering, setCellOrdering] = useState<HeatmapConfig['cellOrdering']>(config?.cellOrdering ?? cfgDefault(['heatmap', 'cell_ordering'], 'none' as HeatmapConfig['cellOrdering']))
   const [obsColumn, setObsColumn] = useState<string | null>(config?.obsColumn ?? null)
   const [lineName, setLineName] = useState<string | null>(config?.lineName ?? null)
   const [geneOrdering, setGeneOrdering] = useState<HeatmapConfig['geneOrdering']>(config?.geneOrdering ?? cfgDefault(['heatmap', 'gene_ordering'], 'as_provided' as HeatmapConfig['geneOrdering']))
   const [aggregateGeneSets, setAggregateGeneSets] = useState(config?.aggregateGeneSets ?? cfgDefault(['heatmap', 'aggregate_gene_sets'], false))
+  // How an aggregate row scores its set: Display's options, starting from what Display is set to.
+  const [scoring, setScoring] = useState<GeneSetScoring>(() => config?.geneSetScoring ?? scoringFromDisplay(displayPreferences))
   const [nBins, setNBins] = useState(config?.nBins ?? cfgDefault(['heatmap', 'n_bins'], 300))
   const [keepCellSubset, setKeepCellSubset] = useState(true)
   const [dotplot, setDotplot] = useState<DotplotOptions>({ ...DEFAULT_DOTPLOT_OPTIONS, ...(config?.dotplot ?? {}) })
   // The heatmap's own pick of groups (the dot plot keeps its in dotplot.groups).
   const [heatmapGroups, setHeatmapGroups] = useState<string[] | null>(config?.groups ?? null)
+  // A dragged display order of every label (the picks hold only the ticked ones).
+  const [heatmapGroupDrag, setHeatmapGroupDrag] = useState<string[] | null>(null)
+  const [dotplotGroupDrag, setDotplotGroupDrag] = useState<string[] | null>(null)
   // The labels of the grouping column, for the group pickers.
   const { summaries } = useObsSummaries()
   const groupValues = useMemo(
@@ -119,30 +134,48 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
     setObsColumn(col)
     setDotplot((d) => ({ ...d, groups: null }))
     setHeatmapGroups(null)
+    setHeatmapGroupDrag(null)
+    setDotplotGroupDrag(null)
   }
-  // "Groups to show": one checkbox per label, in the column's order.
-  const groupPicker = (pick: string[] | null, setPick: (next: string[] | null) => void, attr: string) => groupValues.length > 0 && (
-    <div style={{ marginTop: '8px' }} {...{ [`data-${attr}-groups`]: true }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-        <span style={styles.subTitle}>Groups to show</span>
-        <span style={styles.hint}>
-          {pick ? `${pick.length} of ${groupValues.length}` : `all ${groupValues.length}`}
-        </span>
-        <div style={{ flex: 1 }} />
-        {pick && (
-          <button type="button" style={styles.smallButton} onClick={() => setPick(null)}>all</button>
-        )}
+  // "Groups to show": one checkbox per label, dragged into the order the
+  // groups are drawn in (the column's order until the user drags).
+  const groupPicker = (
+    pick: string[] | null, setPick: (next: string[] | null) => void,
+    dragged: string[] | null, setDragged: (next: string[] | null) => void,
+    attr: string, onDrag?: () => void,
+  ) => {
+    if (groupValues.length === 0) return null
+    const order = groupDisplayOrder(dragged, pick, groupValues)
+    const ticked = new Set(pick ?? groupValues)
+    const inColumnOrder = order.every((v, i) => v === groupValues[i])
+    return (
+      <div style={{ marginTop: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+          <span style={styles.subTitle}>Groups to show</span>
+          <span style={styles.hint}>
+            {ticked.size === groupValues.length ? `all ${groupValues.length}` : `${ticked.size} of ${groupValues.length}`} · drag to reorder
+          </span>
+          <div style={{ flex: 1 }} />
+          {ticked.size < groupValues.length && (
+            <button type="button" style={styles.smallButton} onClick={() => setPick(pickInOrder(null, order, groupValues))}>all</button>
+          )}
+          {!inColumnOrder && (
+            <button
+              type="button" style={styles.smallButton} title="Back to the column's own order"
+              onClick={() => { setDragged(null); setPick(pickInOrder(pick, groupValues, groupValues)) }}
+              {...{ [`data-${attr}-column-order`]: true }}
+            >column order</button>
+          )}
+        </div>
+        <DragOrderList
+          attr={attr}
+          items={order.map((v) => ({ key: v, label: v, checked: ticked.has(v) }))}
+          onToggle={(v) => setPick(toggleGroupPick(pick, groupValues, v, order))}
+          onReorder={(next) => { setDragged(next); setPick(pickInOrder(pick, next, groupValues)); onDrag?.() }}
+        />
       </div>
-      <div style={styles.geneSetList}>
-        {groupValues.map((v) => (
-          <label key={v} style={styles.checkboxRow} {...{ [`data-${attr}-group`]: v }}>
-            <input type="checkbox" checked={pick === null || pick.includes(v)} onChange={() => setPick(toggleGroupPick(pick, groupValues, v))} />
-            <span style={styles.geneSetName}>{v}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-  )
+    )
+  }
 
   // Marker source: a stored run and the selection on it (numbers kept as
   // strings so a half-typed threshold does not snap).
@@ -156,6 +189,8 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
   const [rankBy, setRankBy] = useState<'score' | 'log2fc'>(config?.markerSource?.rankBy ?? 'score')
   const [restrictTo, setRestrictTo] = useState<MarkerRestriction | null>(config?.markerSource?.restrictTo ?? null)
   const [booleanColumns, setBooleanColumns] = useState<{ name: string; n_true: number }[]>([])
+  // The marker blocks' order once dragged; null = follow the cell groups.
+  const [markerOrder, setMarkerOrder] = useState<string[] | null>(config?.markerSource?.groupOrder ?? null)
 
   // Refetched whenever the marker modal closes: a run made from the link
   // below must show up without leaving the panel.
@@ -191,6 +226,8 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
 
   const pickMarkerRun = (key: string) => {
     setMarkerKey(key)
+    // another run has other groups: its blocks follow the cell groups again
+    setMarkerOrder(null)
     const run = markerRuns?.find((r) => r.key === key)
     // Markers read best against their own groups: order the cells by the
     // run's column unless the user already chose an ordering.
@@ -232,6 +269,16 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
   const needsCategory = cellOrdering === 'category' || cellOrdering === 'category_then_position' || cellOrdering === 'category_then_similarity'
   const needsLine = cellOrdering === 'line_position' || cellOrdering === 'line_distance' || cellOrdering === 'category_then_position'
   const usingMarkers = rowSource === 'markers' && Boolean(markerKey)
+  // The cell groups the marker blocks follow, as the request will send them.
+  const cellGroupPick = plotType === 'dotplot'
+    ? cleanGroupPick(dotplot.groups, groupValues)
+    : needsCategory ? cleanGroupPick(heatmapGroups, groupValues) : null
+  const plotColumn = plotType === 'dotplot' || needsCategory ? obsColumn : null
+  const markersFollowCells = Boolean(markerRun && plotColumn && markerRun.obs_column === plotColumn)
+  const markerBlocks = markerRun
+    ? markerBlockOrder(markerRun.groups ?? [], markerOrder, markerRun.obs_column, plotColumn, cellGroupPick)
+    : []
+  const orderedSets = orderSelectedSets(nonEmptySets, selectedIds, setOrder)
   const hasRows = usingMarkers || selectedIds.size > 0
   const canApply = hasRows && (plotType === 'heatmap' || Boolean(obsColumn))
 
@@ -239,15 +286,19 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
     if (!canApply) return
     // Folder order, then each folder's own set order — a pathway reads
     // ligands → receptors → … whatever order the boxes were ticked in.
-    const selected = orderSelectedSets(nonEmptySets, selectedIds)
+    const selected = orderSelectedSets(nonEmptySets, selectedIds, setOrder)
     const markerSource: MarkerSource | null = usingMarkers && markerRun ? {
       key: markerRun.key, label: markerRun.obs_column, topN: Math.max(1, markerTopN),
       minPctIn: numOrNull(minPctIn), maxPctOut: numOrNull(maxPctOut), minLog2fc: numOrNull(minLog2fc), maxPadj: numOrNull(maxPadj),
-      rankBy, restrictTo,
+      rankBy, restrictTo, groupOrder: markerOrder,
     } : null
 
     onApply({
-      selectedGeneSets: selected.map((gs) => ({ id: gs.id, name: groupLabel(gs, selected), genes: gs.genes })),
+      selectedGeneSets: selected.map((gs) => ({
+        id: gs.id, name: groupLabel(gs, selected), genes: gs.genes,
+        ...(gs.genesDown && gs.genesDown.length ? { genesDown: gs.genesDown } : {}),
+      })),
+      geneSetScoring: scoring,
       plotType,
       markerSource,
       dotplot: { ...dotplot, groups: cleanGroupPick(dotplot.groups, groupValues) },
@@ -361,6 +412,24 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
                     Stored ranking: {markerRun?.store_top_n ?? '?'} genes per group.{' '}
                     <span style={styles.link} onClick={openMarkerModal}>Find marker genes…</span>
                   </div>
+                  {markerRun && markerBlocks.length > 1 && (
+                    <div style={{ marginTop: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={styles.subTitle}>Block order</span>
+                        <span style={styles.hint} data-marker-order-mode>
+                          {markerOrder ? 'your order' : markersFollowCells ? 'follows the cell groups' : 'the run’s group order'} · drag to reorder
+                        </span>
+                        <div style={{ flex: 1 }} />
+                        {markerOrder && (
+                          <button type="button" style={styles.smallButton} onClick={() => setMarkerOrder(null)} data-marker-order-follow
+                            title="Order the blocks as the cell groups are ordered, so the plot keeps its diagonal">
+                            follow cell groups
+                          </button>
+                        )}
+                      </div>
+                      <DragOrderList attr="marker-order" items={markerBlocks.map((g) => ({ key: g, label: g }))} onReorder={setMarkerOrder} />
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -419,6 +488,25 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
               })}
             </div>
           )}
+          {orderedSets.length > 1 && (
+            <div style={{ marginTop: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <span style={styles.subTitle}>Row order</span>
+                <span style={styles.hint}>
+                  {setOrder ? 'your order' : 'the Gene Panel’s order'} · drag to reorder{usingMarkers ? ' (after the marker blocks)' : ''}
+                </span>
+                <div style={{ flex: 1 }} />
+                {setOrder && (
+                  <button type="button" style={styles.smallButton} onClick={() => setSetOrder(null)} data-set-order-reset>panel order</button>
+                )}
+              </div>
+              <DragOrderList
+                attr="set-order"
+                items={orderedSets.map((gs) => ({ key: gs.id, label: groupLabel(gs, orderedSets) }))}
+                onReorder={setSetOrder}
+              />
+            </div>
+          )}
         </div>
 
         {plotType === 'dotplot' ? (
@@ -433,7 +521,11 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
               >
                 {categoricalColumns.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-              {groupPicker(dotplot.groups, (next) => setDotplot((d) => ({ ...d, groups: next })), 'dotplot')}
+              {groupPicker(
+                dotplot.groups, (next) => setDotplot((d) => ({ ...d, groups: next })), dotplotGroupDrag, setDotplotGroupDrag, 'dotplot',
+                // a dragged order means "draw them like this": clustering would override it
+                () => setDotplot((d) => (d.groupOrdering === 'cluster' ? { ...d, groupOrdering: 'as_given' } : d)),
+              )}
               <label style={{ ...styles.thresholdRow, marginTop: '8px' }} title="As given: the column's order (the chosen groups' order). Cluster: average-linkage on the per-gene standardised mean profiles, so groups that express the same genes sit together">
                 <span style={{ flex: 1 }}>Group order</span>
                 <select style={{ ...styles.inlineSelect, marginLeft: 0 }} value={dotplot.groupOrdering} onChange={(e) => setDotplot({ ...dotplot, groupOrdering: e.target.value as DotplotOptions['groupOrdering'] })} data-dotplot-group-ordering>
@@ -551,7 +643,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
                   </select>
                 )}
               </div>
-              {needsCategory && groupPicker(heatmapGroups, setHeatmapGroups, 'heatmap')}
+              {needsCategory && groupPicker(heatmapGroups, setHeatmapGroups, heatmapGroupDrag, setHeatmapGroupDrag, 'heatmap')}
             </div>
 
             {/* Gene ordering */}
@@ -577,8 +669,62 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
             <div style={styles.section}>
               <label style={styles.checkboxRow}>
                 <input type="checkbox" checked={aggregateGeneSets} onChange={(e) => setAggregateGeneSets(e.target.checked)} />
-                <span>Show gene set aggregates (mean expression per set)</span>
+                <span>Show gene set aggregates (one scored row per set)</span>
               </label>
+              {aggregateGeneSets && (
+                <div style={{ marginLeft: '22px', marginTop: '6px' }} data-aggregate-scoring>
+                  <label style={styles.thresholdRow}>
+                    <span style={{ flex: 1 }}>Scoring method</span>
+                    <select
+                      style={{ ...styles.inlineSelect, marginLeft: 0 }} value={scoring.scoringMethod} data-aggregate-method
+                      onChange={(e) => setScoring({ ...scoring, scoringMethod: e.target.value as GeneSetScoring['scoringMethod'] })}
+                    >
+                      {SCORING_METHOD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </label>
+                  <div style={styles.optionHint}>{optionHint(SCORING_METHOD_OPTIONS, scoring.scoringMethod)}</div>
+                  {scoring.scoringMethod === 'mean' && (<>
+                    <label style={styles.thresholdRow}>
+                      <span style={{ flex: 1 }}>Per-gene normalization</span>
+                      <select
+                        style={{ ...styles.inlineSelect, marginLeft: 0 }} value={scoring.perGeneNorm} data-aggregate-norm
+                        onChange={(e) => setScoring({ ...scoring, perGeneNorm: e.target.value as GeneSetScoring['perGeneNorm'] })}
+                      >
+                        {PER_GENE_NORM_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </label>
+                    <div style={styles.optionHint}>{optionHint(PER_GENE_NORM_OPTIONS, scoring.perGeneNorm)}</div>
+                    {scoring.perGeneNorm === 'minmax' && (
+                      <label style={styles.thresholdRow} title="Each gene is clipped at this percentile at both ends before the rescale; 0 = its raw min and max">
+                        <span style={{ flex: 1 }}>Per-gene clip percentile</span>
+                        <NumberInput
+                          min={0} max={5} step={0.5} value={scoring.perGeneClip}
+                          onChange={(e) => setScoring({ ...scoring, perGeneClip: Math.min(5, Math.max(0, parseFloat(e.target.value) || 0)) })}
+                          style={{ ...styles.numberInput, width: '72px' }}
+                        />
+                      </label>
+                    )}
+                    <label style={styles.thresholdRow}>
+                      <span style={{ flex: 1 }}>Aggregation across genes</span>
+                      <select
+                        style={{ ...styles.inlineSelect, marginLeft: 0 }} value={scoring.aggregation} data-aggregate-aggregation
+                        onChange={(e) => setScoring({ ...scoring, aggregation: e.target.value as GeneSetScoring['aggregation'] })}
+                      >
+                        {AGGREGATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </label>
+                    <div style={styles.optionHint}>{optionHint(AGGREGATION_OPTIONS, scoring.aggregation)}</div>
+                  </>)}
+                  <div style={{ ...styles.hint, marginTop: '6px', lineHeight: 1.4 }}>
+                    {scoring.scoringMethod === 'mean'
+                      ? 'Scored as Display colours the embedding by a set, with per-gene statistics over every cell. Each row is then rescaled to 0..1, so Sum draws the same as Mean.'
+                      : 'Scored as Display colours the embedding by a set. Each row is then rescaled to 0..1.'}{' '}
+                    <span style={styles.link} onClick={() => setScoring(scoringFromDisplay(displayPreferences))} data-aggregate-from-display>
+                      Use Display’s settings
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Bin count */}
@@ -709,6 +855,11 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '13px',
     color: '#ccc',
     cursor: 'pointer',
+  },
+  optionHint: {
+    fontSize: '10px',
+    color: '#666',
+    margin: '-2px 0 6px 0',
   },
   geneSetName: {
     flex: 1,

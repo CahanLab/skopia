@@ -1,5 +1,6 @@
 import { DEFAULT_TEXT_STYLE, type TextAnnotation, type TextStyle } from './lib/textAnnotations'
 import type { MarkerSource, DotplotOptions } from './lib/markerSelection'
+import type { GeneSetScoring } from './lib/geneSetScoring'
 import { create } from 'zustand'
 import { transformPoint, transformPoints, pointInPolygon, shapeOverlapsHull, type ShapeAffine } from './utils/shapeTransform'
 import { sortGeneSetInCategory } from './lib/geneSetOps'
@@ -499,7 +500,11 @@ export interface HeatmapConfig {
   // `name` is the row-group label (it carries the folder when folders are
   // mixed); `id` is what the config modal restores the selection from.
   // May be empty when `markerSource` names the rows.
-  selectedGeneSets: { id?: string; name: string; genes: string[] }[]
+  // A directional set's genesDown ride along for a UCell aggregate row.
+  selectedGeneSets: { id?: string; name: string; genes: string[]; genesDown?: string[] }[]
+  // How an aggregate row (aggregateGeneSets) scores its set: Display's
+  // options. Absent on configs saved before it: the Display defaults.
+  geneSetScoring?: GeneSetScoring
   // Heatmap (genes × ordered cells) or scanpy-style dot plot (genes × groups).
   // Absent on configs saved before dot plots existed: read as 'heatmap'.
   plotType?: 'heatmap' | 'dotplot'

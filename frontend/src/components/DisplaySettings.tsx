@@ -3,6 +3,7 @@ import { useStore, ColorScale, ExpressionTransform, BivariateColormap, GeneSetPe
 import { getBivariateColor } from '../lib/cellColors'
 import { appendDataset } from '../hooks/useData'
 import NumberInput from './NumberInput'
+import { optionHint, SCORING_METHOD_OPTIONS, PER_GENE_NORM_OPTIONS, AGGREGATION_OPTIONS } from '../lib/geneSetScoring'
 
 const styles = {
   container: {
@@ -518,12 +519,10 @@ export default function DisplaySettings() {
                     onChange={(e) => setDisplayPreferences({ geneSetScoringMethod: e.target.value as 'mean' | 'ucell' })}
                     style={{ ...styles.select, width: '100%' }}
                   >
-                    <option value="mean">Mean / per-gene norm</option>
-                    <option value="ucell">UCell (rank AUC, directional)</option>
+                    {SCORING_METHOD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                   <div style={{ fontSize: '10px', color: '#666', marginTop: '3px' }}>
-                    {displayPreferences.geneSetScoringMethod === 'mean' && 'Per-gene normalize then aggregate across genes (settings below).'}
-                    {displayPreferences.geneSetScoringMethod === 'ucell' && 'Per-cell rank-based AUC; uses a set’s down-genes when present. Source layer is counts.'}
+                    {optionHint(SCORING_METHOD_OPTIONS, displayPreferences.geneSetScoringMethod)}
                   </div>
                 </div>
 
@@ -538,18 +537,11 @@ export default function DisplaySettings() {
                     onChange={(e) => setDisplayPreferences({ geneSetPerGeneNorm: e.target.value as GeneSetPerGeneNorm })}
                     style={{ ...styles.select, width: '100%' }}
                   >
-                    <option value="none">None (raw values)</option>
-                    <option value="zscore_mad">Z-score (MAD, robust)</option>
-                    <option value="zscore_sd">Z-score (SD)</option>
-                    <option value="minmax">Min-max [0, 1]</option>
-                    <option value="rank">Rank → [0, 1]</option>
+                    {PER_GENE_NORM_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                   <div style={{ fontSize: '10px', color: '#666', marginTop: '3px' }}>
-                    {displayPreferences.geneSetPerGeneNorm === 'none' && 'Use raw expression — high-magnitude genes dominate.'}
-                    {displayPreferences.geneSetPerGeneNorm === 'zscore_mad' && 'Center on the median, scale by MAD; falls back to SD if MAD is 0.'}
-                    {displayPreferences.geneSetPerGeneNorm === 'zscore_sd' && 'Center on the mean, scale by standard deviation.'}
-                    {displayPreferences.geneSetPerGeneNorm === 'minmax' && 'Clip per gene then rescale to [0, 1] — every gene votes equally regardless of scale.'}
-                    {displayPreferences.geneSetPerGeneNorm === 'rank' && 'Replace each cell’s value with its average rank within the gene, then divide by N.'}
+                    {optionHint(PER_GENE_NORM_OPTIONS, displayPreferences.geneSetPerGeneNorm)}
+                    {displayPreferences.geneSetPerGeneNorm === 'none' && ' The values are .X, its log1p when Normalize + Log1p is on, or the layer picked as Source in the View panel.'}
                   </div>
                 </div>
 
@@ -590,16 +582,10 @@ export default function DisplaySettings() {
                     onChange={(e) => setDisplayPreferences({ geneSetAggregation: e.target.value as GeneSetAggregation })}
                     style={{ ...styles.select, width: '100%' }}
                   >
-                    <option value="mean">Mean</option>
-                    <option value="median">Median</option>
-                    <option value="sum">Sum</option>
-                    <option value="max">Max</option>
+                    {AGGREGATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                   <div style={{ fontSize: '10px', color: '#666', marginTop: '3px' }}>
-                    {displayPreferences.geneSetAggregation === 'mean' && 'Average of per-gene values per cell.'}
-                    {displayPreferences.geneSetAggregation === 'median' && 'Middle value per cell — robust to one or two outlier genes.'}
-                    {displayPreferences.geneSetAggregation === 'sum' && 'Total per cell — emphasizes broad expression.'}
-                    {displayPreferences.geneSetAggregation === 'max' && 'Brightest gene per cell — emphasizes any-of-set expression.'}
+                    {optionHint(AGGREGATION_OPTIONS, displayPreferences.geneSetAggregation)}
                   </div>
                 </div>
                 </>)}

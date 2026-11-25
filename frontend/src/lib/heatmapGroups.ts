@@ -17,9 +17,38 @@ export interface HeatmapSetLike {
 }
 
 /** The picked sets in list order — folders keep their order, and each
- * folder's sets keep theirs — whatever order they were clicked in. */
-export function orderSelectedSets<T extends HeatmapSetLike>(all: readonly T[], picked: ReadonlySet<string>): T[] {
-  return all.filter((s) => picked.has(s.id))
+ * folder's sets keep theirs — whatever order they were clicked in. Once the
+ * user drags the row blocks, `custom` (set ids) wins; a set ticked after the
+ * drag follows, in list order. */
+export function orderSelectedSets<T extends HeatmapSetLike>(
+  all: readonly T[], picked: ReadonlySet<string>, custom: readonly string[] | null = null,
+): T[] {
+  const inList = all.filter((s) => picked.has(s.id))
+  if (!custom) return inList
+  const byId = new Map(inList.map((s) => [s.id, s]))
+  const first = custom.filter((id) => byId.has(id)).map((id) => byId.get(id)!)
+  const taken = new Set(first.map((s) => s.id))
+  return [...first, ...inList.filter((s) => !taken.has(s.id))]
+}
+
+/** The custom block order an applied config implies: its sets' order when
+ * that differs from list order (the user dragged them), else null. */
+export function restoreSetOrder(
+  applied: readonly { id?: string; name: string; genes: readonly string[] }[],
+  sets: readonly HeatmapSetLike[],
+): string[] | null {
+  const ids = [...restoreSelectedIds(applied, sets)]
+  const inList = orderSelectedSets(sets, new Set(ids)).map((s) => s.id)
+  return ids.every((id, i) => id === inList[i]) ? null : ids
+}
+
+/** `list` with `key` moved to `index` (clamped); unchanged when absent. */
+export function moveItem(list: readonly string[], key: string, index: number): string[] {
+  const from = list.indexOf(key)
+  if (from < 0) return [...list]
+  const rest = list.filter((_, i) => i !== from)
+  const at = Math.max(0, Math.min(index, rest.length))
+  return [...rest.slice(0, at), key, ...rest.slice(at)]
 }
 
 /** The row-group label for one picked set: the set's own name when every
@@ -62,10 +91,13 @@ export function folderSelectionState(
 }
 
 /** Tick or untick one label of a grouping column in a "groups to show"
- * pick. `null` means every label; the result keeps the column's order, and
- * a pick that is every label again collapses back to null. The last label
- * cannot be unticked. Shared by the dot plot and the heatmap. */
-export function toggleGroupPick(pick: readonly string[] | null, all: readonly string[], value: string): string[] | null {
+ * pick. `null` means every label in the column's order. The result keeps
+ * the display `order` (the column's, unless the user dragged the list), and
+ * only every label in the column's own order collapses back to null. The
+ * last label cannot be unticked. Shared by the dot plot and the heatmap. */
+export function toggleGroupPick(
+  pick: readonly string[] | null, all: readonly string[], value: string, order: readonly string[] = all,
+): string[] | null {
   const current = new Set(pick ?? all)
   if (current.has(value)) {
     if (current.size === 1) return [...current]
@@ -73,8 +105,33 @@ export function toggleGroupPick(pick: readonly string[] | null, all: readonly st
   } else {
     current.add(value)
   }
-  const next = all.filter((v) => current.has(v))
-  return next.length === all.length ? null : next
+  return pickInOrder([...current], order, all)
+}
+
+/** The ticked labels of `pick` (null = all) in the display `order`; null
+ * when that is every label in the column's own order. */
+export function pickInOrder(pick: readonly string[] | null, order: readonly string[], all: readonly string[]): string[] | null {
+  const ticked = new Set(pick ?? all)
+  const next = order.filter((v) => ticked.has(v))
+  return next.length === all.length && next.every((v, i) => v === all[i]) ? null : next
+}
+
+/** The order the picker lists the labels in. A dragged order wins, minus
+ * labels the column lost and plus new ones at the end. Without one, the
+ * column's order, unless the pick is out of it (a config saved after a
+ * drag): its labels first, in its order, then the rest. A pick made by
+ * ticking is always in column order, so ticking never moves a row. */
+export function groupDisplayOrder(dragged: readonly string[] | null, pick: readonly string[] | null, all: readonly string[]): string[] {
+  const known = new Set(all)
+  let head: string[] = []
+  if (dragged) head = dragged.filter((v) => known.has(v))
+  else if (pick) {
+    const kept = pick.filter((v) => known.has(v))
+    const colOrder = all.filter((v) => kept.includes(v))
+    if (kept.some((v, i) => v !== colOrder[i])) head = kept
+  }
+  const seen = new Set(head)
+  return [...head, ...all.filter((v) => !seen.has(v))]
 }
 
 /** A pick made before the column changed must not name labels it lacks;

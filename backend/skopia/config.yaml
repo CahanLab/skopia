@@ -255,6 +255,11 @@ figures:
     marker_min_log2fc: null
     marker_max_padj: null
     marker_rank_by: score           # score (scanpy's Wilcoxon order) | log2fc
+    # How an aggregate row scores its set; same options and defaults as display.gene_set_*
+    gene_set_scoring_method: mean   # mean (the pipeline below) | ucell
+    gene_set_per_gene_norm: zscore_mad  # none|zscore_mad|zscore_sd|minmax|rank
+    gene_set_per_gene_clip: 1.0     # only used when norm = minmax; 0–5
+    gene_set_aggregation: mean      # mean|median|sum|max
   expression_dotplot:
     marker_top_n: 5
     marker_min_pct_in: null

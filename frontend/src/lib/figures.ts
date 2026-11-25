@@ -2,7 +2,8 @@
  *  shapes each renderer draws, colour ramps, filenames and PNG rasterising.
  *  Kept free of React so the contract is unit-testable. */
 
-import { markerParams, type MarkerSource, type DotplotOptions, DEFAULT_DOTPLOT_OPTIONS, restrictionWire } from './markerSelection'
+import { markerParams, type MarkerSource, type DotplotOptions, DEFAULT_DOTPLOT_OPTIONS, restrictionWire, geneSetGroupWire } from './markerSelection'
+import { DEFAULT_GENE_SET_SCORING, scoringParams, type GeneSetScoring } from './geneSetScoring'
 
 export type FigureKind = 'enrichment_heatmap' | 'enrichment_network' | 'composition_barplot' | 'expression_heatmap' | 'cnv_heatmap' | 'expression_dotplot'
 
@@ -136,7 +137,9 @@ export interface BarplotConfigLike {
 }
 
 export interface HeatmapConfigLike {
-  selectedGeneSets: { id?: string; name: string; genes: string[] }[]
+  selectedGeneSets: { id?: string; name: string; genes: string[]; genesDown?: string[] }[]
+  /** How an aggregate row scores its set; absent = the Display defaults. */
+  geneSetScoring?: GeneSetScoring
   cellOrdering: string
   obsColumn: string | null
   lineName: string | null
@@ -184,14 +187,16 @@ export function heatmapFigureFromConfig(cfg: HeatmapConfigLike, cellSubset: stri
   return {
     kind: 'expression_heatmap' as const,
     inputs: {
-      gene_sets: (cfg.selectedGeneSets ?? []).map((g) => ({ name: g.name, genes: g.genes })),
+      gene_sets: (cfg.selectedGeneSets ?? []).map(geneSetGroupWire),
       marker_key: src ? src.key : null,
       marker_restrict: src?.restrictTo ? restrictionWire(src.restrictTo) : null,
+      marker_group_order: src?.groupOrder && src.groupOrder.length ? src.groupOrder : null,
       obs_column: cfg.obsColumn, line_name: cfg.lineName, transform, groups: heatmapGroupsFor(cfg),
       ...cellInputs(cellSubset, cfg.cellIndices ?? null),
     },
     params: {
       cell_ordering: cfg.cellOrdering, gene_ordering: cfg.geneOrdering, aggregate_gene_sets: cfg.aggregateGeneSets, n_bins: cfg.nBins,
+      ...scoringParams(cfg.geneSetScoring ?? DEFAULT_GENE_SET_SCORING),
       ...(src ? markerParams(src) : {}),
     } as Record<string, unknown>,
   }
@@ -204,9 +209,10 @@ export function dotplotFigureFromConfig(cfg: HeatmapConfigLike, cellSubset: stri
   return {
     kind: 'expression_dotplot' as const,
     inputs: {
-      gene_sets: (cfg.selectedGeneSets ?? []).map((g) => ({ name: g.name, genes: g.genes })),
+      gene_sets: (cfg.selectedGeneSets ?? []).map(geneSetGroupWire),
       marker_key: src ? src.key : null,
       marker_restrict: src?.restrictTo ? restrictionWire(src.restrictTo) : null,
+      marker_group_order: src?.groupOrder && src.groupOrder.length ? src.groupOrder : null,
       obs_column: cfg.obsColumn, transform, groups: d.groups && d.groups.length ? d.groups : null,
       ...cellInputs(cellSubset, cfg.cellIndices ?? null),
     },
