@@ -252,13 +252,15 @@ def _code_pca(step: Step) -> list[str] | Emission:
 def _code_highly_variable_genes(step: Step) -> list[str] | Emission:
     p = step.params
     subset = p.get('gene_subset')
+    if p.get('split_by') or (subset is not None and not isinstance(subset, str)):
+        # A split run writes skopia's per-group, union and intersection
+        # columns, and scanpy refuses its arguments (the old export passed
+        # split_by to sc.pp.highly_variable_genes); a combined column
+        # expression or a list is skopia's resolution. The adaptor call is
+        # the honest line for both.
+        return Emission([_xcall('run_highly_variable_genes', p)], SKOPIA)
     if subset is None:
         return [_call('sc.pp.highly_variable_genes', p)]
-    if not isinstance(subset, str) or p.get('split_by'):
-        # A combined column expression or a list is skopia's resolution, and a
-        # split run is skopia's per-group write-back: the adaptor call is the
-        # honest line for both.
-        return Emission([_xcall('run_highly_variable_genes', p)], SKOPIA)
     # skopia runs scanpy on the subset's genes alone (they alone compete for
     # n_top_genes and fill the dispersion bins) and writes every other gene
     # as not variable, with statistics of 0.
@@ -287,6 +289,8 @@ def _gene_subset_label(subset: Any) -> str:
 
 
 def _summary_highly_variable_genes(p: dict, r: dict) -> str:
+    if p.get('split_by'):
+        return _summary_hvg_split(p, r)
     if p.get('gene_subset') is None:
         scope = f"of {_n(r.get('n_total_genes'))}"
     else:
@@ -294,6 +298,21 @@ def _summary_highly_variable_genes(p: dict, r: dict) -> str:
                  f"{_gene_subset_label(p['gene_subset'])}")
     return (f"Selected {_n(r.get('n_highly_variable'))} highly variable genes "
             f"{scope} (flavor {p.get('flavor', 'seurat')}).")
+
+
+def _summary_hvg_split(p: dict, r: dict) -> str:
+    groups = r.get('groups') or {}
+    skipped = r.get('skipped') or []
+    within = (f" within {_gene_subset_label(p['gene_subset'])}"
+              if p.get('gene_subset') is not None else '')
+    text = (f"Detected highly variable genes{within} separately in each of the "
+            f"{_n(len(groups))} groups of `{p.get('split_by')}` "
+            f"(flavor {p.get('flavor', 'seurat')}): "
+            f"{_n(r.get('n_union'))} variable in any group, "
+            f"{_n(r.get('n_intersection'))} in every group.")
+    if skipped:
+        text += f" {_n(len(skipped))} group{'' if len(skipped) == 1 else 's'} skipped as too small."
+    return text
 
 
 def _code_exclude_genes(step: Step) -> list[str]:
