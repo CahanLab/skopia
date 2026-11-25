@@ -90,6 +90,10 @@ describe('categoryCentroids', () => {
       { label: 'a', x: 4, y: 4, n: 1 }, { label: 'b', x: 8, y: 8, n: 1 },
     ])
   })
+  it('skips cells without coordinates (a subset embedding leaves the rest null)', () => {
+    const coords = [[0, 0], [null, null], [2, 2]] as unknown as [number, number][]
+    expect(categoryCentroids(coords, [0, 0, 0], ['a'])).toEqual([{ label: 'a', x: 1, y: 1, n: 2 }])
+  })
   it('string values and nulls', () => {
     expect(categoryCentroids([[0, 0], [1, 1], [2, 2]], ['x', null, 'nan'], [])).toEqual([{ label: 'x', x: 0, y: 0, n: 1 }])
   })

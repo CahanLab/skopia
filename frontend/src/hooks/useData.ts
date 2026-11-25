@@ -30,7 +30,7 @@ export function appendDataset(url: string, slot?: DatasetSlot): string {
   return `${url}${sep}dataset=${s}`
 }
 
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+export async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options)
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: response.statusText }))

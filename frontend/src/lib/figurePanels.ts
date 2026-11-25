@@ -166,7 +166,8 @@ function median(arr: number[]): number {
 }
 
 /** Where each category's label sits: the median position of its cells
- *  (robust to stragglers), skipping unassigned and NaN. `values` holds one
+ *  (robust to stragglers), skipping unassigned and NaN labels and cells
+ *  without coordinates. `values` holds one
  *  entry per dataset cell (a code into `categories`, or the label itself);
  *  `index`, when given, says which dataset cell `coords[i]` is. */
 export function categoryCentroids(coords: readonly [number, number][], values: readonly (number | string | null | undefined)[],
@@ -174,13 +175,15 @@ export function categoryCentroids(coords: readonly [number, number][], values: r
   const xs = new Map<string, number[]>()
   const ys = new Map<string, number[]>()
   for (let i = 0; i < coords.length; i++) {
+    const c = coords[i]
+    if (!c || !Number.isFinite(c[0]) || !Number.isFinite(c[1])) continue
     const v = values[index ? index[i] : i]
     if (v === null || v === undefined) continue
     const name = typeof v === 'number' ? (categories[v] ?? String(v)) : String(v)
     if (NOT_A_GROUP.has(name)) continue
     if (!xs.has(name)) { xs.set(name, []); ys.set(name, []) }
-    xs.get(name)!.push(coords[i][0])
-    ys.get(name)!.push(coords[i][1])
+    xs.get(name)!.push(c[0])
+    ys.get(name)!.push(c[1])
   }
   return [...xs.keys()].map((label) => ({ label, x: median(xs.get(label)!), y: median(ys.get(label)!), n: xs.get(label)!.length }))
 }
