@@ -47,3 +47,17 @@ existing diffexp / marker-gene plumbing.
 
 - **Proper mouse→human ortholog table.** The bundled L-R database (`backend/skopia/data/lr_pairs.csv`) uses human UPPERCASE HGNC symbols. Mouse data currently works via case-insensitive matching (`Pdgfb` → `PDGFB`) in `prepare_ligrec`, mirroring CytoSignal. This is a heuristic and fails for genes whose mouse/human symbols genuinely differ, or 1:many ortholog cases. **We need to add a real ortholog mapping** (e.g. MGI `HOM_MouseHumanSequence`, or Ensembl BioMart orthologs) as an option, selectable by species, so mouse (and other species) genes map to the human database correctly. Until then, document the limitation in the tool.
 - Possible follow-ups: Ensembl-ID → symbol fallback when `.var_names` are Ensembl IDs; expose `p_thresh` re-thresholding from stored p-values without re-running; per-interaction spatial-variability ranking (SPARK-X / Moran's I).
+
+## Panels (multi-panel embedding figures)
+
+- **Save the figure.** A Panels figure lives only in the browser store
+  (`activeFigure`): *Close*, a page reload or a backend restart loses it, and
+  it never reaches the `.h5ad`. Persist it, most likely as a Figures-tab kind
+  in `uns['skopia_figures']` (inputs: cells, embedding + dims; params: layout,
+  per-panel colouring, overlay layers, titles, labels), so it reloads, exports
+  from the Figures tab, and is reproducible from the record. Requested
+  2026-11-25 during the Panels redesign
+  (`docs/superpowers/specs/2026-11-25-panels-redesign-design.md`); the
+  2026-09-26 figures spec had already listed it as a follow-up.
+- **PNG export gaps.** Text annotations and per-panel colour bars are drawn
+  live but not in the exported PNG.
