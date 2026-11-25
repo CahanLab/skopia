@@ -56,6 +56,7 @@ def compute_heatmap_data(
     gene_set_per_gene_clip: float = 1.0,
     gene_set_aggregation: str = "mean",
     group_columns: bool = False,
+    scale_rows: bool = True,
 ) -> dict[str, Any]:
     """Compute expression heatmap matrix.
 
@@ -75,6 +76,10 @@ def compute_heatmap_data(
             over the group's cells of each row (an aggregate row's per-cell
             score, or a gene's expression), instead of cells or bins.
             ``n_bins`` does not apply. Needs a category ordering.
+        scale_rows: Rescale each row to 0..1 (the default). False sends the
+            values themselves (e.g. group means of a set's score) on one
+            scale, with ``value_range`` giving its ends; row ordering is
+            computed on the scaled rows either way.
         cell_ordering: "none", "category", "line_position", "line_distance",
             "category_then_position", "similarity" (average-linkage clustering
             of the cells on the selected genes, in dendrogram leaf order) or
@@ -132,6 +137,8 @@ def compute_heatmap_data(
             "n_genes_hidden": n_genes_hidden,
             "cell_ordering_method": None,
             "group_columns": bool(group_columns),
+            "scale_rows": bool(scale_rows),
+            "value_range": [0.0, 1.0],
         }
 
     # Data source
@@ -210,9 +217,14 @@ def compute_heatmap_data(
             "n_genes_hidden": n_genes_hidden,
             "cell_ordering_method": None,
             "group_columns": bool(group_columns),
+            "scale_rows": bool(scale_rows),
+            "value_range": [0.0, 1.0],
         }
 
-    # Per-row min-max normalization
+    # Per-row min-max normalization. The raw matrix is kept for
+    # scale_rows=False; orderings below always use the scaled rows, so
+    # switching the display does not reorder the plot.
+    raw = mat
     rmin = np.nanmin(mat, axis=1, keepdims=True)
     rmax = np.nanmax(mat, axis=1, keepdims=True)
     rng = rmax - rmin
@@ -237,9 +249,17 @@ def compute_heatmap_data(
         else:
             order = np.asarray(order_fn(np.arange(mat.shape[0])), dtype=int)
         mat = mat[order]
+        raw = raw[order]
         row_labels = [row_labels[i] for i in order]
         if row_groups:
             row_groups = [row_groups[i] for i in order]
+
+    value_range = [0.0, 1.0]
+    if not scale_rows:
+        mat = raw
+        finite = raw[np.isfinite(raw)]
+        if finite.size:
+            value_range = [round(float(finite.min()), 4), round(float(finite.max()), 4)]
 
     # Serialize
     matrix_out = []
@@ -258,6 +278,8 @@ def compute_heatmap_data(
         "n_genes_hidden": n_genes_hidden,
         "cell_ordering_method": cell_ordering_method,
         "group_columns": bool(group_columns),
+        "scale_rows": bool(scale_rows),
+        "value_range": value_range,
     }
 
 

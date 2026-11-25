@@ -10,6 +10,7 @@ import {
 } from '../lib/figures'
 import { FIGURE_SCHEMAS, coerceParams, type ParamField } from '../lib/figureSchemas'
 import { standaloneSvg, downloadText } from '../lib/svgExport'
+import { permuteHeatmap } from '../lib/enrichmentOrder'
 import EnrichmentHeatmapFigure from './figures/EnrichmentHeatmapFigure'
 import EnrichmentNetworkFigure from './figures/EnrichmentNetworkFigure'
 import CompositionBarplotFigure from './figures/CompositionBarplotFigure'
@@ -68,6 +69,17 @@ class RendererBoundary extends Component<{ children: ReactNode }, { error: strin
     if (this.state.error) return <div style={styles.error}>The figure could not be drawn: {this.state.error}</div>
     return this.props.children
   }
+}
+
+/** A dragged order: nothing until there is one, then its size and a way back. */
+function OrderLine({ field, value, onClear }: { field: ParamField; value: unknown; onClear: () => void }) {
+  if (!Array.isArray(value) || value.length === 0) return null
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#888', margin: '3px 0' }} data-order-line={field.name}>
+      <span>{field.label}: dragged order ({value.length})</span>
+      <button type="button" onClick={onClear} style={{ background: 'none', border: 'none', color: '#4ecdc4', cursor: 'pointer', fontSize: '11px', padding: 0 }}>clear</button>
+    </div>
+  )
 }
 
 function ParamInput({ field, value, onChange, dynamicOptions }: { field: ParamField; value: unknown; onChange: (v: unknown) => void; dynamicOptions?: string[] }) {
@@ -241,6 +253,18 @@ export default function FiguresView() {
     setForm({ ...record.params }); setTitle(record.title); setCaption(record.caption ?? '')
   }, [record])
 
+  // A dragged or sorted order goes into the form like any edit (Save keeps it)
+  // and is applied to the data in hand at once; the debounced preview then
+  // fetches the same order from the backend.
+  const reorderEnrichment = useCallback((axis: 'rows' | 'cols', order: string[]) => {
+    setForm((prev) => (axis === 'rows'
+      ? { ...prev, row_order: 'custom', row_custom_order: order }
+      : { ...prev, col_order: 'custom', col_custom_order: order }))
+    setData((d) => (d && 'values' in d && 'rows' in d
+      ? { ...d, ...permuteHeatmap(d as EnrichmentHeatmapData, axis === 'rows' ? order : null, axis === 'cols' ? order : null) } as FigureData
+      : d))
+  }, [])
+
   const isCanvasKind = record?.kind === 'expression_heatmap' || record?.kind === 'cnv_heatmap'
 
   // The heatmap is a canvas (a genes × bins matrix is too many cells for SVG), so it exports as PNG only.
@@ -319,7 +343,7 @@ export default function FiguresView() {
   const dynamicOptions = data && 'b_categories' in data ? (data as CrosstabData).b_categories : undefined
   const renderer = record && data && dataMatchesKind ? (
     record.kind === 'enrichment_heatmap' ? (
-      <EnrichmentHeatmapFigure ref={svgRef} data={data as EnrichmentHeatmapData} params={coerced} title={title} width={plotWidth} background={BG} />
+      <EnrichmentHeatmapFigure ref={svgRef} data={data as EnrichmentHeatmapData} params={coerced} title={title} width={plotWidth} background={BG} onReorder={reorderEnrichment} />
     ) : record.kind === 'enrichment_network' ? (
       <EnrichmentNetworkFigure ref={svgRef} data={data as EnrichmentNetworkData} params={coerced} title={title} width={plotWidth} height={Math.max(360, Math.round(plotWidth * 0.66))} background={BG} />
     ) : record.kind === 'composition_barplot' ? (
@@ -396,7 +420,9 @@ export default function FiguresView() {
             <label style={styles.label}>Caption</label>
             <textarea style={{ ...styles.input, minHeight: '48px', resize: 'vertical' as const }} value={caption} onChange={(e) => setCaption(e.target.value)} />
             <div style={styles.section}>Parameters</div>
-            {fields.map((f) => (
+            {fields.map((f) => f.type === 'order' ? (
+              <OrderLine key={f.name} field={f} value={form[f.name]} onClear={() => setForm((prev) => ({ ...prev, [f.name]: null, ...(f.resets ? { [f.resets.name]: f.resets.value } : {}) }))} />
+            ) : (
               <ParamInput key={f.name} field={f} value={form[f.name]} dynamicOptions={dynamicOptions} onChange={(v) => setForm((prev) => ({ ...prev, [f.name]: v }))} />
             ))}
             <div style={{ display: 'flex', gap: '6px', marginTop: '12px' }}>

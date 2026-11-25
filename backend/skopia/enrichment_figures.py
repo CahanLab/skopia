@@ -100,7 +100,21 @@ def collapse_sets(names: list[str], members: dict[str, set[str]], *, jaccard: fl
     return reps
 
 
-def _order_rows(names: list[str], values: list[list[float]], *, row_order: str) -> list[int]:
+def _custom_first(keys: list[str], base: list[int], custom: list[str] | None) -> list[int]:
+    """``base`` (an index order over ``keys``) with the keys ``custom`` names
+    moved to the front, in its order. Names no longer present are skipped, and
+    keys it does not name (a set a higher top_n brought in) keep ``base``."""
+    pos = {k: i for i, k in enumerate(keys)}
+    first = [pos[k] for k in dict.fromkeys(custom or []) if k in pos]
+    taken = set(first)
+    return first + [i for i in base if i not in taken]
+
+
+def _order_rows(names: list[str], values: list[list[float]], *, row_order: str,
+                custom: list[str] | None = None) -> list[int]:
+    if row_order == 'custom':
+        # A dragged order; rows it does not name follow by peak.
+        return _custom_first(names, _order_rows(names, values, row_order='peak'), custom)
     if row_order == 'input' or len(names) < 2:
         return list(range(len(names)))
     arr = np.asarray(values, dtype=float)
@@ -108,16 +122,19 @@ def _order_rows(names: list[str], values: list[list[float]], *, row_order: str) 
         from scipy.cluster.hierarchy import leaves_list, linkage  # noqa: PLC0415
         return [int(i) for i in leaves_list(linkage(arr, method='average', metric='euclidean'))]
     if row_order != 'peak':
-        raise ValueError("row_order must be 'peak', 'cluster' or 'input'")
+        raise ValueError("row_order must be 'peak', 'cluster', 'input' or 'custom'")
     # by the column of the largest |value|; positives before negatives within a column; then by |value|
     peak = np.abs(arr).argmax(axis=1)
     peakv = arr[np.arange(len(names)), peak]
     return sorted(range(len(names)), key=lambda i: (int(peak[i]), 0 if peakv[i] > 0 else 1, -abs(peakv[i])))
 
 
-def _order_cols(cols: list[str], values: list[list[float]], *, col_order: str) -> list[int]:
+def _order_cols(cols: list[str], values: list[list[float]], *, col_order: str,
+                custom: list[str] | None = None) -> list[int]:
+    if col_order == 'custom':
+        return _custom_first(cols, list(range(len(cols))), custom)
     if col_order not in ('input', 'cluster'):
-        raise ValueError("col_order must be 'input' or 'cluster'")
+        raise ValueError("col_order must be 'input', 'cluster' or 'custom'")
     if col_order != 'cluster' or len(cols) < 3 or not values:
         return list(range(len(cols)))
     from scipy.cluster.hierarchy import leaves_list, linkage  # noqa: PLC0415
@@ -136,7 +153,9 @@ def _labels_for(results_by_col: dict[str, dict[str, Any]], labels: dict[str, str
 
 def assemble_matrix(results_by_col: dict[str, dict[str, Any]], *, value: str, padj_max: float, top_n: int,
                     direction: str, collapse_jaccard: float | None, row_order: str, col_order: str,
-                    members: dict[str, set[str]] | None, labels: dict[str, str] | None = None) -> dict[str, Any]:
+                    members: dict[str, set[str]] | None, labels: dict[str, str] | None = None,
+                    row_custom_order: list[str] | None = None,
+                    col_custom_order: list[str] | None = None) -> dict[str, Any]:
     if direction not in ('both', 'up', 'down'):
         raise ValueError("direction must be 'both', 'up' or 'down'")
     per_col, chosen, meta = _select(results_by_col, value=value, padj_max=padj_max, top_n=top_n, direction=direction)
@@ -162,9 +181,9 @@ def assemble_matrix(results_by_col: dict[str, dict[str, Any]], *, value: str, pa
     values = [[per_col[c].get(n, (0.0, 1.0))[0] for c in cols] for n in chosen]
     padj = [[per_col[c].get(n, (0.0, 1.0))[1] for c in cols] for n in chosen]
     # Columns first: the peak rule must see the columns in the order they are drawn.
-    ci = _order_cols(cols, values, col_order=col_order)
+    ci = _order_cols(cols, values, col_order=col_order, custom=col_custom_order)
     permuted = [[row[j] for j in ci] for row in values]
-    ri = _order_rows(chosen, permuted, row_order=row_order)
+    ri = _order_rows(chosen, permuted, row_order=row_order, custom=row_custom_order)
     rows = [{'name': chosen[i], 'library': meta[chosen[i]]['library'], 'members': absorbed.get(chosen[i], []),
              'n_set': meta[chosen[i]]['n_set']} for i in ri]
     return {

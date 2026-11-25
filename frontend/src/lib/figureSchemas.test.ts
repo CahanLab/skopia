@@ -6,7 +6,7 @@ import { FIGURE_SCHEMAS, coerceParams } from './figureSchemas'
 const BACKEND_DEFAULTS: Record<string, Record<string, unknown>> = {
   enrichment_heatmap: {
     value: 'nes', padj_max: 0.05, top_n: 5, direction: 'both', collapse_jaccard: 0.5, row_order: 'peak',
-    col_order: 'input', colormap: 'rdbu', vmax: null, show_values: false, label_max_chars: 40, cell_size: 14,
+    col_order: 'input', row_custom_order: null, col_custom_order: null, colormap: 'rdbu', vmax: null, show_values: false, label_max_chars: 40, cell_size: 14,
   },
   enrichment_network: {
     value: 'nes', padj_max: 0.05, top_n: 5, direction: 'both', set_edge_jaccard: 0.3, layout: 'force', seed: 0,
@@ -14,7 +14,7 @@ const BACKEND_DEFAULTS: Record<string, Record<string, unknown>> = {
   },
   composition_barplot: { order: 'category', share_of: null, normalize: true, min_cells: 0, show_values: false },
   expression_heatmap: {
-    cell_ordering: 'category', gene_ordering: 'as_provided', aggregate_gene_sets: false, n_bins: 50, group_columns: false,
+    cell_ordering: 'category', gene_ordering: 'as_provided', aggregate_gene_sets: false, n_bins: 50, group_columns: false, scale_rows: true,
     marker_top_n: 5, marker_min_pct_in: null, marker_max_pct_out: null, marker_min_log2fc: null, marker_max_padj: null, marker_rank_by: 'score',
     gene_set_scoring_method: 'mean', gene_set_per_gene_norm: 'zscore_mad', gene_set_per_gene_clip: 1.0, gene_set_aggregation: 'mean',
   },

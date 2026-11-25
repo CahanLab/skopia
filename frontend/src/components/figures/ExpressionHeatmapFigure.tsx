@@ -7,16 +7,17 @@
 import { useState, useEffect, useRef, useCallback, forwardRef } from 'react'
 import { FloatingPanel } from '../PlotLegends'
 import { fitRotatedLabel, rotatedLabelFits } from '../../lib/stackedBars'
-import { heatmapCellWidth } from '../../lib/heatmapGroups'
+import { heatmapCellWidth, heatmapScale } from '../../lib/heatmapGroups'
 import type { ExpressionHeatmapData } from '../../lib/figures'
 
 export const HEATMAP_LEGEND_GRADIENT = ['rgb(68,1,84)', 'rgb(59,82,139)', 'rgb(33,145,140)', 'rgb(94,201,98)', 'rgb(253,231,37)']
 
 /** The legend a PNG export should carry for this data. */
-export function heatmapLegendFor(data: ExpressionHeatmapData): { gradient: string[]; gradientLabel: string; groups: { name: string; color: string }[] } {
+export function heatmapLegendFor(data: ExpressionHeatmapData): { gradient: string[]; gradientLabel: string; gradientRange: string; groups: { name: string; color: string }[] } {
   const groups: string[] = []
   for (const g of data.row_groups) if (g && !groups.includes(g)) groups.push(g)
-  return { gradient: HEATMAP_LEGEND_GRADIENT, gradientLabel: 'Normalized expression', groups: groups.map((name, i) => ({ name, color: GROUP_COLORS[i % GROUP_COLORS.length] })) }
+  const scale = heatmapScale(data)
+  return { gradient: HEATMAP_LEGEND_GRADIENT, gradientLabel: scale.label, gradientRange: scale.rangeText, groups: groups.map((name, i) => ({ name, color: GROUP_COLORS[i % GROUP_COLORS.length] })) }
 }
 
 const hmStyles = {
@@ -121,6 +122,8 @@ export const ExpressionHeatmapFigure = forwardRef<HTMLCanvasElement, ExpressionH
   const [hoveredRow, setHoveredRow] = useState<number | null>(null)
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null)
 
+  const scale = heatmapScale(data)
+  const scaleEnds = scale.rangeText.split(' … ')
   const nRows = data.matrix.length
   const nCols = nRows > 0 ? data.matrix[0].length : 0
 
@@ -207,7 +210,7 @@ export const ExpressionHeatmapFigure = forwardRef<HTMLCanvasElement, ExpressionH
       const row = data.matrix[r]
       for (let c = 0; c < nCols; c++) {
         const val = row[c]
-        const [cr, cg, cb] = viridisColor(val)
+        const [cr, cg, cb] = viridisColor(scale.t(val))
         ctx.fillStyle = `rgb(${cr},${cg},${cb})`
         ctx.fillRect(groupBarOffset + c * cellWidth, r * ROW_HEIGHT, cellWidth + 0.5, ROW_HEIGHT)
       }
@@ -358,9 +361,9 @@ export const ExpressionHeatmapFigure = forwardRef<HTMLCanvasElement, ExpressionH
       {legends === 'inline' && (
         <div style={{ display: 'flex', gap: '18px', alignItems: 'flex-start', padding: '6px 2px' }}>
           <div>
-            <div style={{ fontSize: '10px', color: '#aaa', marginBottom: '2px' }}>Normalized expression</div>
+            <div style={{ fontSize: '10px', color: '#aaa', marginBottom: '2px' }}>{scale.label}</div>
             <div style={hmStyles.legendBar} />
-            <div style={hmStyles.legendLabels}><span>0</span><span>1</span></div>
+            <div style={hmStyles.legendLabels}><span>{scaleEnds[0]}</span><span>{scaleEnds[1]}</span></div>
           </div>
           {hasGroups && (
             <div>
@@ -375,11 +378,11 @@ export const ExpressionHeatmapFigure = forwardRef<HTMLCanvasElement, ExpressionH
           )}
         </div>
       )}
-      {legends === 'floating' && <FloatingPanel id="heatmap-scale" title="Normalized expression">
+      {legends === 'floating' && <FloatingPanel id="heatmap-scale" title={scale.label}>
         <div style={hmStyles.legendBar} />
         <div style={hmStyles.legendLabels}>
-          <span>0</span>
-          <span>1</span>
+          <span>{scaleEnds[0]}</span>
+          <span>{scaleEnds[1]}</span>
         </div>
       </FloatingPanel>}
 

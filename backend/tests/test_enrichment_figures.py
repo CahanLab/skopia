@@ -115,3 +115,46 @@ def test_peak_row_order_follows_the_displayed_column_order():
                            collapse_jaccard=None, row_order='peak', col_order='cluster', members=None)
     peaks = [int(np.argmax(np.abs(row))) for row in m['values']]
     assert peaks == sorted(peaks)                # a diagonal in the order the columns are drawn
+
+
+# --- custom (dragged) row and column order ---------------------------------
+
+def _three_cols():
+    a = _gsea([_row('S1', 2.5, 0.001), _row('S2', 2.0, 0.001), _row('S3', -1.5, 0.001)])
+    b = _gsea([_row('S1', 0.5, 0.001), _row('S2', 2.8, 0.001), _row('S3', 1.0, 0.001)])
+    c = _gsea([_row('S1', 0.2, 0.001), _row('S2', 0.1, 0.001), _row('S3', 2.9, 0.001)])
+    return {'a': a, 'b': b, 'c': c}
+
+
+def _matrix(**kw):
+    base = dict(value='nes', padj_max=0.05, top_n=5, direction='both', collapse_jaccard=None,
+                row_order='peak', col_order='input', members=None)
+    return ef.assemble_matrix(_three_cols(), **{**base, **kw})
+
+
+def test_custom_row_order_puts_the_listed_sets_first_and_the_rest_by_peak():
+    peak = [r['name'] for r in _matrix()['rows']]
+    m = _matrix(row_order='custom', row_custom_order=['S3', 'gone'])
+    names = [r['name'] for r in m['rows']]
+    assert names == ['S3'] + [n for n in peak if n != 'S3']
+    # values follow their rows
+    assert m['values'][0] == [-1.5, 1.0, 2.9]
+
+
+def test_custom_column_order_and_values_follow():
+    m = _matrix(col_order='custom', col_custom_order=['c', 'a'])
+    assert [c['key'] for c in m['cols']] == ['c', 'a', 'b']
+    s1 = m['values'][[r['name'] for r in m['rows']].index('S1')]
+    assert s1 == [0.2, 2.5, 0.5]
+
+
+def test_custom_lists_are_ignored_under_another_order():
+    assert _matrix(row_custom_order=['S3'])['rows'] == _matrix()['rows']
+    assert _matrix(col_custom_order=['c'])['cols'] == _matrix()['cols']
+
+
+def test_unknown_orders_are_refused():
+    with pytest.raises(ValueError, match='row_order'):
+        _matrix(row_order='sideways')
+    with pytest.raises(ValueError, match='col_order'):
+        _matrix(col_order='peak')

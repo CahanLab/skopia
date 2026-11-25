@@ -118,6 +118,8 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
   const [scoring, setScoring] = useState<GeneSetScoring>(() => config?.geneSetScoring ?? scoringFromDisplay(displayPreferences))
   // Aggregate rows: one column per cell group instead of cells or bins.
   const [groupColumns, setGroupColumns] = useState<boolean>(config?.groupColumns ?? false)
+  // Per-group view: false colours the group means themselves on one scale.
+  const [scaleRows, setScaleRows] = useState<boolean>(config?.scaleRows ?? true)
   const [nBins, setNBins] = useState(config?.nBins ?? cfgDefault(['heatmap', 'n_bins'], 300))
   const [keepCellSubset, setKeepCellSubset] = useState(true)
   const [dotplot, setDotplot] = useState<DotplotOptions>({ ...DEFAULT_DOTPLOT_OPTIONS, ...(config?.dotplot ?? {}) })
@@ -323,6 +325,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
       geneOrdering,
       aggregateGeneSets,
       groupColumns,
+      scaleRows,
       nBins,
       cellIndices: keepCellSubset ? config?.cellIndices ?? null : null,
       cellLabel: keepCellSubset ? config?.cellLabel ?? null : null,
@@ -738,6 +741,25 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
                     <span>One value per cell group (the mean of its cells’ scores)</span>
                   </label>
                   {!needsCategory && <div style={styles.optionHint}>Group the cells by category under Cell Ordering to use this.</div>}
+                  {collapsingGroups && (<>
+                    <label style={styles.thresholdRow}>
+                      <span style={{ flex: 1 }}>Colour scale</span>
+                      <select
+                        style={{ ...styles.inlineSelect, marginLeft: 0 }}
+                        value={scaleRows ? 'scaled' : 'raw'}
+                        onChange={(e) => setScaleRows(e.target.value === 'scaled')}
+                        data-aggregate-scale
+                      >
+                        <option value="scaled">Each row 0..1</option>
+                        <option value="raw">Raw group means, one scale</option>
+                      </select>
+                    </label>
+                    <div style={styles.optionHint}>
+                      {scaleRows
+                        ? 'Each set spans the full colour range, which shows where it peaks but not how much it varies.'
+                        : 'The group means themselves, on one scale shared by every row, so sets can be compared and a flat set stays one colour.'}
+                    </div>
+                  </>)}
                   <div style={{ ...styles.hint, marginTop: '6px', lineHeight: 1.4 }}>
                     {scoring.scoringMethod === 'mean'
                       ? 'Scored as Display colours the embedding by a set, with per-gene statistics over every cell. Each row is then rescaled to 0..1, so Sum draws the same as Mean.'

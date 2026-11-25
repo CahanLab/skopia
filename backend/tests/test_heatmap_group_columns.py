@@ -115,3 +115,44 @@ def test_figure_param():
                         params={'cell_ordering': 'none', 'group_columns': True})
     shipped = user_config._parse(user_config._repo_default_path())
     assert shipped['figures']['expression_heatmap']['group_columns'] is False
+
+
+# --- raw values: scale_rows=False ------------------------------------------
+
+def test_raw_group_means_keep_their_values_and_report_the_range():
+    a = _adaptor()
+    out = compute_heatmap_data(a, ['g0', 'g1'], gene_set_groups=[SET], aggregate_gene_sets=True,
+                               scale_rows=False, **GROUPED)
+    score = np.asarray(a.get_multi_gene_expression(['g0', 'g1'], per_gene_norm='zscore_mad', per_gene_clip=1.0,
+                                                   aggregation='mean', clip_percentile=0)['values'])
+    want = [score[a.adata.obs['grp'] == g].mean() for g in LABELS]
+    np.testing.assert_allclose(out['matrix'][0], want, atol=1e-3)
+    assert out['scale_rows'] is False
+    assert out['value_range'] == pytest.approx([min(want), max(want)], abs=1e-3)
+
+
+def test_raw_gene_rows_share_one_range_and_keep_the_scaled_order():
+    a = _adaptor()
+    X = a.adata.X.toarray()
+    raw = compute_heatmap_data(a, GENES, gene_ordering='peak_position', scale_rows=False, **GROUPED)
+    scaled = compute_heatmap_data(a, GENES, gene_ordering='peak_position', **GROUPED)
+    assert raw['row_labels'] == scaled['row_labels']
+    means = {g: [X[a.adata.obs['grp'] == lab, j].mean() for lab in LABELS] for j, g in enumerate(GENES)}
+    for i, g in enumerate(raw['row_labels']):
+        np.testing.assert_allclose(raw['matrix'][i], means[g], atol=1e-3)
+    flat = [v for row in means.values() for v in row]
+    assert raw['value_range'] == pytest.approx([min(flat), max(flat)], abs=1e-3)
+    assert scaled['value_range'] == [0.0, 1.0] and scaled['scale_rows'] is True
+
+
+def test_raw_values_route_and_figure_param(monkeypatch):
+    a = _adaptor()
+    monkeypatch.setattr(routes, 'get_adaptor', lambda dataset=None: a)
+    res = TestClient(app).post('/api/heatmap/data', json={'genes': GENES, 'scale_rows': False, **GROUPED})
+    assert res.status_code == 200 and res.json()['scale_rows'] is False
+    f = a.create_figure('expression_heatmap', inputs={'gene_sets': [SET], 'obs_column': 'grp'},
+                        params={'aggregate_gene_sets': True, 'cell_ordering': 'category', 'group_columns': True,
+                                'scale_rows': False})
+    assert a.figure_data(f['id'])['scale_rows'] is False
+    shipped = user_config._parse(user_config._repo_default_path())
+    assert shipped['figures']['expression_heatmap']['scale_rows'] is True

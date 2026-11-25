@@ -151,3 +151,29 @@ export function heatmapCellWidth(availablePx: number, nCols: number, groupColumn
   const max = groupColumns ? 32 : 8
   return Math.max(1, Math.min(max, availablePx / Math.max(1, nCols)))
 }
+
+function rangeEnd(v: number): string {
+  if (Number.isInteger(v)) return String(v)
+  return Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2)
+}
+
+/** How a heatmap's values map onto its colour ramp. Rows scaled 0..1 (the
+ * default, and every record from before `scale_rows`) use the ramp as is;
+ * raw values (the per-group view's option) share one scale, from the data's
+ * `value_range`, so a set that barely varies stays one colour. `t(v)` is the
+ * ramp position, 0..1. */
+export function heatmapScale(data: { scale_rows?: boolean; value_range?: [number, number]; group_columns?: boolean }): {
+  lo: number; hi: number; label: string; rangeText: string; t: (v: number) => number
+} {
+  if (data.scale_rows !== false) {
+    return { lo: 0, hi: 1, label: 'Normalized expression', rangeText: '0 … 1', t: (v) => v }
+  }
+  const [lo, hi] = data.value_range ?? [0, 1]
+  const span = hi - lo
+  return {
+    lo, hi,
+    label: data.group_columns ? 'Group mean' : 'Value',
+    rangeText: `${rangeEnd(lo)} … ${rangeEnd(hi)}`,
+    t: (v) => (span > 0 ? (v - lo) / span : 0),
+  }
+}

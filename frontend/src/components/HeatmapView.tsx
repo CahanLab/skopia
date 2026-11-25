@@ -12,7 +12,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useStore, HeatmapConfig } from '../store'
 import { useDataActions, appendDataset, createFigure, fetchDotplotData } from '../hooks/useData'
-import { heatmapFigureFromConfig, dotplotFigureFromConfig, heatmapGroupsFor, groupColumnsFor } from '../lib/figures'
+import { heatmapFigureFromConfig, dotplotFigureFromConfig, heatmapGroupsFor, groupColumnsFor, scaleRowsFor } from '../lib/figures'
 import { heatmapCellScope } from '../lib/heatmapCells'
 import { markerSummary, normalizeHeatmapConfig, rowsFromConfig } from '../lib/markerSelection'
 import { DEFAULT_GENE_SET_SCORING, scoringParams, scoringSummary } from '../lib/geneSetScoring'
@@ -151,6 +151,7 @@ export default function HeatmapView() {
           // a config saved before the option scores as the Display defaults, as its figure does
           ...scoringParams(config.geneSetScoring ?? DEFAULT_GENE_SET_SCORING),
           group_columns: groupColumnsFor(config),
+          scale_rows: scaleRowsFor(config),
           cell_ordering: config.cellOrdering,
           obs_column: config.obsColumn,
           line_name: config.lineName,
@@ -240,7 +241,7 @@ export default function HeatmapView() {
 
   const markerNote = heatmapConfig.markerSource ? ` · ${markerSummary(heatmapConfig.markerSource)}` : ''
   const aggregateNote = !isDotplot && heatmapConfig.aggregateGeneSets
-    ? ` · set rows: ${scoringSummary(heatmapConfig.geneSetScoring ?? DEFAULT_GENE_SET_SCORING)}` : ''
+    ? ` · set rows: ${scoringSummary(heatmapConfig.geneSetScoring ?? DEFAULT_GENE_SET_SCORING)}${scaleRowsFor(heatmapConfig) ? '' : ', raw group means'}` : ''
 
   return (
     <div style={hmStyles.wrapper}>
@@ -319,6 +320,8 @@ const hmStyles: Record<string, React.CSSProperties> = {
   settingsButton: {
     padding: '4px 12px',
     fontSize: '12px',
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
     backgroundColor: '#0f3460',
     color: '#aaa',
     border: '1px solid #1a1a2e',
