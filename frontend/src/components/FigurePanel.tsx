@@ -2,8 +2,12 @@ import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import DeckGL from '@deck.gl/react'
 import { ScatterplotLayer } from '@deck.gl/layers'
 import { OrthographicView, OrthographicViewState } from '@deck.gl/core'
-import { Figure, FigurePanel as PanelType, HighlightLayer, HighlightSource, useStore } from '../store'
-import { appendDataset } from '../hooks/useData'
+import { Figure, FigurePanel as PanelType, HighlightLayer, HighlightSource, useStore, type DisplayPreferences } from '../store'
+import { appendDataset, fetchJson } from '../hooks/useData'
+import { categoryCentroids, panelRequest } from '../lib/figurePanels'
+import { layoutLabels } from '../lib/labelLayout'
+import { viewTransform } from '../lib/textAnnotations'
+import { figureInk } from '../lib/figures'
 import { boundsOf, fitView, zoomLimits } from '../lib/viewFit'
 import { getColorFromScale, getBivariateColor, resolveCategoryPalette, hexToRgb } from '../lib/cellColors'
 import TextAnnotationOverlay from './TextAnnotationOverlay'
@@ -50,83 +54,35 @@ interface PanelColorData {
   categoryColors?: (string | null | undefined)[]
 }
 
-const API_BASE = '/api'
-
-// Resolve a gene-set name to its gene list via the global store (gene sets
-// are global, not per-dataset). Returns [] if unknown.
-function lookupGeneSet(name: string | null): string[] {
-  if (!name) return []
-  const cats = useStore.getState().geneSetCategories
-  for (const k of Object.keys(cats) as (keyof typeof cats)[]) {
-    const cat = cats[k]
-    for (const gs of cat.geneSets) {
-      if (gs.name === name) return gs.genes
-    }
-    for (const folder of cat.folders) {
-      for (const gs of folder.geneSets) {
-        if (gs.name === name) return gs.genes
-      }
-    }
-  }
-  return []
+interface ColorResponse {
+  values?: (number | null)[]
+  min?: number
+  max?: number
+  dtype?: string
+  categories?: string[]
+  colors?: (string | null)[]
+  values1?: number[]
+  values2?: number[]
 }
 
-async function fetchPanelData(panel: PanelType): Promise<PanelColorData> {
-  if (panel.colorMode === 'none') return { kind: 'none' }
-
-  if (panel.colorMode === 'bivariate') {
-    // Each axis is a single gene (bivariateGeneN) or a gene set (bivariateSetN).
-    const genes1 = panel.bivariateGene1 ? [panel.bivariateGene1] : lookupGeneSet(panel.bivariateSet1)
-    const genes2 = panel.bivariateGene2 ? [panel.bivariateGene2] : lookupGeneSet(panel.bivariateSet2)
-    if (genes1.length === 0 || genes2.length === 0) return { kind: 'none' }
-    const transform = panel.expressionTransform === 'log1p' ? 'log1p' : null
-    const res = await fetch(appendDataset(`${API_BASE}/expression/bivariate`), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ genes1, genes2, transform }),
-    })
-    if (!res.ok) throw new Error('bivariate fetch failed')
-    const data = await res.json()
-    return { kind: 'bivariate', values1: data.values1, values2: data.values2 }
-  }
-
-  if (panel.colorMode === 'expression') {
-    if (panel.selectedGenes.length === 0) return { kind: 'none' }
-    const transform = panel.expressionTransform === 'log1p' ? 'log1p' : undefined
-    if (panel.selectedGenes.length === 1) {
-      const qs = new URLSearchParams()
-      if (transform) qs.set('transform', transform)
-      const url = appendDataset(`${API_BASE}/expression/${encodeURIComponent(panel.selectedGenes[0])}${qs.toString() ? '?' + qs.toString() : ''}`)
-      const res = await fetch(url)
-      if (!res.ok) throw new Error('expression fetch failed')
-      const data = await res.json()
-      return { kind: 'expression', values: data.values, min: data.min, max: data.max }
-    } else {
-      const res = await fetch(appendDataset(`${API_BASE}/expression/multi`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ genes: panel.selectedGenes, transform }),
-      })
-      if (!res.ok) throw new Error('expression/multi fetch failed')
-      const data = await res.json()
-      return { kind: 'expression', values: data.values, min: data.min, max: data.max }
-    }
-  }
-
-  if (panel.colorMode === 'metadata' && panel.selectedColorColumn) {
-    const res = await fetch(appendDataset(`${API_BASE}/obs/${encodeURIComponent(panel.selectedColorColumn)}`))
-    if (!res.ok) throw new Error('obs fetch failed')
-    const data = await res.json()
+/** Fetch a panel's colouring from the figure's dataset, as Display would
+ *  compute it there (lib/figurePanels.panelRequest). */
+async function fetchPanelData(panel: PanelType, prefs: DisplayPreferences, layer: string, slot: string): Promise<PanelColorData> {
+  const req = panelRequest(panel, prefs, layer)
+  if (!req) return { kind: 'none' }
+  const data = await fetchJson<ColorResponse>(appendDataset(req.url, slot), req.init)
+  if (panel.colorMode === 'bivariate') return { kind: 'bivariate', values1: data.values1, values2: data.values2 }
+  if (panel.colorMode === 'metadata') {
     if (data.dtype === 'category') {
       return { kind: 'metadata-category', values: data.values, categories: data.categories ?? [], categoryColors: data.colors ?? undefined }
     }
-    if (data.dtype === 'numeric') {
+    if (data.dtype === 'numeric' && data.values) {
       const { min, max } = numericExtent(data.values)
       return { kind: 'metadata-numeric', values: data.values, min, max }
     }
+    return { kind: 'none' }
   }
-
-  return { kind: 'none' }
+  return { kind: 'expression', values: data.values, min: data.min, max: data.max }
 }
 
 interface Props {
@@ -135,27 +91,57 @@ interface Props {
   // Render-only mode used by the export path — disables interaction so the
   // panel renders without controllers, suitable for screenshot capture.
   staticView?: boolean
+  /** The panel the Genes and Cells panes colour; it offers its title for naming. */
+  isActive?: boolean
 }
 
-export default function FigurePanel({ figure, panel, staticView = false }: Props) {
+export default function FigurePanel({ figure, panel, staticView = false, isActive = false }: Props) {
   const updateFigure = useStore((s) => s.updateFigure)
-  const highlightLayers = useStore((s) => s.highlightLayers)
+  const setFigurePanelTitle = useStore((s) => s.setFigurePanelTitle)
+  const highlightLayers = figure.overlayLayers
+  // Display settings of the dataset the figure was made on, so a panel keeps
+  // computing its colours there when another dataset is active.
+  const prefs = useStore((s) => s.datasets[figure.slot]?.displayPreferences ?? s.displayPreferences)
+  const displayLayer = useStore((s) => s.datasets[figure.slot]?.displayLayer ?? 'X')
+  // Bumped when .obs values change under the same column name (a label
+  // rename or merge goes through refreshColorByColumn, a re-run through
+  // refreshObsSummaries), which a metadata panel's URL alone cannot see.
+  const obsVersion = useStore((s) => s.datasets[figure.slot]?.obsSummariesVersion ?? 0)
   const [colorData, setColorData] = useState<PanelColorData>({ kind: 'none' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Fetch color data when the panel's color mode / source changes.
+  // Refetch only when the request itself changes, not on every panel edit
+  // (a title or a colour scale leaves it alone).
+  const request = panelRequest(panel, prefs, displayLayer)
+  const requestKey = request
+    ? `${figure.slot}|${request.url}|${String(request.init?.body ?? '')}${panel.colorMode === 'metadata' ? `|obs${obsVersion}` : ''}`
+    : ''
+  const latest = useRef({ panel, prefs, displayLayer })
+  latest.current = { panel, prefs, displayLayer }
+
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
     setError(null)
-    fetchPanelData(panel)
+    if (!requestKey) {
+      setColorData({ kind: 'none' })
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    const { panel: p, prefs: dp, displayLayer: dl } = latest.current
+    fetchPanelData(p, dp, dl, figure.slot)
       .then((d) => {
         if (!cancelled) setColorData(d)
       })
       .catch((err) => {
-        if (!cancelled) setError((err as Error).message)
+        // Drop the previous colours too: the title already names the new
+        // colouring, and the error box is not in the exported PNG.
+        if (!cancelled) {
+          setError((err as Error).message)
+          setColorData({ kind: 'none' })
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -163,7 +149,7 @@ export default function FigurePanel({ figure, panel, staticView = false }: Props
     return () => {
       cancelled = true
     }
-  }, [panel.colorMode, panel.selectedGenes, panel.selectedColorColumn, panel.expressionTransform, panel.bivariateSet1, panel.bivariateSet2, panel.bivariateGene1, panel.bivariateGene2])
+  }, [requestKey, figure.slot])
 
   // Bounds from the snapshotted coordinates — used for default viewState.
   const bounds = useMemo(() => boundsOf(figure.coordinates), [figure.coordinates])
@@ -347,7 +333,60 @@ export default function FigurePanel({ figure, panel, staticView = false }: Props
     [updateFigure]
   )
 
-  const radius = figure.pointSize / 2
+  // The Embedding tab draws `pointSize` as the radius; so do panels.
+  const radius = figure.pointSize
+
+  // Panel size, for placing category labels in screen space.
+  const [size, setSize] = useState({ w: 0, h: 0 })
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const measure = () => setSize({ w: el.clientWidth, h: el.clientHeight })
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    measure()
+    return () => ro.disconnect()
+  }, [])
+
+  const viewTarget: [number, number] = [(viewState.target as number[])[0], (viewState.target as number[])[1]]
+  const viewZoom = typeof viewState.zoom === 'number' ? viewState.zoom : (viewState.zoom as number[])[0]
+
+  // Category labels at per-category median centroids over the figure's
+  // cells, pushed apart as on the Embedding tab (lib/labelLayout).
+  const centroids = useMemo(() => {
+    if (!panel.showLabels || colorData.kind !== 'metadata-category' || !colorData.values || !colorData.categories) return []
+    return categoryCentroids(figure.coordinates, colorData.values, colorData.categories, figure.cellIndices)
+  }, [panel.showLabels, colorData, figure.coordinates, figure.cellIndices])
+  const placedLabels = useMemo(() => {
+    if (centroids.length === 0 || size.w === 0 || size.h === 0) return []
+    const t = viewTransform(viewTarget, viewZoom, size.w, size.h)
+    const anchors = centroids.map((c) => {
+      const [x, y] = t.toScreen(c.x, c.y)
+      return { id: c.label, text: c.label, x, y, weight: c.n }
+    })
+    return layoutLabels(anchors, { fontPx: panel.labelFontSize, bounds: { w: size.w, h: size.h } }).filter((p) => !p.hidden)
+    // viewTarget is rebuilt each render; its numbers are the dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [centroids, viewTarget[0], viewTarget[1], viewZoom, size.w, size.h, panel.labelFontSize])
+
+  // Inline title editing: click the title, Enter or click away to keep it,
+  // Escape to drop the edit. A blank title returns to the automatic one.
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  const editingRef = useRef(false)
+  const beginTitleEdit = () => {
+    if (staticView) return
+    setTitleDraft(panel.title)
+    editingRef.current = true
+    setEditingTitle(true)
+  }
+  const endTitleEdit = (keep: boolean) => {
+    if (!editingRef.current) return
+    editingRef.current = false
+    setEditingTitle(false)
+    if (keep && titleDraft !== panel.title) setFigurePanelTitle(panel.id, titleDraft)
+  }
+  const ink = figureInk(panel.background)
 
   // Pack positions into a Float32Array binary attribute. See ScatterPlot.tsx
   // for the rationale — deck.gl 9.2.6's per-cell accessor path has a stride
@@ -417,29 +456,70 @@ export default function FigurePanel({ figure, panel, staticView = false }: Props
       )}
       {/* The embedding's text annotations, read-only, in this panel's view. */}
       <TextAnnotationOverlay
+        slot={figure.slot}
         embeddingName={figure.embeddingName}
         dimX={figure.dimX ?? 0}
         dimY={figure.dimY ?? 1}
-        target={[(viewState.target as number[])[0], (viewState.target as number[])[1]]}
-        zoom={typeof viewState.zoom === 'number' ? viewState.zoom : (viewState.zoom as number[])[0]}
+        target={viewTarget}
+        zoom={viewZoom}
         active={false}
       />
-      {panel.title && (
+      {placedLabels.length > 0 && (
+        // Read by utils/exportFigure, which redraws these labels into the PNG.
+        <svg data-panel-labels data-font-px={panel.labelFontSize} style={labelSvgStyle}>
+          {placedLabels.map((c) => Math.hypot(c.x - c.ax, c.y - c.ay) > panel.labelFontSize * 0.6 && (
+            <line key={`${c.id}-leader`} x1={c.ax} y1={c.ay} x2={c.x} y2={c.y} stroke="rgba(255,255,255,0.55)" strokeWidth={1} />
+          ))}
+          {placedLabels.map((c) => (
+            <text
+              key={c.id}
+              x={c.x}
+              y={c.y}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              style={{ fontSize: panel.labelFontSize, fontWeight: 700, fill: '#fff', stroke: '#000', strokeWidth: 3.5, paintOrder: 'stroke' } as React.CSSProperties}
+            >
+              {c.text}
+            </text>
+          ))}
+        </svg>
+      )}
+      {editingTitle ? (
+        <input
+          autoFocus
+          value={titleDraft}
+          onChange={(e) => setTitleDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') endTitleEdit(true)
+            if (e.key === 'Escape') endTitleEdit(false)
+            e.stopPropagation()
+          }}
+          onBlur={() => endTitleEdit(true)}
+          onPointerDown={(e) => e.stopPropagation()}
+          placeholder="Blank = automatic title"
+          data-panel-title-input
+          style={titleInputStyle}
+        />
+      ) : (panel.title || (isActive && !staticView)) ? (
         <div
+          data-panel-title
+          onClick={beginTitleEdit}
+          title={staticView ? undefined : 'Click to rename'}
           style={{
             position: 'absolute',
             top: '8px',
             left: '8px',
             fontSize: '14px',
             fontWeight: 600,
-            color: '#fff',
-            textShadow: '0 1px 2px rgba(0,0,0,0.8)',
-            pointerEvents: 'none',
+            color: panel.title ? ink.title : ink.muted,
+            fontStyle: panel.title ? 'normal' : 'italic',
+            cursor: staticView ? 'default' : 'text',
+            pointerEvents: staticView ? 'none' : 'auto',
           }}
         >
-          {panel.title}
+          {panel.title || 'Click to name'}
         </div>
-      )}
+      ) : null}
       {/* Expression legend (mini colorbar) — only for continuous color modes */}
       {(colorData.kind === 'expression' || colorData.kind === 'metadata-numeric') &&
         colorData.min !== undefined && colorData.max !== undefined && (
@@ -514,6 +594,30 @@ function ColorBar({ scale, width, height }: { scale: import('../store').ColorSca
   }
   const bg = `linear-gradient(to right, ${stops.join(', ')})`
   return <div style={{ width, height, background: bg, borderRadius: '2px', border: '1px solid rgba(255,255,255,0.4)' }} />
+}
+
+const labelSvgStyle: React.CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  width: '100%',
+  height: '100%',
+  pointerEvents: 'none',
+  overflow: 'visible',
+}
+
+const titleInputStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '6px',
+  left: '6px',
+  width: '60%',
+  fontSize: '14px',
+  fontWeight: 600,
+  padding: '1px 4px',
+  background: '#0f1625',
+  color: '#eee',
+  border: '1px solid #4ecdc4',
+  borderRadius: '3px',
+  outline: 'none',
 }
 
 const loadingOverlayStyle = {

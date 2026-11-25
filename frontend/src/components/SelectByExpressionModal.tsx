@@ -6,6 +6,7 @@ import {
   addLabelToAnnotation,
   labelCells,
   useDataActions,
+  onEmbedding,
   useObsSummaries,
   refreshSchema,
 } from '../hooks/useData'
@@ -61,8 +62,10 @@ export default function SelectByExpressionModal() {
         selectedGenes.length === 1 &&
         selectedGenes[0] === source.gene &&
         selectedGeneSetName === null
+      // The histogram and Label cells read the Embedding's expressionData,
+      // so colour the Embedding even while Panels is showing.
       if (!alreadyColoring) {
-        colorByGene(source.gene)
+        onEmbedding(() => colorByGene(source.gene))
       }
     } else {
       const alreadyColoring =
@@ -70,7 +73,7 @@ export default function SelectByExpressionModal() {
         selectedGeneSetName === source.name &&
         selectedGenes.length === source.genes.length
       if (!alreadyColoring) {
-        colorByGenes(source.genes, undefined, source.name)
+        onEmbedding(() => colorByGenes(source.genes, undefined, source.name))
       }
     }
     // Deliberately only run when `source` identity changes — we don't want

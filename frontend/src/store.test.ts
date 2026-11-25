@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useStore, createDefaultDatasetState, Schema } from './store'
 import { DEFAULT_TEXT_STYLE } from './lib/textAnnotations'
+import { specForColumn, specForGenes } from './lib/figurePanels'
 
 // A comparison is a statement about *one* dataset: "these cells versus those
 // cells, in this matrix". Cell indices, the split view's second geometry, and
@@ -746,5 +747,113 @@ describe('text annotations are per slot', () => {
     useStore.getState().loadDatasetIntoSlot('primary', PRIMARY)
     expect(useStore.getState().datasets.primary.textHydrated).toBe(false)
     expect(useStore.getState().textAnnotations).toEqual([])
+  })
+})
+
+describe('the Panels figure', () => {
+  const layer = (id: string) => ({ id, color: '#fff', intensity: 1, source: { kind: 'cellset' as const, label: id, mask: new Uint8Array(1) } })
+  function makeFigure() {
+    const s = useStore.getState()
+    s.setActiveSlot('primary')
+    s.setDisplayPreferences({ pointSize: 7, backgroundColor: '#ffffff', labelFontSize: 18 })
+    s.createFigure([0, 1, 2], [[0, 0], [1, 1], [2, 2]], 'X_umap')
+    useStore.setState({ centerPanelView: 'figure' })
+    return useStore.getState().activeFigure!
+  }
+
+  it('records its dataset and starts from the Display settings', () => {
+    const fig = makeFigure()
+    expect(fig.slot).toBe('primary')
+    expect(fig.pointSize).toBe(7)
+    expect(fig.background).toBe('#ffffff')
+    expect(fig.panels[0].labelFontSize).toBe(18)
+    expect(fig.panels.every((p) => p.showHighlightOverlay && p.title === '' && !p.titleEdited)).toBe(true)
+    expect(fig.overlayLayers).toEqual([])
+  })
+
+  it("puts highlight layers on the figure while Panels shows, and leaves the Embedding's alone", () => {
+    const s = useStore.getState()
+    s.addHighlightLayer(layer('embedding'))
+    makeFigure()
+    useStore.getState().addHighlightLayer(layer('figure'))
+    expect(useStore.getState().activeFigure!.overlayLayers.map((l) => l.id)).toEqual(['figure'])
+    expect(useStore.getState().highlightLayers.map((l) => l.id)).toEqual(['embedding'])
+    useStore.getState().updateHighlightLayer('figure', { color: '#f00' })
+    expect(useStore.getState().activeFigure!.overlayLayers[0].color).toBe('#f00')
+    useStore.getState().clearAllHighlights()
+    expect(useStore.getState().activeFigure!.overlayLayers).toEqual([])
+    expect(useStore.getState().highlightLayers.map((l) => l.id)).toEqual(['embedding'])
+    useStore.setState({ centerPanelView: 'scatter' })
+    useStore.getState().removeHighlightLayer('embedding')
+    expect(useStore.getState().highlightLayers).toEqual([])
+  })
+
+  it('copies the Embedding layers into the overlay on request', () => {
+    useStore.getState().addHighlightLayer(layer('embedding'))
+    makeFigure()
+    useStore.getState().copyEmbeddingHighlightsToFigure()
+    const copied = useStore.getState().activeFigure!.overlayLayers
+    expect(copied.map((l) => l.source.label)).toEqual(['embedding'])
+    // fresh ids, so an edit to one list can never reach the other
+    expect(copied[0].id).not.toBe('embedding')
+  })
+
+  it("edits a dataset layer by id even while Panels shows (the cell-count sync does this)", () => {
+    useStore.getState().addHighlightLayer(layer('embedding'))
+    makeFigure()
+    useStore.getState().addHighlightLayer(layer('figure'))
+    useStore.getState().updateHighlightLayer('embedding', { intensity: 0.5 })
+    expect(useStore.getState().highlightLayers[0].intensity).toBe(0.5)
+    expect(useStore.getState().activeFigure!.overlayLayers[0].intensity).toBe(1)
+    useStore.getState().removeHighlightLayer('embedding')
+    expect(useStore.getState().highlightLayers).toEqual([])
+    expect(useStore.getState().activeFigure!.overlayLayers.map((l) => l.id)).toEqual(['figure'])
+  })
+
+  it('titles a panel after its colouring until the user names it', () => {
+    const fig = makeFigure()
+    const id = fig.panels[0].id
+    const s = useStore.getState()
+    s.colorFigurePanel(id, specForGenes(['Myl7']))
+    expect(useStore.getState().activeFigure!.panels[0]).toMatchObject({ title: 'Myl7', colorMode: 'expression', selectedGenes: ['Myl7'] })
+    s.setFigurePanelTitle(id, 'Mine')
+    s.colorFigurePanel(id, specForColumn('celltype'))
+    expect(useStore.getState().activeFigure!.panels[0]).toMatchObject({ title: 'Mine', titleEdited: true, selectedColorColumn: 'celltype' })
+    s.setFigurePanelTitle(id, '  ')
+    expect(useStore.getState().activeFigure!.panels[0]).toMatchObject({ title: 'celltype', titleEdited: false })
+  })
+
+  it('drops an active panel the layout removes', () => {
+    const fig = makeFigure()
+    useStore.getState().setActiveFigurePanel(fig.panels[3].id)
+    useStore.getState().setFigureLayout(1, 2)
+    expect(useStore.getState().activeFigure!.activePanelId).toBeNull()
+    useStore.getState().setActiveFigurePanel(fig.panels[1].id)
+    useStore.getState().setFigureLayout(2, 2)
+    expect(useStore.getState().activeFigure!.activePanelId).toBe(fig.panels[1].id)
+    expect(useStore.getState().activeFigure!.panels[3].showHighlightOverlay).toBe(true)
+  })
+
+  it("stops routing to the figure when its dataset's cells change", () => {
+    makeFigure()
+    useStore.getState().addHighlightLayer(layer('figure'))
+    expect(useStore.getState().activeFigure!.overlayLayers).toHaveLength(1)
+    // cells deleted: the dataset reloads its schema with fewer cells
+    useStore.getState().loadDatasetIntoSlot('primary', { ...PRIMARY, n_cells: 4000 })
+    useStore.setState({ centerPanelView: 'figure' })
+    useStore.getState().addHighlightLayer(layer('after'))
+    expect(useStore.getState().activeFigure!.overlayLayers.map((l) => l.id)).toEqual(['figure'])
+    expect(useStore.getState().highlightLayers.map((l) => l.id)).toContain('after')
+  })
+
+  it('crops to new cells and refits the view', () => {
+    makeFigure()
+    useStore.getState().updateFigure({ sharedZoom: 3, sharedTargetX: 1, sharedTargetY: 1 })
+    useStore.getState().cropFigure([2], [[2, 2]])
+    const fig = useStore.getState().activeFigure!
+    expect(fig.cellIndices).toEqual([2])
+    expect(fig.coordinates).toEqual([[2, 2]])
+    expect(fig.sharedZoom).toBeNull()
+    expect(fig.panels).toHaveLength(4)
   })
 })

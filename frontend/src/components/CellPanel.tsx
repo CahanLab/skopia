@@ -1,10 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useStore } from '../store'
+import { editableHighlightLayers, panelRouteTarget } from '../lib/figurePanels'
 import {
   useObsSummaries,
   ObsSummary,
   CategoryValue,
   useDataActions,
+  onEmbedding,
   createAnnotation,
   labelCells,
   useDiffExp,
@@ -1046,14 +1048,12 @@ export default function CellPanel() {
     comparisonCheckedColumn,
     comparisonCheckedCategories,
     toggleComparisonCategory,
-    createFigure,
-    setCenterPanelView,
   } = useStore()
   const { summaries, isLoading, error, refresh } = useObsSummaries()
   const cellSubsets = useCellSubsets()
   const { selectColorColumn, addCellSetHighlight, colorByGene, colorByGenes, selectEmbedding } = useDataActions()
   const { runComparison, isDiffExpLoading } = useDiffExp()
-  const highlightLayers = useStore((s) => s.highlightLayers)
+  const highlightLayers = useStore(editableHighlightLayers)
   const embedding = useStore((s) => s.embedding)
   const selectedEmbeddingName = useStore((s) => s.selectedEmbedding)
 
@@ -1226,8 +1226,13 @@ export default function CellPanel() {
   const hasGroup2 = comparison.group2 !== null && comparison.group2.length > 0
   const canCompare = hasGroup1 && hasGroup2
 
+  // The toggle reads whatever the click colours: the active panel while
+  // Panels routes colour there, else the Embedding.
   const handleColorBy = (columnName: string) => {
-    if (colorMode === 'metadata' && selectedColorColumn === columnName) {
+    const st = useStore.getState()
+    const panelId = panelRouteTarget(st)
+    const current = (panelId && st.activeFigure?.panels.find((p) => p.id === panelId)) || { colorMode, selectedColorColumn }
+    if (current.colorMode === 'metadata' && current.selectedColorColumn === columnName) {
       selectColorColumn(null)
     } else {
       selectColorColumn(columnName)
@@ -1414,7 +1419,7 @@ export default function CellPanel() {
       if (embeddingLabelColumn === columnName) {
         setEmbeddingLabelColumn(null)
       } else {
-        selectColorColumn(columnName)
+        onEmbedding(() => selectColorColumn(columnName))
         setEmbeddingLabelColumn(columnName)
       }
     },
@@ -1480,21 +1485,6 @@ export default function CellPanel() {
     }
   }, [selectedAnnotation, newLabel, selectedCellIndices, clearSelection, refresh])
 
-  const handleCreateFigure = useCallback(() => {
-    if (!embedding || embedding.coordinates.length === 0) return
-    // Snapshot the selected cells' coordinates. If selection is empty, fall
-    // back to all cells (the user wants a figure of the full dataset).
-    const indices = selectedCellIndices.length > 0
-      ? selectedCellIndices
-      : Array.from({ length: embedding.coordinates.length }, (_, i) => i)
-    const coords: [number, number][] = indices.map((i) => {
-      const c = embedding.coordinates[i]
-      return [c[0], c[1]]
-    })
-    createFigure(indices, coords, selectedEmbeddingName ?? embedding.name, 2, 2, { x: embedding.dim_x ?? 0, y: embedding.dim_y ?? 1 })
-    setCenterPanelView('figure')
-  }, [embedding, selectedCellIndices, selectedEmbeddingName, createFigure, setCenterPanelView])
-
   const handleDeleteCells = useCallback(async () => {
     if (selectedCellIndices.length === 0) return
     setIsDeleting(true)
@@ -1536,9 +1526,9 @@ export default function CellPanel() {
       // selectedGenes survives the delete; we just need to fetch fresh values.
       if (priorColorMode === 'expression' && priorGenes.length > 0) {
         if (priorGenes.length === 1) {
-          await colorByGene(priorGenes[0])
+          await onEmbedding(() => colorByGene(priorGenes[0]))
         } else {
-          await colorByGenes(priorGenes, undefined, priorSetName ?? undefined)
+          await onEmbedding(() => colorByGenes(priorGenes, undefined, priorSetName ?? undefined))
         }
       }
     } catch (err) {
@@ -2142,28 +2132,6 @@ export default function CellPanel() {
         />
       )}
 
-      {/* Create figure — always available (works on selection or all cells). */}
-      {embedding && (
-        <div style={{ padding: '8px 10px', borderTop: '1px solid #0f3460', backgroundColor: '#0f1625' }}>
-          <button
-            onClick={handleCreateFigure}
-            style={{
-              width: '100%',
-              padding: '6px',
-              fontSize: '11px',
-              fontWeight: 500,
-              backgroundColor: '#4ecdc4',
-              color: '#000',
-              border: 'none',
-              borderRadius: '3px',
-              cursor: 'pointer',
-            }}
-            title="Open the Figure builder. Uses the current selection if any, otherwise all cells."
-          >
-            Create figure ({(selectedCellIndices.length > 0 ? selectedCellIndices.length : embedding.coordinates.length).toLocaleString()} cells)
-          </button>
-        </div>
-      )}
     </div>
   )
 }

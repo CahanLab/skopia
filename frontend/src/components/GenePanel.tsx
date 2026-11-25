@@ -16,6 +16,7 @@ import { MESSAGES } from '../messages'
 import { copyText } from '../lib/clipboard'
 import { setKey, countGeneSets } from '../lib/geneSetManager'
 import { findGeneSetLayer, findGeneSetLayers, geneSetLayerKey, highlightButtonAction, GENE_SET_LAYER_DEFAULTS } from '../lib/highlightLayers'
+import { editableHighlightLayers } from '../lib/figurePanels'
 import NumberInput from './NumberInput'
 
 const API_BASE = '/api'
@@ -871,7 +872,7 @@ function CategoryGeneSetComponent({
   const setUcellScoreSource = useStore((s) => s.setUcellScoreSource)
   const setGeneSetToVarSource = useStore((s) => s.setGeneSetToVarSource)
   const setGeneSetManager = useStore((s) => s.setGeneSetManager)
-  const highlightLayers = useStore((s) => s.highlightLayers)
+  const highlightLayers = useStore(editableHighlightLayers)
   const highlightLayer = useMemo(() => findGeneSetLayer(highlightLayers, geneSet), [highlightLayers, geneSet])
   const [highlightBusy, setHighlightBusy] = useState(false)
   const updateHighlightLayer = useStore((s) => s.updateHighlightLayer)
@@ -1245,7 +1246,7 @@ function CategoryGeneSetComponent({
             layer={highlightLayer}
             label="Highlight"
             onUpdate={(patch) => updateHighlightLayer(highlightLayer.id, patch)}
-            onRemove={() => findGeneSetLayers(useStore.getState().highlightLayers, geneSet)
+            onRemove={() => findGeneSetLayers(editableHighlightLayers(useStore.getState()), geneSet)
               .forEach((l) => removeHighlightLayer(l.id))}
           />
         </div>
@@ -1864,7 +1865,8 @@ export function flattenGeneSets(categories: Record<GeneSetCategoryType, GeneSetC
 }
 
 export default function GenePanel() {
-  const { geneSetCategories, selectedGenes, bivariateData, highlightLayers, colorMode, addGeneSetToCategory, addFolderToCategory, setImportModalOpen, setGeneSetLibraryModalOpen, setGeneMapSource, setEnrichmentSource } = useStore()
+  const highlightLayers = useStore(editableHighlightLayers)
+  const { geneSetCategories, selectedGenes, bivariateData, colorMode, addGeneSetToCategory, addFolderToCategory, setImportModalOpen, setGeneSetLibraryModalOpen, setGeneMapSource, setEnrichmentSource } = useStore()
   const setGeneSetManager = useStore((s) => s.setGeneSetManager)
   const setClearGeneSetsOpen = useStore((s) => s.setClearGeneSetsOpen)
   const geneSetTotals = useMemo(() => countGeneSets(geneSetCategories), [geneSetCategories])
@@ -1910,7 +1912,7 @@ export default function GenePanel() {
   const pendingHighlights = useRef(new Set<string>())
   // Resolves true once the set has a layer (already, or newly added).
   const handleAddHighlight = useCallback(async (geneSet: GeneSet): Promise<boolean> => {
-    if (findGeneSetLayers(useStore.getState().highlightLayers, geneSet).length) return true
+    if (findGeneSetLayers(editableHighlightLayers(useStore.getState()), geneSet).length) return true
     const key = geneSetLayerKey(geneSet)
     if (pendingHighlights.current.has(key)) return false
     pendingHighlights.current.add(key)
@@ -2490,7 +2492,7 @@ export default function GenePanel() {
                 />
               </div>
               <button
-                onClick={() => { if (ready) colorByBivariate(r1.genes, r2.genes) }}
+                onClick={() => { if (ready) colorByBivariate(r1.genes, r2.genes, r1.label, r2.label) }}
                 disabled={!ready}
                 style={{
                   width: '100%',
