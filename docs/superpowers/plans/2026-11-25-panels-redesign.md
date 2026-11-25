@@ -36,12 +36,12 @@
 
 **Interfaces:**
 - Produces:
-  - `panelRouteTarget(s: { centerPanelView: string; activeSlot: string; activeFigure: { slot: string; activePanelId: string | null; panels: { id: string }[] } | null }): string | null` — the panel id to colour, or null (not Panels, no figure, or slot mismatch). Active id falls back to the first panel when missing.
-  - `editableHighlightLayers(s): HighlightLayer[]` — the figure's `overlayLayers` when `panelRouteTarget(s)` is non-null, else `s.highlightLayers`.
+  - `panelRouteTarget(s: { centerPanelView: string; activeSlot: string; activeFigure: { slot: string; activePanelId: string | null; panels: { id: string }[] } | null }): string | null`: the panel id to colour, or null (not Panels, no figure, or slot mismatch). Active id falls back to the first panel when missing.
+  - `editableHighlightLayers(s): HighlightLayer[]`: the figure's `overlayLayers` when `panelRouteTarget(s)` is non-null, else `s.highlightLayers`.
   - `PanelColorSpec = Pick<FigurePanel, 'colorMode' | 'selectedGenes' | 'selectedGeneSetName' | 'genesDown' | 'selectedColorColumn' | 'scoreSource' | 'bivariateSet1' | 'bivariateSet2' | 'bivariateGene1' | 'bivariateGene2' | 'bivariateGenes1' | 'bivariateGenes2' | 'bivariateLabel1' | 'bivariateLabel2'>`
   - `specForGenes(genes: string[], setName?: string | null, genesDown?: string[]): PanelColorSpec`, `specForColumn(column: string | null)`, `specForScore(obsm: string, column: string)`, `specForBivariate(g1: string[], g2: string[], l1?: string, l2?: string)`, `SPEC_NONE`.
   - `autoPanelTitle(p: PanelColorSpec): string`
-  - `panelRequest(p, prefs: DisplayPreferences, layer: string | null): { url: string; init?: RequestInit } | null` — URL without dataset; caller applies `appendDataset(url, slot)`.
+  - `panelRequest(p, prefs: DisplayPreferences, layer: string | null): { url: string; init?: RequestInit } | null`: URL without dataset; caller applies `appendDataset(url, slot)`.
   - `categoryCentroids(coords: [number, number][], values: (number | string | null)[], categories: string[], index?: number[]): { label: string; x: number; y: number; n: number }[]`
 
 - [ ] **Step 1: Write the failing tests**
@@ -80,9 +80,9 @@ expect(categoryCentroids([[0,0],[2,0],[10,10],[11,11],[5,5]], [0,0,1,1,2], ['a',
   { label: 'a', x: 1, y: 0, n: 2 }, { label: 'b', x: 10.5, y: 10.5, n: 2 }])
 ```
 
-- [ ] **Step 2: Run** `npx vitest run src/lib/figurePanels.test.ts` — FAIL (module missing).
+- [ ] **Step 2: Run** `npx vitest run src/lib/figurePanels.test.ts`: FAIL (module missing).
 - [ ] **Step 3: Implement** the module. A single gene with UCell off uses `GET /api/expression/{gene}` with `transform` (when log1p), `clip_percentile` (when > 0), `layer` (when not null/`X`), in that order; UCell applies to any set, as `colorByGenes` does. `categoryCentroids` takes `index` (the figure's `cellIndices`) so `coords[i]` pairs with `values[index[i]]`.
-- [ ] **Step 4: Run** the test — PASS.
+- [ ] **Step 4: Run** the test: PASS.
 - [ ] **Step 5: Commit** `feat(panels): pure helpers for routing, colour specs, titles, requests, centroids`.
 
 ### Task 2: Store
@@ -97,18 +97,18 @@ expect(categoryCentroids([[0,0],[2,0],[10,10],[11,11],[5,5]], [0,0,1,1,2], ['a',
   - `FigurePanel` adds `titleEdited: boolean`, `genesDown?: string[]`, `scoreSource?: { obsm: string; column: string } | null`, `bivariateGenes1?/2?: string[] | null`, `bivariateLabel1?/2?: string | null`, `showLabels: boolean`, `labelFontSize: number`; colorMode adds `'score'`; `expressionTransform` removed.
   - `Figure` adds `slot: string`, `overlayLayers: HighlightLayer[]`, `activePanelId: string | null`.
   - `createFigure(cellIndices, coordinates, embeddingName, rows?, cols?, dims?)` unchanged signature; records `slot: activeSlot`, background / pointSize / pointOpacity / colorScale / labelFontSize from current `displayPreferences`, panels `showHighlightOverlay: true`, `title: ''`, `titleEdited: false`.
-  - `colorFigurePanel(panelId: string, spec: PanelColorSpec): void` — applies the spec; sets `title = autoPanelTitle(spec)` unless `titleEdited`.
-  - `setFigurePanelTitle(panelId: string, title: string): void` — trimmed empty → automatic title, `titleEdited: false`; else `titleEdited: true`.
+  - `colorFigurePanel(panelId: string, spec: PanelColorSpec): void`: applies the spec; sets `title = autoPanelTitle(spec)` unless `titleEdited`.
+  - `setFigurePanelTitle(panelId: string, title: string): void`: trimmed empty → automatic title, `titleEdited: false`; else `titleEdited: true`.
   - `setActiveFigurePanel(panelId: string | null): void`
-  - `cropFigure(cellIndices: number[], coordinates: [number, number][]): void` — replaces cells and coordinates, resets shared zoom to null, keeps panels.
+  - `cropFigure(cellIndices: number[], coordinates: [number, number][]): void`: replaces cells and coordinates, resets shared zoom to null, keeps panels.
   - `setFigureLayout` keeps `activePanelId` only if that panel survives.
   - `addHighlightLayer` / `removeHighlightLayer` / `updateHighlightLayer` / `clearAllHighlights` act on `activeFigure.overlayLayers` when `panelRouteTarget(state)` is non-null.
   - `copyEmbeddingHighlightsToFigure(): void`
 
 - [ ] **Step 1: Write the failing tests** in `store.test.ts`: create a figure (set `activeSlot`, `centerPanelView: 'figure'`); `addHighlightLayer(l)` lands in `activeFigure.overlayLayers` and the dataset's `highlightLayers` keeps its earlier layer; with `centerPanelView: 'scatter'` it lands on the dataset; `colorFigurePanel(p1, specForGenes(['Myl7']))` sets title `Myl7`; after `setFigurePanelTitle(p1, 'Mine')` a recolour keeps `Mine`; `setFigurePanelTitle(p1, '  ')` restores `Myl7` and `titleEdited === false`; `setFigureLayout(1,1)` with active `p4` leaves `activePanelId === null`; the new figure's `slot` is the active slot and `pointSize` equals `displayPreferences.pointSize`.
-- [ ] **Step 2: Run** `npx vitest run src/store.test.ts` — FAIL.
+- [ ] **Step 2: Run** `npx vitest run src/store.test.ts`: FAIL.
 - [ ] **Step 3: Implement**; fix the type errors `npx tsc --noEmit` reports in `FigureBuilder` / `FigurePanel` minimally (Tasks 4-5 finish them).
-- [ ] **Step 4: Run** store tests and `npx tsc --noEmit` — PASS / clean.
+- [ ] **Step 4: Run** store tests and `npx tsc --noEmit`: PASS / clean.
 - [ ] **Step 5: Commit** `feat(panels): figure owns slot, overlay and active panel; routed highlight actions`.
 
 ### Task 3: Route the panes' colour actions
@@ -124,7 +124,7 @@ expect(categoryCentroids([[0,0],[2,0],[10,10],[11,11],[5,5]], [0,0,1,1,2], ['a',
 - [ ] **Step 1:** At the top of each colour action: `const target = panelRouteTarget(useStore.getState()); if (target) { useStore.getState().colorFigurePanel(target, <spec>); return }` (clear actions apply `SPEC_NONE`). `colorByGenes` passes `geneSetName` and `genesDown`.
 - [ ] **Step 2:** Replace highlight-layer reads in GenePanel / CellPanel and the colour pick in `addGeneSetHighlight` with `editableHighlightLayers` (selector form `useStore(editableHighlightLayers)` with shallow-stable result: select the two arrays and pick in a `useMemo`).
 - [ ] **Step 3:** GenePanel's bivariate button passes the two picks' names as labels.
-- [ ] **Step 4: Run** `npx tsc --noEmit` and `npx vitest run` — clean / PASS.
+- [ ] **Step 4: Run** `npx tsc --noEmit` and `npx vitest run`: clean / PASS.
 - [ ] **Step 5: Commit** `feat(panels): Genes and Cells panes colour the active panel while Panels shows`.
 
 ### Task 4: `FigurePanel` rendering
@@ -139,7 +139,7 @@ expect(categoryCentroids([[0,0],[2,0],[10,10],[11,11],[5,5]], [0,0,1,1,2], ['a',
 - [ ] **Step 2:** Overlay from `figure.overlayLayers` when `panel.showHighlightOverlay`; radius `figure.pointSize` (not halved).
 - [ ] **Step 3:** Title: a click on the title (stopPropagation) swaps in an input; Enter / blur → `setFigurePanelTitle`; Escape cancels. Placeholder `Click to name` only on the active panel when the title is empty.
 - [ ] **Step 4:** Labels: when `panel.showLabels` and the data is a category, centroids over the figure's cells, projected with `viewTransform(target, zoom, w, h)` (container size by ResizeObserver), placed by `layoutLabels({ fontPx: panel.labelFontSize, bounds })`, drawn in an SVG with `data-panel-labels` (white bold text, dark stroke halo, leader line when shifted), the Embedding tab's styling.
-- [ ] **Step 5: Run** `npx tsc --noEmit` — clean. **Commit** `feat(panels): panels draw Display-scored colours, the figure overlay, inline titles and labels`.
+- [ ] **Step 5: Run** `npx tsc --noEmit`: clean. **Commit** `feat(panels): panels draw Display-scored colours, the figure overlay, inline titles and labels`.
 
 ### Task 5: `FigureBuilder`, Cells pane, export
 
@@ -153,7 +153,7 @@ expect(categoryCentroids([[0,0],[2,0],[10,10],[11,11],[5,5]], [0,0,1,1,2], ['a',
 - [ ] **Step 5:** Overlay section (figure level): layers with swatch, label, × remove; `Copy from Embedding` when the dataset has layers; hint `Add layers with 🖍 in the Genes pane while Panels is open.` Panel row keeps `Show overlay`.
 - [ ] **Step 6:** Slot notice when `figure.slot !== activeSlot`: `This figure shows <dataset>. Switch back to colour it, or start a new figure here.` + `New figure` button.
 - [ ] **Step 7:** Remove the Cells pane button and handler. Export draws each `[data-panel-labels] text` (and leader lines) at its measured position with the halo. ScatterPlot uses `categoryCentroids`.
-- [ ] **Step 8: Run** `npx tsc --noEmit`, `npx vitest run` — clean / PASS. **Commit** `feat(panels): open straight into a figure; crop, overlay, labels and slot notice in the Panels pane`.
+- [ ] **Step 8: Run** `npx tsc --noEmit`, `npx vitest run`: clean / PASS. **Commit** `feat(panels): open straight into a figure; crop, overlay, labels and slot notice in the Panels pane`.
 
 ### Task 6: Verify, record, merge
 
