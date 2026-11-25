@@ -2387,6 +2387,7 @@ class HeatmapRequest(BaseModel):
     gene_set_per_gene_norm: str = "zscore_mad"     # none | zscore_mad | zscore_sd | minmax | rank
     gene_set_per_gene_clip: float = 1.0            # minmax only: percentile clip before the rescale
     gene_set_aggregation: str = "mean"             # mean | median | sum | max
+    group_columns: bool = False                    # one column per group of a category ordering (mean of its cells)
 
 
 @router.post("/heatmap/data")
@@ -2419,6 +2420,7 @@ def get_heatmap_data(request: HeatmapRequest, dataset: str | None = Query(None))
             gene_set_per_gene_norm=request.gene_set_per_gene_norm,
             gene_set_per_gene_clip=request.gene_set_per_gene_clip,
             gene_set_aggregation=request.gene_set_aggregation,
+            group_columns=request.group_columns,
         )
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))

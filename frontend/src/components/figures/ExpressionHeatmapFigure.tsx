@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef, useCallback, forwardRef } from 'react'
 import { FloatingPanel } from '../PlotLegends'
 import { fitRotatedLabel, rotatedLabelFits } from '../../lib/stackedBars'
+import { heatmapCellWidth } from '../../lib/heatmapGroups'
 import type { ExpressionHeatmapData } from '../../lib/figures'
 
 export const HEATMAP_LEGEND_GRADIENT = ['rgb(68,1,84)', 'rgb(59,82,139)', 'rgb(33,145,140)', 'rgb(94,201,98)', 'rgb(253,231,37)']
@@ -87,8 +88,6 @@ const GROUP_BAR_WIDTH = 8
 const COL_LABEL_HEIGHT = 72
 const LABEL_CHAR_PX = 5.6
 const ROW_HEIGHT = 16
-const MIN_CELL_WIDTH = 1
-const MAX_CELL_WIDTH = 8
 
 export interface ExpressionHeatmapFigureProps {
   data: ExpressionHeatmapData
@@ -139,7 +138,7 @@ export const ExpressionHeatmapFigure = forwardRef<HTMLCanvasElement, ExpressionH
 
   // Canvas sizing
   const availableWidth = containerWidth - groupBarOffset - 20
-  const cellWidth = Math.max(MIN_CELL_WIDTH, Math.min(MAX_CELL_WIDTH, availableWidth / nCols))
+  const cellWidth = heatmapCellWidth(availableWidth, nCols, Boolean(data.group_columns))
   const heatmapWidth = cellWidth * nCols
   const canvasLogicalWidth = groupBarOffset + heatmapWidth
   const canvasLogicalHeight = nRows * ROW_HEIGHT + COL_LABEL_HEIGHT

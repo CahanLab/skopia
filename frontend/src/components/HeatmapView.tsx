@@ -12,7 +12,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useStore, HeatmapConfig } from '../store'
 import { useDataActions, appendDataset, createFigure, fetchDotplotData } from '../hooks/useData'
-import { heatmapFigureFromConfig, dotplotFigureFromConfig, heatmapGroupsFor } from '../lib/figures'
+import { heatmapFigureFromConfig, dotplotFigureFromConfig, heatmapGroupsFor, groupColumnsFor } from '../lib/figures'
 import { heatmapCellScope } from '../lib/heatmapCells'
 import { markerSummary, normalizeHeatmapConfig, rowsFromConfig } from '../lib/markerSelection'
 import { DEFAULT_GENE_SET_SCORING, scoringParams, scoringSummary } from '../lib/geneSetScoring'
@@ -150,6 +150,7 @@ export default function HeatmapView() {
           aggregate_gene_sets: config.aggregateGeneSets,
           // a config saved before the option scores as the Display defaults, as its figure does
           ...scoringParams(config.geneSetScoring ?? DEFAULT_GENE_SET_SCORING),
+          group_columns: groupColumnsFor(config),
           cell_ordering: config.cellOrdering,
           obs_column: config.obsColumn,
           line_name: config.lineName,
@@ -258,7 +259,7 @@ export default function HeatmapView() {
             </>
           ) : data ? (
             <>
-              {data.row_labels.length} {heatmapConfig.aggregateGeneSets ? 'sets' : 'genes'} &times; {data.n_bins} {data.n_bins < data.n_cells ? 'bins' : 'cells'}
+              {data.row_labels.length} {heatmapConfig.aggregateGeneSets ? 'sets' : 'genes'} &times; {data.n_bins} {data.group_columns ? 'groups' : data.n_bins < data.n_cells ? 'bins' : 'cells'}
               {data.n_bins < data.n_cells && ` (${data.n_cells.toLocaleString()} cells)`}
             </>
           ) : null}

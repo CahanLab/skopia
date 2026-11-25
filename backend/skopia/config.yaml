@@ -249,6 +249,7 @@ figures:
     gene_ordering: as_provided
     aggregate_gene_sets: false
     n_bins: 50
+    group_columns: false            # one column per group of a category ordering (mean of its cells); n_bins then does not apply
     marker_top_n: 5                 # when the rows come from a stored marker run: top N per group after the filters
     marker_min_pct_in: null         # fraction of the group's cells expressing (0..1); null = no filter
     marker_max_pct_out: null        # fraction of the other cells expressing; null = no filter

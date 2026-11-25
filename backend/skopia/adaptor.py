@@ -7696,8 +7696,8 @@ class DataAdaptor:
         'enrichment_network': ('value', 'padj_max', 'top_n', 'direction', 'set_edge_jaccard', 'layout', 'seed',
                                'node_size_by', 'edge_width_by', 'label_max_chars', 'colormap'),
         'composition_barplot': ('order', 'share_of', 'normalize', 'min_cells', 'show_values'),
-        'expression_heatmap': ('cell_ordering', 'gene_ordering', 'aggregate_gene_sets', 'n_bins') + _MARKER_PARAM_KEYS
-                              + _GENE_SET_SCORING_KEYS,
+        'expression_heatmap': ('cell_ordering', 'gene_ordering', 'aggregate_gene_sets', 'n_bins', 'group_columns')
+                              + _MARKER_PARAM_KEYS + _GENE_SET_SCORING_KEYS,
         'cnv_heatmap': ('row_mode', 'max_rows', 'group_order', 'vmax', 'colormap'),
         'expression_dotplot': _MARKER_PARAM_KEYS + ('color_by', 'standard_scale', 'expression_cutoff', 'gene_ordering',
                                                     'group_ordering', 'swap_axes', 'colormap', 'vmax', 'dot_max',
@@ -7859,6 +7859,8 @@ class DataAdaptor:
             raise ValueError(f"cell_ordering '{ordering}' needs a drawn line, and this figure has none")
         if ordering in ('category', 'category_then_position', 'category_then_similarity') and not inputs.get('obs_column'):
             raise ValueError(f"cell_ordering '{ordering}' needs an .obs column, and this figure has none")
+        if params.get('group_columns') and ordering not in ('category', 'category_then_position', 'category_then_similarity'):
+            raise ValueError(f"group_columns needs a category cell_ordering, and this figure's is '{ordering}'")
         from skopia.heatmap import _check_gene_set_scoring  # noqa: PLC0415
         _check_gene_set_scoring(params.get('gene_set_scoring_method', 'mean'),
                                 params.get('gene_set_per_gene_norm', 'zscore_mad'),
@@ -8319,6 +8321,7 @@ class DataAdaptor:
                 obs_column=inp.get('obs_column'), line_name=inp.get('line_name'),
                 gene_ordering=str(params.get('gene_ordering', 'as_provided')), n_bins=int(params.get('n_bins', 0)),
                 transform=inp.get('transform'), cell_indices=self._figure_cells(inp), groups=groups,
+                group_columns=bool(params.get('group_columns')),
                 **{k: params[k] for k in self._GENE_SET_SCORING_KEYS if k in params})
             out['figure_id'] = figure_id
             out['kind'] = kind

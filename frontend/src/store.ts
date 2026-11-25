@@ -521,6 +521,9 @@ export interface HeatmapConfig {
   // Heatmap: the labels of obsColumn to show, in order (null/absent = all).
   // Sent only under a category ordering; the dot plot keeps its own in dotplot.groups.
   groups?: string[] | null
+  // Aggregate rows: one column per group (the mean of its cells' set scores)
+  // instead of cells or bins; sent only as `groupColumnsFor` allows.
+  groupColumns?: boolean
   // Restrict the heatmap to these cells (e.g. the subset a gene clustering
   // ran on). null/absent = every cell. cellLabel is shown in the toolbar.
   cellIndices?: number[] | null

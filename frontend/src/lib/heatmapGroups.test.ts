@@ -80,8 +80,10 @@ describe('toggleGroupPick', () => {
   it('a pick keeps the column order whatever order it was clicked in', () => {
     expect(toggleGroupPick(['3'], all, '0')).toEqual(['0', '3'])
   })
-  it('the last group cannot be unticked', () => {
-    expect(toggleGroupPick(['2'], all, '2')).toEqual(['2'])
+  it('unticking the last group leaves an empty pick (None, then tick a few)', () => {
+    expect(toggleGroupPick(['2'], all, '2')).toEqual([])
+    expect(toggleGroupPick([], all, '3')).toEqual(['3'])
+    expect(toggleGroupPick(['3'], all, '1')).toEqual(['1', '3'])
   })
 })
 
@@ -147,5 +149,20 @@ describe('gene-set row order', () => {
     const { restoreSetOrder } = await import('./heatmapGroups')
     expect(restoreSetOrder([{ id: 'a', name: 'A', genes: ['x'] }, { id: 'c', name: 'C', genes: ['z'] }], sets)).toBeNull()
     expect(restoreSetOrder([{ id: 'c', name: 'C', genes: ['z'] }, { id: 'a', name: 'A', genes: ['x'] }], sets)).toEqual(['c', 'a'])
+  })
+})
+
+describe('heatmapCellWidth', () => {
+  it('cells or bins stay at most 8 px and at least 1', async () => {
+    const { heatmapCellWidth } = await import('./heatmapGroups')
+    expect(heatmapCellWidth(800, 50, false)).toBe(8)
+    expect(heatmapCellWidth(800, 400, false)).toBe(2)
+    expect(heatmapCellWidth(800, 5000, false)).toBe(1)
+  })
+  it('one column per group is wide enough for its rotated name', async () => {
+    const { heatmapCellWidth } = await import('./heatmapGroups')
+    expect(heatmapCellWidth(800, 7, true)).toBe(32)
+    expect(heatmapCellWidth(300, 20, true)).toBe(15)
+    expect(heatmapCellWidth(100, 500, true)).toBe(1)
   })
 })

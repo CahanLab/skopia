@@ -90,6 +90,7 @@ export const FIGURE_SCHEMAS: Record<FigureKind, ParamField[]> = {
     { name: 'gene_set_per_gene_clip', label: 'Per-gene clip %', type: 'number', min: 0, max: 5, step: 0.5, help: 'Min-max only: each gene is clipped at this percentile at both ends before the rescale.' },
     { name: 'gene_set_aggregation', label: 'Aggregation across genes', type: 'select', options: AGGREGATION_OPTIONS.map(({ value, label }) => ({ value, label })), help: 'Mean scoring only. Each row is rescaled to 0..1 afterwards, so Sum draws the same as Mean.' },
     { name: 'n_bins', label: 'Bins', type: 'int', min: 0, max: 1000 },
+    { name: 'group_columns', label: 'One column per group', type: 'bool', help: 'The mean of each group\'s cells, one column per group; needs a category cell order. Bins then do not apply.' },
     ...MARKER_FIELDS,
   ],
   expression_dotplot: [

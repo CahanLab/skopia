@@ -61,7 +61,7 @@ describe('tab configs become figure records', () => {
       kind: 'expression_heatmap',
       inputs: { gene_sets: [{ name: 'collagen', genes: ['Col1a1', 'Col1a2'] }], marker_key: null, marker_restrict: null, marker_group_order: null, obs_column: 'leiden', line_name: 'L1', transform: 'log1p', groups: null, cell_subset: null, cell_indices: [3, 4] },
       params: {
-        cell_ordering: 'line_position', gene_ordering: 'peak_position', aggregate_gene_sets: true, n_bins: 20,
+        cell_ordering: 'line_position', gene_ordering: 'peak_position', aggregate_gene_sets: true, n_bins: 20, group_columns: false,
         // no geneSetScoring on the config: the Display defaults
         gene_set_scoring_method: 'mean', gene_set_per_gene_norm: 'zscore_mad', gene_set_per_gene_clip: 1, gene_set_aggregation: 'mean',
       },
@@ -105,5 +105,27 @@ describe('figureInk', () => {
   it('falls back to the dark-panel ink for anything that is not hex', () => {
     expect(figureInk('white').text).toBe('#ccc')
     expect(figureInk(undefined).text).toBe('#ccc')
+  })
+})
+
+describe('one heatmap column per group', () => {
+  const base = {
+    selectedGeneSets: [{ name: 's', genes: ['A', 'B'] }], obsColumn: 'leiden', lineName: null,
+    geneOrdering: 'as_provided', aggregateGeneSets: true, nBins: 50, groupColumns: true,
+  }
+  it('applies to aggregate rows under a category ordering only', async () => {
+    const { groupColumnsFor } = await import('./figures')
+    for (const ordering of ['category', 'category_then_similarity', 'category_then_position']) {
+      expect(groupColumnsFor({ ...base, cellOrdering: ordering })).toBe(true)
+    }
+    expect(groupColumnsFor({ ...base, cellOrdering: 'similarity' })).toBe(false)
+    expect(groupColumnsFor({ ...base, cellOrdering: 'category', obsColumn: null })).toBe(false)
+    expect(groupColumnsFor({ ...base, cellOrdering: 'category', aggregateGeneSets: false })).toBe(false)
+    expect(groupColumnsFor({ ...base, cellOrdering: 'category', groupColumns: undefined })).toBe(false)
+  })
+  it('a figure records it as a param', async () => {
+    const { heatmapFigureFromConfig } = await import('./figures')
+    expect(heatmapFigureFromConfig({ ...base, cellOrdering: 'category' }, null).params.group_columns).toBe(true)
+    expect(heatmapFigureFromConfig({ ...base, cellOrdering: 'similarity' }, null).params.group_columns).toBe(false)
   })
 })
