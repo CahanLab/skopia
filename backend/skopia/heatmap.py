@@ -23,6 +23,8 @@ CELL_ORDERINGS = (
 # embedding by the set (adaptor._aggregate_gene_set_scores / UCell); the
 # option names and defaults are the Display's (config.yaml `display:`).
 GENE_SET_SCORING_METHODS = ("mean", "ucell")
+# Orderings that lay the cells out in contiguous blocks of an .obs column.
+CATEGORY_ORDERINGS = ("category", "category_then_position", "category_then_similarity")
 GENE_SET_PER_GENE_NORMS = ("none", "zscore_mad", "zscore_sd", "minmax", "rank")
 GENE_SET_AGGREGATIONS = ("mean", "median", "sum", "max")
 
@@ -53,6 +55,8 @@ def compute_heatmap_data(
     gene_set_per_gene_norm: str = "zscore_mad",
     gene_set_per_gene_clip: float = 1.0,
     gene_set_aggregation: str = "mean",
+    group_columns: bool = False,
+    scale_rows: bool = True,
 ) -> dict[str, Any]:
     """Compute expression heatmap matrix.
 
@@ -68,6 +72,14 @@ def compute_heatmap_data(
             minmax) and ``gene_set_aggregation`` across genes. Per-gene
             statistics are over every cell, so the row is the embedding's
             score for the plotted cells.
+        group_columns: One column per group of a category ordering: the mean
+            over the group's cells of each row (an aggregate row's per-cell
+            score, or a gene's expression), instead of cells or bins.
+            ``n_bins`` does not apply. Needs a category ordering.
+        scale_rows: Rescale each row to 0..1 (the default). False sends the
+            values themselves (e.g. group means of a set's score) on one
+            scale, with ``value_range`` giving its ends; row ordering is
+            computed on the scaled rows either way.
         cell_ordering: "none", "category", "line_position", "line_distance",
             "category_then_position", "similarity" (average-linkage clustering
             of the cells on the selected genes, in dendrogram leaf order) or
@@ -99,6 +111,11 @@ def compute_heatmap_data(
         raise ValueError(
             f"cell_ordering must be one of {', '.join(CELL_ORDERINGS)}, got {cell_ordering!r}"
         )
+    if group_columns and (cell_ordering not in CATEGORY_ORDERINGS or not obs_column):
+        raise ValueError(
+            "group_columns needs the cells grouped by an .obs column: "
+            f"cell_ordering one of {', '.join(CATEGORY_ORDERINGS)} and an obs_column"
+        )
     if gene_ordering not in ("as_provided", "peak_position", "similarity"):
         raise ValueError(
             f"gene_ordering must be 'as_provided', 'peak_position' or 'similarity', got {gene_ordering!r}"
@@ -119,6 +136,9 @@ def compute_heatmap_data(
             "n_cells": 0,
             "n_genes_hidden": n_genes_hidden,
             "cell_ordering_method": None,
+            "group_columns": bool(group_columns),
+            "scale_rows": bool(scale_rows),
+            "value_range": [0.0, 1.0],
         }
 
     # Data source
@@ -153,7 +173,11 @@ def compute_heatmap_data(
     # The category variant moves cells only within their block, like the
     # gene orderings within gene-set groups.
     cell_ordering_method = None
-    if cell_ordering == "similarity" or (cell_ordering == "category_then_similarity" and col_groups):
+    # Skipped under group_columns: one column per group makes the order
+    # inside a group irrelevant.
+    if not group_columns and (
+        cell_ordering == "similarity" or (cell_ordering == "category_then_similarity" and col_groups)
+    ):
         perm, cell_ordering_method = _similarity_order_cells(expr, col_groups)
         expr = expr[perm]
         ordered_idx = ordered_idx[perm]
@@ -169,9 +193,12 @@ def compute_heatmap_data(
         row_labels = list(valid_genes)
         row_groups = _label_genes_by_set(valid_genes, gene_set_groups)
 
-    # Bin cells
+    # Bin cells, or collapse each group to one column
     effective_bins = n_cells
-    if n_bins > 0 and n_cells > n_bins:
+    if group_columns:
+        expr, col_groups = _group_columns(expr, col_groups)
+        effective_bins = len(col_groups)
+    elif n_bins > 0 and n_cells > n_bins:
         expr, col_groups = _bin_cells(expr, n_bins, col_groups, n_cells)
         effective_bins = n_bins
 
@@ -189,9 +216,15 @@ def compute_heatmap_data(
             "n_cells": n_cells,
             "n_genes_hidden": n_genes_hidden,
             "cell_ordering_method": None,
+            "group_columns": bool(group_columns),
+            "scale_rows": bool(scale_rows),
+            "value_range": [0.0, 1.0],
         }
 
-    # Per-row min-max normalization
+    # Per-row min-max normalization. The raw matrix is kept for
+    # scale_rows=False; orderings below always use the scaled rows, so
+    # switching the display does not reorder the plot.
+    raw = mat
     rmin = np.nanmin(mat, axis=1, keepdims=True)
     rmax = np.nanmax(mat, axis=1, keepdims=True)
     rng = rmax - rmin
@@ -216,9 +249,17 @@ def compute_heatmap_data(
         else:
             order = np.asarray(order_fn(np.arange(mat.shape[0])), dtype=int)
         mat = mat[order]
+        raw = raw[order]
         row_labels = [row_labels[i] for i in order]
         if row_groups:
             row_groups = [row_groups[i] for i in order]
+
+    value_range = [0.0, 1.0]
+    if not scale_rows:
+        mat = raw
+        finite = raw[np.isfinite(raw)]
+        if finite.size:
+            value_range = [round(float(finite.min()), 4), round(float(finite.max()), 4)]
 
     # Serialize
     matrix_out = []
@@ -236,6 +277,9 @@ def compute_heatmap_data(
         "n_cells": n_cells,
         "n_genes_hidden": n_genes_hidden,
         "cell_ordering_method": cell_ordering_method,
+        "group_columns": bool(group_columns),
+        "scale_rows": bool(scale_rows),
+        "value_range": value_range,
     }
 
 
@@ -453,6 +497,15 @@ def _label_genes_by_set(gene_names, gene_set_groups):
 # ---------------------------------------------------------------------------
 # Binning
 # ---------------------------------------------------------------------------
+
+
+def _group_columns(expr, col_groups):
+    """One row per group (the mean over its cells, which the category
+    ordering made contiguous); expr is (cells, rows)."""
+    out = np.zeros((len(col_groups), expr.shape[1]))
+    for i, g in enumerate(col_groups):
+        out[i] = np.nanmean(expr[g["start"]:g["start"] + g["size"]], axis=0)
+    return out, [{"name": g["name"], "start": i, "size": 1} for i, g in enumerate(col_groups)]
 
 
 def _bin_cells(expr, n_bins, col_groups, n_cells):

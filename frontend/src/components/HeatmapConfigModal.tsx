@@ -23,6 +23,7 @@ import {
   scoringFromDisplay, optionHint, SCORING_METHOD_OPTIONS, PER_GENE_NORM_OPTIONS, AGGREGATION_OPTIONS, type GeneSetScoring,
 } from '../lib/geneSetScoring'
 import DragOrderList from './DragOrderList'
+import { groupColumnsFor } from '../lib/figures'
 import { useStore, HeatmapConfig, GeneSetCategoryType, cfgDefault } from '../store'
 import { getAllGeneSets, CATEGORY_ORDER, type FlatGeneSet } from '../lib/flatGeneSets'
 import RestrictionPicker from './RestrictionPicker'
@@ -115,6 +116,10 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
   const [aggregateGeneSets, setAggregateGeneSets] = useState(config?.aggregateGeneSets ?? cfgDefault(['heatmap', 'aggregate_gene_sets'], false))
   // How an aggregate row scores its set: Display's options, starting from what Display is set to.
   const [scoring, setScoring] = useState<GeneSetScoring>(() => config?.geneSetScoring ?? scoringFromDisplay(displayPreferences))
+  // Aggregate rows: one column per cell group instead of cells or bins.
+  const [groupColumns, setGroupColumns] = useState<boolean>(config?.groupColumns ?? false)
+  // Per-group view: false colours the group means themselves on one scale.
+  const [scaleRows, setScaleRows] = useState<boolean>(config?.scaleRows ?? true)
   const [nBins, setNBins] = useState(config?.nBins ?? cfgDefault(['heatmap', 'n_bins'], 300))
   const [keepCellSubset, setKeepCellSubset] = useState(true)
   const [dotplot, setDotplot] = useState<DotplotOptions>({ ...DEFAULT_DOTPLOT_OPTIONS, ...(config?.dotplot ?? {}) })
@@ -159,6 +164,9 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
           {ticked.size < groupValues.length && (
             <button type="button" style={styles.smallButton} onClick={() => setPick(pickInOrder(null, order, groupValues))}>all</button>
           )}
+          {ticked.size > 0 && (
+            <button type="button" style={styles.smallButton} onClick={() => setPick([])} title="Untick every group, to tick a few" {...{ [`data-${attr}-none`]: true }}>none</button>
+          )}
           {!inColumnOrder && (
             <button
               type="button" style={styles.smallButton} title="Back to the column's own order"
@@ -167,6 +175,9 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
             >column order</button>
           )}
         </div>
+        {ticked.size === 0 && (
+          <div style={{ fontSize: '11px', color: '#e9a23b', marginBottom: '4px' }} {...{ [`data-${attr}-empty`]: true }}>Tick at least one group.</div>
+        )}
         <DragOrderList
           attr={attr}
           items={order.map((v) => ({ key: v, label: v, checked: ticked.has(v) }))}
@@ -280,7 +291,12 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
     : []
   const orderedSets = orderSelectedSets(nonEmptySets, selectedIds, setOrder)
   const hasRows = usingMarkers || selectedIds.size > 0
-  const canApply = hasRows && (plotType === 'heatmap' || Boolean(obsColumn))
+  // "none" leaves a pick empty until a group is ticked; nothing to draw then.
+  const emptyGroupPick = plotType === 'dotplot'
+    ? dotplot.groups !== null && dotplot.groups.length === 0
+    : needsCategory && heatmapGroups !== null && heatmapGroups.length === 0
+  const canApply = hasRows && (plotType === 'heatmap' || Boolean(obsColumn)) && !emptyGroupPick
+  const collapsingGroups = groupColumnsFor({ cellOrdering, obsColumn, aggregateGeneSets, groupColumns })
 
   const handleApply = () => {
     if (!canApply) return
@@ -308,6 +324,8 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
       lineName: plotType === 'heatmap' && needsLine ? lineName : null,
       geneOrdering,
       aggregateGeneSets,
+      groupColumns,
+      scaleRows,
       nBins,
       cellIndices: keepCellSubset ? config?.cellIndices ?? null : null,
       cellLabel: keepCellSubset ? config?.cellLabel ?? null : null,
@@ -715,6 +733,33 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
                     </label>
                     <div style={styles.optionHint}>{optionHint(AGGREGATION_OPTIONS, scoring.aggregation)}</div>
                   </>)}
+                  <label
+                    style={{ ...styles.checkboxRow, opacity: needsCategory ? 1 : 0.5 }}
+                    title={needsCategory ? 'Each column is a cell group: the mean of its cells\' set scores' : 'Needs the cells grouped by category (Cell Ordering above)'}
+                  >
+                    <input type="checkbox" checked={groupColumns} disabled={!needsCategory} onChange={(e) => setGroupColumns(e.target.checked)} data-aggregate-group-columns />
+                    <span>One value per cell group (the mean of its cells’ scores)</span>
+                  </label>
+                  {!needsCategory && <div style={styles.optionHint}>Group the cells by category under Cell Ordering to use this.</div>}
+                  {collapsingGroups && (<>
+                    <label style={styles.thresholdRow}>
+                      <span style={{ flex: 1 }}>Colour scale</span>
+                      <select
+                        style={{ ...styles.inlineSelect, marginLeft: 0 }}
+                        value={scaleRows ? 'scaled' : 'raw'}
+                        onChange={(e) => setScaleRows(e.target.value === 'scaled')}
+                        data-aggregate-scale
+                      >
+                        <option value="scaled">Each row 0..1</option>
+                        <option value="raw">Raw group means, one scale</option>
+                      </select>
+                    </label>
+                    <div style={styles.optionHint}>
+                      {scaleRows
+                        ? 'Each set spans the full colour range, which shows where it peaks but not how much it varies.'
+                        : 'The group means themselves, on one scale shared by every row, so sets can be compared and a flat set stays one colour.'}
+                    </div>
+                  </>)}
                   <div style={{ ...styles.hint, marginTop: '6px', lineHeight: 1.4 }}>
                     {scoring.scoringMethod === 'mean'
                       ? 'Scored as Display colours the embedding by a set, with per-gene statistics over every cell. Each row is then rescaled to 0..1, so Sum draws the same as Mean.'
@@ -738,7 +783,7 @@ export default function HeatmapConfigModal({ config, onApply, onCancel }: Props)
                   onChange={(e) => setNBins(Math.max(0, parseInt(e.target.value) || 0))}
                   style={styles.numberInput}
                 />
-                <span style={styles.hint}>0 = no binning (show all cells)</span>
+                <span style={styles.hint}>{collapsingGroups ? 'not used: one column per group' : '0 = no binning (show all cells)'}</span>
               </div>
             </div>
           </>

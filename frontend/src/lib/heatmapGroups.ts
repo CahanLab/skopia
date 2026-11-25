@@ -94,13 +94,14 @@ export function folderSelectionState(
  * pick. `null` means every label in the column's order. The result keeps
  * the display `order` (the column's, unless the user dragged the list), and
  * only every label in the column's own order collapses back to null. The
- * last label cannot be unticked. Shared by the dot plot and the heatmap. */
+ * last label can be unticked (as *none* does), leaving `[]`: the modal
+ * then refuses to apply until one is ticked. Shared by the dot plot and
+ * the heatmap. */
 export function toggleGroupPick(
   pick: readonly string[] | null, all: readonly string[], value: string, order: readonly string[] = all,
 ): string[] | null {
   const current = new Set(pick ?? all)
   if (current.has(value)) {
-    if (current.size === 1) return [...current]
     current.delete(value)
   } else {
     current.add(value)
@@ -140,4 +141,39 @@ export function cleanGroupPick(pick: readonly string[] | null, all: readonly str
   if (!pick || !all.length) return pick ? [...pick] : null
   const kept = pick.filter((g) => all.includes(g))
   return kept.length ? kept : null
+}
+
+/** Width of one heatmap column, in px. A column of cells or bins is a sliver
+ * (at most 8 px). A column per cell group carries a group's name, rotated
+ * 45° under it; 32 px holds a line of that text (`rotatedLabelFits`), where
+ * 8 px left every name undrawn. Both shrink to fit, down to 1 px. */
+export function heatmapCellWidth(availablePx: number, nCols: number, groupColumns: boolean): number {
+  const max = groupColumns ? 32 : 8
+  return Math.max(1, Math.min(max, availablePx / Math.max(1, nCols)))
+}
+
+function rangeEnd(v: number): string {
+  if (Number.isInteger(v)) return String(v)
+  return Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2)
+}
+
+/** How a heatmap's values map onto its colour ramp. Rows scaled 0..1 (the
+ * default, and every record from before `scale_rows`) use the ramp as is;
+ * raw values (the per-group view's option) share one scale, from the data's
+ * `value_range`, so a set that barely varies stays one colour. `t(v)` is the
+ * ramp position, 0..1. */
+export function heatmapScale(data: { scale_rows?: boolean; value_range?: [number, number]; group_columns?: boolean }): {
+  lo: number; hi: number; label: string; rangeText: string; t: (v: number) => number
+} {
+  if (data.scale_rows !== false) {
+    return { lo: 0, hi: 1, label: 'Normalized expression', rangeText: '0 … 1', t: (v) => v }
+  }
+  const [lo, hi] = data.value_range ?? [0, 1]
+  const span = hi - lo
+  return {
+    lo, hi,
+    label: data.group_columns ? 'Group mean' : 'Value',
+    rangeText: `${rangeEnd(lo)} … ${rangeEnd(hi)}`,
+    t: (v) => (span > 0 ? (v - lo) / span : 0),
+  }
 }

@@ -87,6 +87,11 @@ export interface ExpressionHeatmapData {
   n_genes_hidden?: number
   /** How a similarity cell ordering was computed; null for the other orderings. */
   cell_ordering_method?: 'exact' | 'centroids' | null
+  /** One column per cell group (the mean of its cells), not cells or bins. */
+  group_columns?: boolean
+  /** False: values are not rescaled per row; `value_range` gives the scale. */
+  scale_rows?: boolean
+  value_range?: [number, number]
 }
 
 /** Rows (cells binned within a group, or one row per group) × genome windows. */
@@ -152,6 +157,10 @@ export interface HeatmapConfigLike {
   plotType?: 'heatmap' | 'dotplot'
   /** Heatmap only: labels of obsColumn to keep, in order; null = all. */
   groups?: string[] | null
+  /** Heatmap aggregates: one column per group (see `groupColumnsFor`). */
+  groupColumns?: boolean
+  /** Per-group view: false draws the group means on one scale (see `scaleRowsFor`). */
+  scaleRows?: boolean
 }
 
 const CATEGORY_ORDERINGS: ReadonlySet<string> = new Set(['category', 'category_then_similarity', 'category_then_position'])
@@ -162,6 +171,21 @@ const CATEGORY_ORDERINGS: ReadonlySet<string> = new Set(['category', 'category_t
 export function heatmapGroupsFor(cfg: Pick<HeatmapConfigLike, 'cellOrdering' | 'obsColumn' | 'groups'>): string[] | null {
   if (!cfg.obsColumn || !CATEGORY_ORDERINGS.has(cfg.cellOrdering)) return null
   return cfg.groups && cfg.groups.length ? cfg.groups : null
+}
+
+/** One column per group, as sent: asked for under the gene-set aggregates,
+ * and only meaningful while the cells are grouped by obsColumn (the backend
+ * refuses it otherwise), so a choice left from a category ordering is
+ * dropped under another. */
+export function groupColumnsFor(cfg: Pick<HeatmapConfigLike, 'cellOrdering' | 'obsColumn' | 'aggregateGeneSets' | 'groupColumns'>): boolean {
+  return Boolean(cfg.groupColumns && cfg.aggregateGeneSets && cfg.obsColumn && CATEGORY_ORDERINGS.has(cfg.cellOrdering))
+}
+
+/** Rows rescaled 0..1, as sent: raw values are offered only in the
+ * per-group view, so a choice left from it reverts to scaled rows when the
+ * plot goes back to cells or bins. */
+export function scaleRowsFor(cfg: Pick<HeatmapConfigLike, 'cellOrdering' | 'obsColumn' | 'aggregateGeneSets' | 'groupColumns' | 'scaleRows'>): boolean {
+  return !(groupColumnsFor(cfg) && cfg.scaleRows === false)
 }
 
 /** The cells a tab is showing, as figure inputs: a named subset when one is
@@ -196,6 +220,8 @@ export function heatmapFigureFromConfig(cfg: HeatmapConfigLike, cellSubset: stri
     },
     params: {
       cell_ordering: cfg.cellOrdering, gene_ordering: cfg.geneOrdering, aggregate_gene_sets: cfg.aggregateGeneSets, n_bins: cfg.nBins,
+      group_columns: groupColumnsFor(cfg),
+      scale_rows: scaleRowsFor(cfg),
       ...scoringParams(cfg.geneSetScoring ?? DEFAULT_GENE_SET_SCORING),
       ...(src ? markerParams(src) : {}),
     } as Record<string, unknown>,

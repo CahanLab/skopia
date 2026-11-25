@@ -7692,12 +7692,13 @@ class DataAdaptor:
                                'gene_set_per_gene_clip': 0.0, 'gene_set_aggregation': 'mean'}
     _FIGURE_PARAM_KEYS = {
         'enrichment_heatmap': ('value', 'padj_max', 'top_n', 'direction', 'collapse_jaccard', 'row_order',
-                               'col_order', 'colormap', 'vmax', 'show_values', 'label_max_chars', 'cell_size'),
+                               'col_order', 'row_custom_order', 'col_custom_order', 'colormap', 'vmax',
+                               'show_values', 'label_max_chars', 'cell_size'),
         'enrichment_network': ('value', 'padj_max', 'top_n', 'direction', 'set_edge_jaccard', 'layout', 'seed',
                                'node_size_by', 'edge_width_by', 'label_max_chars', 'colormap'),
         'composition_barplot': ('order', 'share_of', 'normalize', 'min_cells', 'show_values'),
-        'expression_heatmap': ('cell_ordering', 'gene_ordering', 'aggregate_gene_sets', 'n_bins') + _MARKER_PARAM_KEYS
-                              + _GENE_SET_SCORING_KEYS,
+        'expression_heatmap': ('cell_ordering', 'gene_ordering', 'aggregate_gene_sets', 'n_bins', 'group_columns', 'scale_rows')
+                              + _MARKER_PARAM_KEYS + _GENE_SET_SCORING_KEYS,
         'cnv_heatmap': ('row_mode', 'max_rows', 'group_order', 'vmax', 'colormap'),
         'expression_dotplot': _MARKER_PARAM_KEYS + ('color_by', 'standard_scale', 'expression_cutoff', 'gene_ordering',
                                                     'group_ordering', 'swap_axes', 'colormap', 'vmax', 'dot_max',
@@ -7851,6 +7852,19 @@ class DataAdaptor:
             return 'similarity'
         return ordering
 
+    @staticmethod
+    def _check_enrichment_order_params(params: dict[str, Any]) -> None:
+        """Row/column orderings of an enrichment heatmap. A dragged order is a
+        list of set names (rows) or column keys; ``None`` when never dragged."""
+        if params.get('row_order') not in ('peak', 'cluster', 'input', 'custom'):
+            raise ValueError("row_order must be 'peak', 'cluster', 'input' or 'custom'")
+        if params.get('col_order') not in ('input', 'cluster', 'custom'):
+            raise ValueError("col_order must be 'input', 'cluster' or 'custom'")
+        for k in ('row_custom_order', 'col_custom_order'):
+            v = params.get(k)
+            if v is not None and not (isinstance(v, list) and all(isinstance(x, str) for x in v)):
+                raise ValueError(f'{k} must be a list of names, or null')
+
     def _check_heatmap_params(self, inputs: dict[str, Any], params: dict[str, Any]) -> None:
         """An ordering that needs a line or column the inputs do not carry is a
         request that cannot mean anything — refuse it rather than fall back."""
@@ -7859,6 +7873,8 @@ class DataAdaptor:
             raise ValueError(f"cell_ordering '{ordering}' needs a drawn line, and this figure has none")
         if ordering in ('category', 'category_then_position', 'category_then_similarity') and not inputs.get('obs_column'):
             raise ValueError(f"cell_ordering '{ordering}' needs an .obs column, and this figure has none")
+        if params.get('group_columns') and ordering not in ('category', 'category_then_position', 'category_then_similarity'):
+            raise ValueError(f"group_columns needs a category cell_ordering, and this figure's is '{ordering}'")
         from skopia.heatmap import _check_gene_set_scoring  # noqa: PLC0415
         _check_gene_set_scoring(params.get('gene_set_scoring_method', 'mean'),
                                 params.get('gene_set_per_gene_norm', 'zscore_mad'),
@@ -8088,6 +8104,8 @@ class DataAdaptor:
             self._check_dotplot_params(merged)
         if kind == 'cnv_heatmap':
             self._check_cnv_params(merged)
+        if kind == 'enrichment_heatmap':
+            self._check_enrichment_order_params(merged)
         now = datetime.now(timezone.utc).isoformat(timespec='seconds')
         store = self._enrichment_store()
         input_ids = {}
@@ -8183,6 +8201,8 @@ class DataAdaptor:
                     self._check_dotplot_params(merged)
                 if record['kind'] == 'cnv_heatmap':
                     self._check_cnv_params(merged)
+                if record['kind'] == 'enrichment_heatmap':
+                    self._check_enrichment_order_params(merged)
                 record['params'].update(delta)
                 changes['params'] = delta
         if len(changes) > 1:
@@ -8274,7 +8294,8 @@ class DataAdaptor:
                 out = ef.assemble_matrix(
                     cols, value=params['value'], padj_max=float(params['padj_max']), top_n=int(params['top_n']),
                     direction=params['direction'], collapse_jaccard=params.get('collapse_jaccard'),
-                    row_order=params['row_order'], col_order=params['col_order'], members=members, labels=labels)
+                    row_order=params['row_order'], col_order=params['col_order'], members=members, labels=labels,
+                    row_custom_order=params.get('row_custom_order'), col_custom_order=params.get('col_custom_order'))
             else:
                 out = ef.assemble_network(
                     cols, value=params['value'], padj_max=float(params['padj_max']), top_n=int(params['top_n']),
@@ -8319,6 +8340,8 @@ class DataAdaptor:
                 obs_column=inp.get('obs_column'), line_name=inp.get('line_name'),
                 gene_ordering=str(params.get('gene_ordering', 'as_provided')), n_bins=int(params.get('n_bins', 0)),
                 transform=inp.get('transform'), cell_indices=self._figure_cells(inp), groups=groups,
+                group_columns=bool(params.get('group_columns')),
+                scale_rows=bool(params.get('scale_rows', True)),
                 **{k: params[k] for k in self._GENE_SET_SCORING_KEYS if k in params})
             out['figure_id'] = figure_id
             out['kind'] = kind

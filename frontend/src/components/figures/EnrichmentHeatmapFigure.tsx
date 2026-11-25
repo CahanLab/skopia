@@ -1,5 +1,6 @@
-import { forwardRef, useMemo } from 'react'
+import { forwardRef, useEffect, useMemo, useRef, useState } from 'react'
 import { divergingColor, truncate, type EnrichmentHeatmapData } from '../../lib/figures'
+import { colKey, dropSlot, moveToSlot, sortRowsByColumn } from '../../lib/enrichmentOrder'
 
 /** Gene sets × groups heatmap (PySingleCellNet convention): a diverging
  *  colour centred on 0, rows the union of each column's top sets. Pure SVG so
@@ -11,14 +12,27 @@ export interface EnrichmentHeatmapFigureProps {
   title?: string
   width?: number
   background?: string
+  /** Hand ordering (the Figures tab): drag a row or column label to move it,
+   *  click a column label to sort the rows by that column. Receives the new
+   *  row names or column keys in full. Without it the labels are inert. */
+  onReorder?: (axis: 'rows' | 'cols', order: string[]) => void
 }
+
+interface LabelDrag { axis: 'rows' | 'cols'; from: number; slot: number; x0: number; y0: number; moved: boolean; rect: DOMRect }
+
+const ACCENT = '#4ecdc4'
 
 const FONT = 'Inter, system-ui, sans-serif'
 
 export const EnrichmentHeatmapFigure = forwardRef<SVGSVGElement, EnrichmentHeatmapFigureProps>(function EnrichmentHeatmapFigure(
-  { data, params, title, width, background = '#16213e' },
+  { data, params, title, width, background = '#16213e', onReorder },
   ref,
 ) {
+  // The drag lives in a ref for the window listeners and in state to draw it.
+  const dragRef = useRef<LabelDrag | null>(null)
+  const [drag, setDragState] = useState<LabelDrag | null>(null)
+  const setDrag = (d: LabelDrag | null) => { dragRef.current = d; setDragState(d) }
+  const geometry = useRef({ top: 0, left: 0, cell: 14 })
   const cell = Math.max(6, Number(params.cell_size ?? 14))
   const labelMax = Math.max(8, Number(params.label_max_chars ?? 40))
   const colormap = String(params.colormap ?? 'rdbu')
@@ -46,6 +60,46 @@ export const EnrichmentHeatmapFigure = forwardRef<SVGSVGElement, EnrichmentHeatm
   // wide enough for the grid, the container and the title (7 px per glyph at 13 px)
   const svgW = Math.max(width ?? 0, left + gridW + 24, title ? 24 + title.length * 7 : 0)
   const svgH = top + gridH + legendH + 16
+  geometry.current = { top, left, cell }
+
+  const dragging = drag !== null
+  useEffect(() => {
+    if (!dragging) return
+    const move = (e: PointerEvent) => {
+      const d = dragRef.current
+      if (!d) return
+      const { top: t, left: l, cell: c } = geometry.current
+      const slot = d.axis === 'rows'
+        ? dropSlot(e.clientY - d.rect.top, t, c, data.rows.length)
+        : dropSlot(e.clientX - d.rect.left, l, c, data.cols.length)
+      setDrag({ ...d, slot, moved: d.moved || Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 4 })
+    }
+    const up = () => {
+      const d = dragRef.current
+      setDrag(null)
+      if (!d || !onReorder) return
+      if (!d.moved) {
+        // A click: a column label sorts the rows by its column.
+        if (d.axis === 'cols') onReorder('rows', sortRowsByColumn(data, d.from))
+        return
+      }
+      if (d.slot === d.from || d.slot === d.from + 1) return
+      const keys = d.axis === 'rows' ? data.rows.map((r) => r.name) : data.cols.map(colKey)
+      onReorder(d.axis, moveToSlot(keys, d.from, d.slot))
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up) }
+  }, [dragging, data, onReorder])
+
+  const startDrag = (axis: 'rows' | 'cols', from: number) => (e: React.PointerEvent<SVGTextElement>) => {
+    if (!onReorder || e.button !== 0) return
+    const svg = e.currentTarget.ownerSVGElement
+    if (!svg) return
+    e.preventDefault()
+    setDrag({ axis, from, slot: from, x0: e.clientX, y0: e.clientY, moved: false, rect: svg.getBoundingClientRect() })
+  }
+  const labelFill = (axis: 'rows' | 'cols', i: number) => (drag && drag.axis === axis && drag.from === i ? ACCENT : '#ccc')
 
   if (data.rows.length === 0) {
     return (
@@ -67,16 +121,25 @@ export const EnrichmentHeatmapFigure = forwardRef<SVGSVGElement, EnrichmentHeatm
       {/* column labels, rotated */}
       {colLabels.map((label, j) => (
         <text
-          key={j} fill="#ccc" fontSize={fontSize}
+          key={j} fill={labelFill('cols', j)} fontSize={fontSize}
           transform={`translate(${left + j * cell + cell / 2 + fontSize * 0.35}, ${top - 6}) rotate(-45)`}
           textAnchor="start"
+          onPointerDown={startDrag('cols', j)}
+          style={onReorder ? { cursor: 'grab', userSelect: 'none' } : undefined}
+          data-enrich-col={colKey(data.cols[j])}
         >
+          {onReorder && <title>Drag to move this column; click to sort the rows by it</title>}
           {label}
         </text>
       ))}
       {/* row labels */}
       {rowLabels.map((label, i) => (
-        <text key={i} x={left - 6} y={top + i * cell + cell / 2 + fontSize * 0.35} fill="#ccc" fontSize={fontSize} textAnchor="end">
+        <text
+          key={i} x={left - 6} y={top + i * cell + cell / 2 + fontSize * 0.35} fill={labelFill('rows', i)} fontSize={fontSize} textAnchor="end"
+          onPointerDown={startDrag('rows', i)}
+          style={onReorder ? { cursor: 'grab', userSelect: 'none' } : undefined}
+          data-enrich-row={data.rows[i].name}
+        >
           <title>{[data.rows[i].name, data.rows[i].library, ...(data.rows[i].members.length ? ['also: ' + data.rows[i].members.join(', ')] : [])].filter(Boolean).join(' · ')}</title>
           {label}
         </text>
@@ -94,6 +157,10 @@ export const EnrichmentHeatmapFigure = forwardRef<SVGSVGElement, EnrichmentHeatm
           )}
         </g>
       )))}
+      {/* where a dragged label will land; drawn only mid-drag, so exports never carry it */}
+      {drag?.moved && (drag.axis === 'rows'
+        ? <line x1={Math.max(0, left - rowLabelW)} x2={left + gridW} y1={top + drag.slot * cell} y2={top + drag.slot * cell} stroke={ACCENT} strokeWidth={2} />
+        : <line x1={left + drag.slot * cell} x2={left + drag.slot * cell} y1={Math.max(0, top - colLabelH)} y2={top + gridH} stroke={ACCENT} strokeWidth={2} />)}
       {/* legend */}
       <defs>
         <linearGradient id="enrich-heatmap-legend" x1="0" x2="1" y1="0" y2="0">

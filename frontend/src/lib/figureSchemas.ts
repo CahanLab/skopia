@@ -10,7 +10,9 @@ export interface ParamOption { value: string; label: string }
 export interface ParamField {
   name: string
   label: string
-  type: 'number' | 'int' | 'select' | 'bool' | 'nullable-number' | 'color'
+  /** 'order': a dragged order (a list of names) set by interacting with the
+   *  plot, not typed; the form shows a line with a clear button. */
+  type: 'number' | 'int' | 'select' | 'bool' | 'nullable-number' | 'color' | 'order'
   min?: number
   max?: number
   step?: number
@@ -20,6 +22,8 @@ export interface ParamField {
   help?: string
   /** Shown only when the figure's inputs carry this key (the marker fields need a marker run). */
   whenInput?: 'marker_key'
+  /** 'order' fields: the ordering param that 'clear' sets back, and to what. */
+  resets?: { name: string; value: string }
 }
 
 /** Top N and the filters on a stored marker run — the same for both expression kinds. */
@@ -56,8 +60,10 @@ export const FIGURE_SCHEMAS: Record<FigureKind, ParamField[]> = {
   enrichment_heatmap: [
     ...SHARED_ENRICHMENT,
     { name: 'collapse_jaccard', label: 'Collapse rows (Jaccard ≥)', type: 'nullable-number', min: 0, max: 1, step: 0.05, help: 'Merge sets whose member genes overlap at least this much; blank = off.' },
-    { name: 'row_order', label: 'Row order', type: 'select', options: [{ value: 'peak', label: 'by peak column' }, { value: 'cluster', label: 'hierarchical' }, { value: 'input', label: 'as selected' }] },
-    { name: 'col_order', label: 'Column order', type: 'select', options: [{ value: 'input', label: 'as given' }, { value: 'cluster', label: 'hierarchical' }] },
+    { name: 'row_order', label: 'Row order', type: 'select', options: [{ value: 'peak', label: 'by peak column' }, { value: 'cluster', label: 'hierarchical' }, { value: 'input', label: 'as selected' }, { value: 'custom', label: 'custom (dragged)' }], help: 'Drag a row label in the plot to move it; click a column label to sort the rows by that column.' },
+    { name: 'row_custom_order', label: 'Rows', type: 'order', resets: { name: 'row_order', value: 'peak' } },
+    { name: 'col_order', label: 'Column order', type: 'select', options: [{ value: 'input', label: 'as given' }, { value: 'cluster', label: 'hierarchical' }, { value: 'custom', label: 'custom (dragged)' }], help: 'Drag a column label in the plot to move it.' },
+    { name: 'col_custom_order', label: 'Columns', type: 'order', resets: { name: 'col_order', value: 'input' } },
     { name: 'colormap', label: 'Colours', type: 'select', options: COLORMAP_OPTIONS },
     { name: 'vmax', label: 'Colour limit (±)', type: 'nullable-number', min: 0, step: 0.5, help: 'Blank = the data maximum.' },
     { name: 'show_values', label: 'Show values', type: 'bool' },
@@ -90,6 +96,8 @@ export const FIGURE_SCHEMAS: Record<FigureKind, ParamField[]> = {
     { name: 'gene_set_per_gene_clip', label: 'Per-gene clip %', type: 'number', min: 0, max: 5, step: 0.5, help: 'Min-max only: each gene is clipped at this percentile at both ends before the rescale.' },
     { name: 'gene_set_aggregation', label: 'Aggregation across genes', type: 'select', options: AGGREGATION_OPTIONS.map(({ value, label }) => ({ value, label })), help: 'Mean scoring only. Each row is rescaled to 0..1 afterwards, so Sum draws the same as Mean.' },
     { name: 'n_bins', label: 'Bins', type: 'int', min: 0, max: 1000 },
+    { name: 'group_columns', label: 'One column per group', type: 'bool', help: 'The mean of each group\'s cells, one column per group; needs a category cell order. Bins then do not apply.' },
+    { name: 'scale_rows', label: 'Scale each row 0..1', type: 'bool', help: 'Off: the values themselves (group means) on one colour scale, so rows can be compared.' },
     ...MARKER_FIELDS,
   ],
   expression_dotplot: [
@@ -123,6 +131,7 @@ export function coerceParams(kind: FigureKind, raw: Record<string, unknown>): Re
     const f = fields.get(name)
     if (!f) { out[name] = value; continue }
     if (f.type === 'bool') { out[name] = Boolean(value); continue }
+    if (f.type === 'order') { out[name] = Array.isArray(value) && value.length ? value.map(String) : null; continue }
     if (f.type === 'select' || f.type === 'color') { out[name] = value == null ? null : String(value); continue }
     if (f.type === 'nullable-number') {
       const s = value == null ? '' : String(value).trim()

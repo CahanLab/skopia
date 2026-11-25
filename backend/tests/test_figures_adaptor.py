@@ -538,3 +538,20 @@ def test_dotplot_figure_takes_groups_as_an_input_and_group_ordering_as_a_param()
     a.rename_obs_label('grp', 'c', 'chondro')
     with pytest.raises(FigureInputMissing):
         a.figure_data(f['id'])
+
+
+def test_enrichment_heatmap_custom_order_params():
+    a, col = _with_batch()
+    f = a.create_figure('enrichment_heatmap', inputs={'enrichment_keys': [col['key']]},
+                        params={'padj_max': 1.0, 'top_n': 3, 'collapse_jaccard': None})
+    keys = [c['key'] for c in a.figure_data(f['id'])['cols']]
+    a.update_figure(f['id'], params={'col_order': 'custom', 'col_custom_order': [keys[2], keys[0]]})
+    assert [c['key'] for c in a.figure_data(f['id'])['cols']] == [keys[2], keys[0], keys[1]]
+    rows = [r['name'] for r in a.figure_data(f['id'])['rows']]
+    a.update_figure(f['id'], params={'row_order': 'custom', 'row_custom_order': rows[::-1]})
+    assert [r['name'] for r in a.figure_data(f['id'])['rows']] == rows[::-1]
+    for bad in ({'row_custom_order': 'S1'}, {'col_custom_order': [1, 2]}, {'row_order': 'sideways'}):
+        with pytest.raises(ValueError):
+            a.update_figure(f['id'], params=bad)
+    defaults = a._figure_defaults('enrichment_heatmap')
+    assert defaults['row_custom_order'] is None and defaults['col_custom_order'] is None

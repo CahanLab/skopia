@@ -80,8 +80,10 @@ describe('toggleGroupPick', () => {
   it('a pick keeps the column order whatever order it was clicked in', () => {
     expect(toggleGroupPick(['3'], all, '0')).toEqual(['0', '3'])
   })
-  it('the last group cannot be unticked', () => {
-    expect(toggleGroupPick(['2'], all, '2')).toEqual(['2'])
+  it('unticking the last group leaves an empty pick (None, then tick a few)', () => {
+    expect(toggleGroupPick(['2'], all, '2')).toEqual([])
+    expect(toggleGroupPick([], all, '3')).toEqual(['3'])
+    expect(toggleGroupPick(['3'], all, '1')).toEqual(['1', '3'])
   })
 })
 
@@ -147,5 +149,40 @@ describe('gene-set row order', () => {
     const { restoreSetOrder } = await import('./heatmapGroups')
     expect(restoreSetOrder([{ id: 'a', name: 'A', genes: ['x'] }, { id: 'c', name: 'C', genes: ['z'] }], sets)).toBeNull()
     expect(restoreSetOrder([{ id: 'c', name: 'C', genes: ['z'] }, { id: 'a', name: 'A', genes: ['x'] }], sets)).toEqual(['c', 'a'])
+  })
+})
+
+describe('heatmapCellWidth', () => {
+  it('cells or bins stay at most 8 px and at least 1', async () => {
+    const { heatmapCellWidth } = await import('./heatmapGroups')
+    expect(heatmapCellWidth(800, 50, false)).toBe(8)
+    expect(heatmapCellWidth(800, 400, false)).toBe(2)
+    expect(heatmapCellWidth(800, 5000, false)).toBe(1)
+  })
+  it('one column per group is wide enough for its rotated name', async () => {
+    const { heatmapCellWidth } = await import('./heatmapGroups')
+    expect(heatmapCellWidth(800, 7, true)).toBe(32)
+    expect(heatmapCellWidth(300, 20, true)).toBe(15)
+    expect(heatmapCellWidth(100, 500, true)).toBe(1)
+  })
+})
+
+describe('heatmapScale', () => {
+  it('scaled rows are 0..1 under the usual label', async () => {
+    const { heatmapScale } = await import('./heatmapGroups')
+    const s = heatmapScale({ scale_rows: true, value_range: [0, 1], group_columns: true })
+    expect([s.lo, s.hi, s.label, s.rangeText]).toEqual([0, 1, 'Normalized expression', '0 … 1'])
+    expect(s.t(0.25)).toBe(0.25)
+    // A record from before the field is a scaled one.
+    expect(heatmapScale({}).label).toBe('Normalized expression')
+  })
+  it('raw values map their own range onto the colours', async () => {
+    const { heatmapScale } = await import('./heatmapGroups')
+    const s = heatmapScale({ scale_rows: false, value_range: [-0.5, 1.5], group_columns: true })
+    expect([s.lo, s.hi, s.label, s.rangeText]).toEqual([-0.5, 1.5, 'Group mean', '-0.50 … 1.50'])
+    expect(s.t(0.5)).toBe(0.5)
+    expect(s.t(-0.5)).toBe(0)
+    expect(heatmapScale({ scale_rows: false, value_range: [2, 2] }).t(2)).toBe(0)
+    expect(heatmapScale({ scale_rows: false, value_range: [0, 1234] }).rangeText).toBe('0 … 1234')
   })
 })

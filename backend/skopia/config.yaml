@@ -219,8 +219,10 @@ figures:
     top_n: 5                        # per column, positive and negative separately; rows are the union
     direction: both                 # both|up|down
     collapse_jaccard: 0.5           # merge rows whose member genes overlap at least this much; blank = off
-    row_order: peak                 # peak|cluster|input
-    col_order: input                # input|cluster
+    row_order: peak                 # peak|cluster|input|custom
+    col_order: input                # input|cluster|custom
+    row_custom_order: null          # row_order custom: set names in dragged order (the rest follow by peak)
+    col_custom_order: null          # col_order custom: column keys in dragged order
     colormap: rdbu                  # rdbu|prgn|roma
     vmax: null                      # symmetric colour limit; null = data max
     show_values: false
@@ -249,6 +251,8 @@ figures:
     gene_ordering: as_provided
     aggregate_gene_sets: false
     n_bins: 50
+    group_columns: false            # one column per group of a category ordering (mean of its cells); n_bins then does not apply
+    scale_rows: true                # false: the values themselves on one colour scale instead of each row 0..1
     marker_top_n: 5                 # when the rows come from a stored marker run: top N per group after the filters
     marker_min_pct_in: null         # fraction of the group's cells expressing (0..1); null = no filter
     marker_max_pct_out: null        # fraction of the other cells expressing; null = no filter
