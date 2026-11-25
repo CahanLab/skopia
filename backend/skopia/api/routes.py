@@ -2487,9 +2487,17 @@ def _plot_rows(adaptor, genes: list[str], gene_set_groups: list[HeatmapGeneSetGr
 # =========================================================================
 
 
+class GeneTypeSelection(BaseModel):
+    """Ticked GENCODE classes and named sets (skopia/gene_types.py)."""
+    classes: list[str] = []
+    sets: list[str] = []
+    species: str | None = None
+
+
 class ExcludeGenesRequest(BaseModel):
     gene_names: list[str] | None = None
     patterns: list[str] | None = None
+    types: GeneTypeSelection | None = None
 
 
 class FilterGenesRequest(BaseModel):
@@ -2996,9 +3004,34 @@ def delete_cell_subset(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+class GeneTypeSummaryRequest(BaseModel):
+    species: str | None = None
+    gene_names: list[str] | None = None
+    patterns: list[str] | None = None
+    types: GeneTypeSelection | None = None
+
+
+@router.post("/scanpy/exclude_genes/types")
+def gene_type_summary(request: GeneTypeSummaryRequest, dataset: str | None = Query(None)):
+    """Gene classes and named sets this dataset offers, and what a choice removes.
+
+    A read: POST only because the selection is a body.
+    """
+    adaptor = get_adaptor(dataset)
+    try:
+        return adaptor.gene_type_summary(
+            species=request.species,
+            gene_names=request.gene_names,
+            patterns=request.patterns,
+            types=request.types.model_dump() if request.types else None,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/scanpy/exclude_genes")
 def run_exclude_genes(request: ExcludeGenesRequest, dataset: str | None = Query(None)):
-    """Remove genes by exact name or regex pattern.
+    """Remove genes by exact name, regex pattern or gene type.
 
     Returns:
         Before/after gene counts and list of removed genes
@@ -3008,6 +3041,33 @@ def run_exclude_genes(request: ExcludeGenesRequest, dataset: str | None = Query(
         return adaptor.run_exclude_genes(
             gene_names=request.gene_names,
             patterns=request.patterns,
+            types=request.types.model_dump() if request.types else None,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class AnnotateGeneTypesRequest(BaseModel):
+    types: GeneTypeSelection | None = None
+    column: str = 'analysis_genes'
+    gene_names: list[str] | None = None
+    patterns: list[str] | None = None
+    species: str | None = None
+    overwrite: bool = False
+
+
+@router.post("/scanpy/annotate_gene_types")
+def annotate_gene_types(request: AnnotateGeneTypesRequest, dataset: str | None = Query(None)):
+    """Mark, without removing, the genes Exclude Genes would keep, as a boolean .var column."""
+    adaptor = get_adaptor(dataset)
+    try:
+        return adaptor.annotate_gene_types(
+            request.types.model_dump() if request.types else None,
+            request.column,
+            gene_names=request.gene_names,
+            patterns=request.patterns,
+            species=request.species,
+            overwrite=request.overwrite,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

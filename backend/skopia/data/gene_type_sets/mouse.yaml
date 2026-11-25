@@ -1,0 +1,99 @@
+# Copied unchanged below this header on 2026-11-25 from the SJD pipeline (cryten):
+#   CahanLab Dropbox/Patrick Cahan/PC/PC/projects/SJD/analysis/claude_pipeline/resources/genesets/mouse.yaml
+# skopia/gene_types.py reads `sets` and `gene_class` for Exclude Genes by type.
+# Patterns are matched with re.search against the gene symbol, as cryten does.
+
+# Gene sets used to annotate a mouse transcriptome (read by `annotate_genes.sh`).
+#
+# Each entry becomes one True/False column of the annotation table and, after
+# the QC module, of `adata.var`. Edit this file and rerun `annotate_genes.sh`
+# to change a set; the QC module reads the saved table, not this file.
+#
+# A set can be defined by any combination of
+#   pattern: a regular expression matched against the gene symbol
+#   genes:   an explicit list of symbols (symbols absent from the genome are ignored)
+#   chrom:   a list of chromosome names
+#   biotype: a list of Ensembl biotypes
+# A gene is in the set if it meets any of the conditions given.
+
+species: mouse
+
+sets:
+  mt:
+    description: Genes on the mitochondrial genome.
+    chrom: [MT, chrM, M]
+    pattern: '^mt-'
+  ribo:
+    description: >-
+      Cytoplasmic ribosomal protein genes, their paralogs and pseudogenes. The S6 kinases (Rps6ka1 and so on) and
+      Rps19bp1 are not matched.
+    pattern: '^Rp[sl]\d+(?!\d|k|bp)|^Rplp\d|^Rpsa$'
+  mito_ribo:
+    description: Mitochondrial ribosomal protein genes (nuclear encoded). Annotated, not excluded by default.
+    pattern: '^Mrp[sl]\d'
+  rrna:
+    description: >-
+      rRNA genes and loci that overlap rRNA repeats. The listed symbols are a
+      documented source of technical clusters.
+    biotype: [rRNA, Mt_rRNA, rRNA_pseudogene]
+    genes: [Gm42418, AY036118, Gm26917, Rn45s, Rn18s, Rn28s1, CT010467.1, Lars2]
+  45S_ribo:
+    description: >-
+      Loci that collect reads of the 45S rRNA (named `damaged` in cryten 0.11.0). Gm42418 and AY036118 lie on the rDNA fragment of
+      chr17 in GRCm38 (Kimmel et al. 2020, doi:10.1242/dev.183855; Isola et al. 2024, doi:10.1038/s43587-023-00552-5).
+      The other six carry exact blocks of 82 to 214 nt of the 45S region of the mouse rDNA unit (GenBank BK000964) on
+      their own strand (12 control genes of similar length: none over 69 nt), follow Gm42418 across five limb PIP-seq
+      libraries (r 0.96 to 0.99) and rise with it in the damaged cells of E13.5 cluster 0.3 (cryten 0.11.0, 2026-11-20).
+      Scored per cell in QC (pct_45S_ribo, qc_45S_ribo); left out of the features by default (0.12.0).
+    genes: [Gm42418, AY036118, Lars2, Cmss1, Gphn, Camk1d, Cdk8, Gm19951]
+  hb:
+    description: Hemoglobin genes. Also used as an independent check of the ambient RNA fraction.
+    pattern: '^Hb[ab]-'
+  histone:
+    description: Histone genes (replication-dependent clusters and variants).
+    pattern: '^Hist\d|^H[1-4][a-z0-9]*-|^H2a[cfxzj]|^H2b[c]|^H1f|^H3c|^H4c'
+  x_linked:
+    description: Genes on the X chromosome. Annotated, not excluded by default.
+    chrom: [X, chrX]
+  y_linked:
+    description: Genes on the Y chromosome.
+    chrom: [Y, chrY]
+  sex:
+    description: Genes whose expression follows embryo sex (Xist, Tsix and the expressed Y genes).
+    chrom: [Y, chrY]
+    genes: [Xist, Tsix, Ddx3y, Eif2s3y, Uty, Kdm5d]
+  cell_cycle_s:
+    description: S phase genes (Tirosh et al. 2016, mouse symbols; old and new symbols both listed).
+    genes: [Mcm5, Pcna, Tyms, Fen1, Mcm2, Mcm4, Rrm1, Ung, Gins2, Mcm6, Cdca7, Dtl, Prim1,
+            Uhrf1, Mlf1ip, Cenpu, Hells, Rfc2, Rpa2, Nasp, Rad51ap1, Gmnn, Wdr76, Slbp, Ccne2, Ubr7,
+            Pold3, Msh2, Atad2, Rad51, Rrm2, Cdc45, Cdc6, Exo1, Tipin, Dscc1, Blm, Casp8ap2, Usp1,
+            Clspn, Pola1, Chaf1b, Brip1, E2f8]
+  cell_cycle_g2m:
+    description: G2/M phase genes (Tirosh et al. 2016, mouse symbols).
+    genes: [Hmgb2, Cdk1, Nusap1, Ube2c, Birc5, Tpx2, Top2a, Ndc80, Cks2, Nuf2, Cks1b,
+            Mki67, Tmpo, Cenpf, Tacc3, Fam64a, Pimreg, Smc4, Ccnb2, Ckap2l, Ckap2, Aurkb, Bub1, Kif11,
+            Anp32e, Tubb4b, Gtse1, Kif20b, Hjurp, Cdca3, Hn1, Jpt1, Cdc20, Ttk, Cdc25c, Kif2c, Rangap1,
+            Ncapd2, Dlgap5, Cdca2, Cdca8, Ect2, Kif23, Hmmr, Aurka, Psrc1, Anln, Lbr, Ckap5, Cenpe,
+            Ctcf, Nek2, G2e3, Gas2l3, Cbx5, Cenpa]
+  stress:
+    description: Immediate-early and dissociation-stress genes (van den Brink et al. 2017 core).
+    genes: [Fos, Fosb, Jun, Junb, Jund, Egr1, Egr2, Egr3, Ier2, Ier3, Ier5, Atf3,
+            Dusp1, Hspa1a, Hspa1b, Hspa8, Hsp90aa1, Hspb1, Hspe1, Hspd1, Dnajb1, Dnaja1, Klf2, Klf4,
+            Klf6, Nr4a1, Socs3, Zfp36, Btg2, Ccn1, Cyr61, Ubc]
+  predicted:
+    description: Unnamed gene models (Gm and Rik symbols, clone-based names). Annotated, not excluded by default.
+    pattern: '^Gm\d+$|Rik\d*$|^[A-Z]{1,2}\d{5,6}(\.\d+)?$'
+
+# Ensembl biotypes grouped into the coarse `gene_class` column. A biotype that
+# is not listed here becomes `other`.
+gene_class:
+  protein_coding: [protein_coding]
+  lncRNA: [lncRNA, lincRNA, antisense, sense_intronic, sense_overlapping, processed_transcript,
+           bidirectional_promoter_lncRNA, 3prime_overlapping_ncRNA, macro_lncRNA, non_coding, TEC]
+  pseudogene: [pseudogene, processed_pseudogene, unprocessed_pseudogene, transcribed_processed_pseudogene,
+               transcribed_unprocessed_pseudogene, transcribed_unitary_pseudogene, unitary_pseudogene,
+               polymorphic_pseudogene, translated_unprocessed_pseudogene, translated_processed_pseudogene,
+               TR_V_pseudogene, TR_J_pseudogene, IG_V_pseudogene, IG_C_pseudogene, IG_D_pseudogene,
+               IG_J_pseudogene, IG_pseudogene, rRNA_pseudogene]
+  ig_tr: [IG_C_gene, IG_D_gene, IG_J_gene, IG_LV_gene, IG_V_gene, TR_C_gene, TR_D_gene, TR_J_gene, TR_V_gene]
+  small_rna: [miRNA, snRNA, snoRNA, scaRNA, misc_RNA, rRNA, Mt_rRNA, Mt_tRNA, ribozyme, sRNA, scRNA, vault_RNA]

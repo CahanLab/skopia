@@ -12,6 +12,8 @@ import { HvgPreviewPanel } from './HvgPreviewPanel'
 import { hvgPreviewBody, type HvgPreview } from '../lib/hvgPreview'
 import { percentOfCells } from '../lib/percentOfCells'
 import { DEFAULT_EXCLUDE_GENE_PATTERNS, excludeGenePatternsFor } from '../lib/excludeGenes'
+import { EMPTY_SELECTION, excludeGenesBody, type GeneTypeSelection } from '../lib/geneTypes'
+import { GeneTypeExclusion } from './GeneTypeExclusion'
 import { MESSAGES } from '../messages'
 import { flattenGeneSets } from './GenePanel'
 import { parseGeneInput, computeLoadingHits, orderPcs, isHit, formatHitCount, geneSetInputText, type PcOrder } from '../lib/pcaLoadingHits'
@@ -214,7 +216,7 @@ const SCANPY_FUNCTIONS: Record<string, CategoryDef> = {
       },
       exclude_genes: {
         label: 'Exclude Genes',
-        description: 'Remove genes by name or regex pattern (e.g. ^mt- for mitochondrial, ^Gm\\d+ for predicted). The patterns are preset for the species the gene names suggest: mouse ^mt-, ^Gm\\d+, ^Rps, ^Rpl; human ^MT-, ^ENS, ^RPS, ^RPL, ^LINC.',
+        description: 'Remove genes by name, regex pattern or gene type (GENCODE class and named sets such as mt, ribo, predicted). The patterns are preset for the species the gene names suggest: mouse ^mt-, ^Gm\\d+, ^Rps, ^Rpl; human ^MT-, ^ENS, ^RPS, ^RPL, ^LINC. Run removes the union of all three; Mark writes the genes Run would keep to a boolean .var column instead.',
         prerequisites: [],
         params: [
           { name: 'gene_names', label: 'Gene names', type: 'textarea', default: null, description: 'One gene name per line (exact match)' },
@@ -904,6 +906,8 @@ export default function ScanpyModal() {
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('preprocessing')
   const [selectedFunction, setSelectedFunction] = useState<FunctionKey>('filter_genes')
   const [paramValues, setParamValues] = useState<ParamValues>({})
+  // Exclude Genes by type. Lives here, not in the panel, so Run can read it.
+  const [geneTypeSelection, setGeneTypeSelection] = useState<GeneTypeSelection>(EMPTY_SELECTION)
   const [isRunning, setIsRunning] = useState(false)
   // What the progress strip shows while a run is in flight; reset in the
   // run's finally, since this modal never unmounts.
@@ -1053,6 +1057,13 @@ export default function ScanpyModal() {
       setVarianceData(null)
     }
   }, [selectedFunction, functionDef, userConfig])
+
+  // Nothing ticked when Exclude Genes opens, so the pattern preset and a type
+  // choice never combine by surprise. The modal never unmounts, so this resets
+  // on open as well as on a change of function or dataset.
+  useEffect(() => {
+    setGeneTypeSelection(EMPTY_SELECTION)
+  }, [selectedFunction, activeSlot, isScanpyModalOpen])
 
   // Fetch cell PCA variance when Neighbors is selected
   useEffect(() => {
@@ -1616,17 +1627,18 @@ export default function ScanpyModal() {
         }
       }
 
-      // Handle exclude_genes: parse textarea into arrays
+      // Handle exclude_genes: names, patterns and the ticked gene types
       if (selectedFunction === 'exclude_genes') {
-        const namesStr = String(requestParams['gene_names'] || '').trim()
-        const patternsStr = String(requestParams['patterns'] || '').trim()
-        requestParams['gene_names'] = namesStr ? namesStr.split(/\n+/).map((s: string) => s.trim()).filter(Boolean) : null
-        requestParams['patterns'] = patternsStr ? patternsStr.split(',').map((s: string) => s.trim()).filter(Boolean) : null
-        if (!requestParams['gene_names'] && !requestParams['patterns']) {
-          setResult({ success: false, message: 'Provide at least one gene name or regex pattern.' })
+        const body = excludeGenesBody(
+          String(requestParams['gene_names'] ?? ''), String(requestParams['patterns'] ?? ''), geneTypeSelection)
+        if ('error' in body) {
+          setResult({ success: false, message: body.error })
           setIsRunning(false)
           return
         }
+        requestParams['gene_names'] = body.gene_names
+        requestParams['patterns'] = body.patterns
+        requestParams['types'] = body.types
       }
 
       // Inject selected genes for contourize
@@ -1958,7 +1970,7 @@ export default function ScanpyModal() {
       setActiveTaskId(null)
       setTaskProgress(null)
     }
-  }, [functionDef, isRunning, prereqStatus, selectedFunction, paramValues, selectedGeneColumns, geneSubsetOperation, addScanpyAction, refreshSchema, activeCellMask, activeSubsetName, subsetDraft, setActiveSubsetName, resetActiveCells, clearSelection, setExpressionData, setBivariateData, refreshObsSummaries, setColorBy, setEmbedding, setSelectedEmbedding, setEmbeddingDims, selectedGenes, setActiveTaskId])
+  }, [functionDef, isRunning, prereqStatus, selectedFunction, paramValues, geneTypeSelection, selectedGeneColumns, geneSubsetOperation, addScanpyAction, refreshSchema, activeCellMask, activeSubsetName, subsetDraft, setActiveSubsetName, resetActiveCells, clearSelection, setExpressionData, setBivariateData, refreshObsSummaries, setColorBy, setEmbedding, setSelectedEmbedding, setEmbeddingDims, selectedGenes, setActiveTaskId])
 
   const handleCancel = useCallback(async () => {
     if (activeTaskId) {
@@ -3051,6 +3063,24 @@ export default function ScanpyModal() {
               </div>
             )})}
           </div>
+        )}
+
+        {selectedFunction === 'exclude_genes' && (
+          <GeneTypeExclusion
+            selection={geneTypeSelection}
+            onChange={setGeneTypeSelection}
+            namesText={String(paramValues.gene_names ?? '')}
+            patternsText={String(paramValues.patterns ?? '')}
+            onMarked={async (data, request) => {
+              addScanpyAction({
+                action: 'annotate_gene_types',
+                params: request,
+                result: data,
+                timestamp: new Date().toISOString(),
+              })
+              await refreshSchema()
+            }}
+          />
         )}
 
         {/* Result display */}

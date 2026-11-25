@@ -1,0 +1,74 @@
+# Copied unchanged below this header on 2026-11-25 from the SJD pipeline (cryten):
+#   CahanLab Dropbox/Patrick Cahan/PC/PC/projects/SJD/analysis/claude_pipeline/resources/genesets/human.yaml
+# skopia/gene_types.py reads `sets` and `gene_class` for Exclude Genes by type.
+# Patterns are matched with re.search against the gene symbol, as cryten does.
+
+# Gene sets used to annotate a human transcriptome (read by `annotate_genes.sh --genesets resources/genesets/human.yaml`).
+#
+# Same sets as resources/genesets/mouse.yaml, with human symbols; see that file for how a set is defined.
+# The cell-cycle and stress lists are the mouse lists in upper case (the published lists are human).
+# Made on 2026-11-17 for the first run on human data (the public 10x PBMC 10k v3 data set).
+
+species: human
+sets:
+  mt:
+    description: Genes on the mitochondrial genome.
+    chrom: [MT, chrM, M]
+    pattern: ^MT-
+  ribo: {description: 'Cytoplasmic ribosomal protein genes and their pseudogenes; the S6 kinases (RPS6KA1 and so on) are not matched.', pattern: '^RP[SL]\d+(?!\d|K)|^RPLP\d|^RPSA$'}
+  mito_ribo: {description: 'Mitochondrial ribosomal protein genes (nuclear encoded). Annotated, not excluded by
+      default.', pattern: '^MRP[SL]\d'}
+  rrna:
+    description: rRNA genes and loci that overlap rRNA repeats.
+    biotype: [rRNA, Mt_rRNA, rRNA_pseudogene]
+    genes: [RNA18SN5, RNA28SN5, RNA45SN1, RNA45SN2, RNA45SN3, RNA45SN4, RNA45SN5, RNA5-8SN5]
+  45S_ribo:
+    description: >-
+      Loci that collect reads of the 45S rRNA (see the mouse file). None known in human: human
+      LARS2, CMSS1, CAMK1D, GPHN and CDK8 carry no block of the 45S region of the human rDNA unit (GenBank U13369) on
+      their own strand (longest 35 nt, as in control genes; 82 to 214 nt in the mouse genes), the lncRNAs that span the
+      chr21 rDNA (FP671120.1, FP236383.1) have no UMIs in PBMC 10k v3, and no publication names such genes
+      (2026-11-20). Empty, so no human cell is flagged qc_45S_ribo; the share of UMIs in long genes (pct_long_genes) is
+      the nuclear signal.
+    genes: []
+  hb: {description: 'Hemoglobin genes (HBA1, HBA2, HBB, HBD, HBE1, HBG1, HBG2, HBM, HBQ1, HBZ). Also used as an
+      independent check of the ambient RNA fraction.', pattern: '^HB[ABDEGMQZ]\d?$'}
+  histone: {description: Histone genes (replication-dependent clusters and variants; old HIST and new H1- to H4-
+      symbols)., pattern: '^HIST\d|^H[1-4][A-Z0-9]*-|^H2A[CFXZJ]|^H2BC|^H1F|^H3C|^H4C'}
+  x_linked:
+    description: Genes on the X chromosome. Annotated, not excluded by default.
+    chrom: [X, chrX]
+  y_linked:
+    description: Genes on the Y chromosome.
+    chrom: [Y, chrY]
+  sex:
+    description: Genes whose expression follows sex (XIST, TSIX and the Y genes).
+    chrom: [Y, chrY]
+    genes: [XIST, TSIX]
+  cell_cycle_s:
+    description: S phase genes (Tirosh et al. 2016; old and new symbols both listed).
+    genes: [MCM5, PCNA, TYMS, FEN1, MCM2, MCM4, RRM1, UNG, GINS2, MCM6, CDCA7, DTL, PRIM1, UHRF1, MLF1IP, CENPU,
+      HELLS, RFC2, RPA2, NASP, RAD51AP1, GMNN, WDR76, SLBP, CCNE2, UBR7, POLD3, MSH2, ATAD2, RAD51, RRM2, CDC45,
+      CDC6, EXO1, TIPIN, DSCC1, BLM, CASP8AP2, USP1, CLSPN, POLA1, CHAF1B, BRIP1, E2F8]
+  cell_cycle_g2m:
+    description: G2/M phase genes (Tirosh et al. 2016).
+    genes: [HMGB2, CDK1, NUSAP1, UBE2C, BIRC5, TPX2, TOP2A, NDC80, CKS2, NUF2, CKS1B, MKI67, TMPO, CENPF, TACC3,
+      FAM64A, PIMREG, SMC4, CCNB2, CKAP2L, CKAP2, AURKB, BUB1, KIF11, ANP32E, TUBB4B, GTSE1, KIF20B, HJURP, CDCA3,
+      HN1, JPT1, CDC20, TTK, CDC25C, KIF2C, RANGAP1, NCAPD2, DLGAP5, CDCA2, CDCA8, ECT2, KIF23, HMMR, AURKA, PSRC1,
+      ANLN, LBR, CKAP5, CENPE, CTCF, NEK2, G2E3, GAS2L3, CBX5, CENPA]
+  stress:
+    description: Immediate-early and dissociation-stress genes (van den Brink et al. 2017 core, human symbols).
+    genes: [FOS, FOSB, JUN, JUNB, JUND, EGR1, EGR2, EGR3, IER2, IER3, IER5, ATF3, DUSP1, HSPA1A, HSPA1B, HSPA8,
+      HSP90AA1, HSPB1, HSPE1, HSPD1, DNAJB1, DNAJA1, KLF2, KLF4, KLF6, NR4A1, SOCS3, ZFP36, BTG2, CCN1, CYR61, UBC]
+  predicted: {description: 'Unnamed gene models (clone-based names, LOC and LINC symbols, numbered open reading
+      frames). Annotated, not excluded by default.', pattern: '^LOC\d+$|^LINC\d+$|^[A-Z]{1,2}\d{5,6}\.\d+$|^C\d+orf\d+$|^CTD-|^RP\d+-|^CT[ABCD]-'}
+gene_class:
+  protein_coding: [protein_coding]
+  lncRNA: [lncRNA, lincRNA, antisense, sense_intronic, sense_overlapping, processed_transcript, bidirectional_promoter_lncRNA,
+    3prime_overlapping_ncRNA, macro_lncRNA, non_coding, TEC]
+  pseudogene: [pseudogene, processed_pseudogene, unprocessed_pseudogene, transcribed_processed_pseudogene, transcribed_unprocessed_pseudogene,
+    transcribed_unitary_pseudogene, unitary_pseudogene, polymorphic_pseudogene, translated_unprocessed_pseudogene,
+    translated_processed_pseudogene, TR_V_pseudogene, TR_J_pseudogene, IG_V_pseudogene, IG_C_pseudogene, IG_D_pseudogene,
+    IG_J_pseudogene, IG_pseudogene, rRNA_pseudogene]
+  ig_tr: [IG_C_gene, IG_D_gene, IG_J_gene, IG_LV_gene, IG_V_gene, TR_C_gene, TR_D_gene, TR_J_gene, TR_V_gene]
+  small_rna: [miRNA, snRNA, snoRNA, scaRNA, misc_RNA, rRNA, Mt_rRNA, Mt_tRNA, ribozyme, sRNA, scRNA, vault_RNA]
