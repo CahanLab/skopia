@@ -8701,42 +8701,176 @@ class DataAdaptor:
         self._log_action('filter_genes', kwargs, result, subset=indices)
         return result
 
+    # ------------------------------------------------------------------
+    # Exclude Genes: names, patterns and gene types share one mask, built
+    # by _exclusion_mask, so the modal's preview, the removal and the mark
+    # cannot disagree about which genes a choice takes.
+    # ------------------------------------------------------------------
+
+    # The uns record of the type columns Mark wrote from the GENCODE tables.
+    # Without it, a gene_class column Mark wrote would make the next summary
+    # take the file's "own" annotation, which lacks the chromosome the
+    # x_linked, y_linked and sex sets need.
+    _GENE_TYPE_UNS = f'{UNS_PREFIX}gene_types'
+
+    @staticmethod
+    def _normalize_gene_types(types: Any, species: str | None = None) -> dict[str, Any] | None:
+        """``{classes, sets, species}`` or None when nothing is ticked."""
+        if types is None:
+            return None
+        if not isinstance(types, dict):
+            raise ValueError("types must be {classes: [...], sets: [...], species: ...}")
+        classes = [str(c) for c in (types.get('classes') or [])]
+        sets = [str(s) for s in (types.get('sets') or [])]
+        sp = species if species is not None else types.get('species')
+        if not classes and not sets:
+            return None
+        return {'classes': classes, 'sets': sets, 'species': sp}
+
+    def _gene_type_annotation(self, species: str | None):
+        """The dataset's gene types: the file's own annotation, else a table.
+
+        None when the file has no annotation and no species is given or
+        guessed (a barnyard index, another organism).
+        """
+        from skopia import gene_types as gt  # noqa: PLC0415
+
+        var = self.adata.var
+        names = [str(g) for g in self.adata.var_names]
+        if species is not None and species not in gt.SPECIES:
+            raise ValueError(f"No gene-type table for species '{species}'. "
+                             f"Choose one of: {', '.join(gt.SPECIES)}.")
+        guessed = species or self.guess_species().get('species')
+        written = self._plain(self.adata.uns.get(self._GENE_TYPE_UNS, {})) or {}
+        if 'gene_class' not in (written.get('columns') or []):
+            ann = gt.annotate_from_var(var, names, guessed)
+            if ann is not None:
+                return ann
+        if guessed is None:
+            return None
+        ids = None
+        for col in ('gene_ids', 'gene_id'):
+            if col in var.columns:
+                ids = var[col].tolist()
+                break
+        return gt.annotate_from_table(names, ids, guessed)
+
+    def _exclusion_mask(self, gene_names=None, patterns=None, types=None):
+        """(every gene removed, genes the types remove, the annotation used).
+
+        The one place an exclusion is computed. Names match exactly; patterns
+        match from the start of the name (``str.match``, as the field always
+        has); types are the union of the ticked classes and sets.
+        """
+        import re
+
+        from skopia import gene_types as gt  # noqa: PLC0415
+
+        names = self.adata.var_names
+        mask = np.zeros(len(names), dtype=bool)
+        if gene_names:
+            mask |= np.asarray(names.isin(set(gene_names)), dtype=bool)
+        for pattern in patterns or []:
+            try:
+                mask |= np.asarray(names.str.match(pattern), dtype=bool)
+            except re.error as e:
+                raise ValueError(f"Invalid regex pattern '{pattern}': {e}")
+        types = self._normalize_gene_types(types)
+        type_mask = np.zeros(len(names), dtype=bool)
+        ann = None
+        if types is not None:
+            ann = self._gene_type_annotation(types['species'])
+            if ann is None:
+                raise ValueError("Could not tell this dataset's species from its gene names; "
+                                 "choose human or mouse to exclude genes by type.")
+            type_mask = gt.removal_mask(ann, types['classes'], types['sets'])
+        return mask | type_mask, type_mask, ann
+
+    EXCLUSION_EXAMPLES = 8
+
+    def gene_type_summary(
+        self,
+        species: str | None = None,
+        gene_names: list[str] | None = None,
+        patterns: list[str] | None = None,
+        types: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """What Exclude Genes can offer this dataset, and what a choice removes.
+
+        Per class and named set, how many of the dataset's genes it holds
+        with a few names; with a selection (names, patterns, types), how
+        many genes Run would remove, from the same mask Run uses.
+        """
+        from skopia import gene_types as gt  # noqa: PLC0415
+
+        k = self.EXCLUSION_EXAMPLES
+        names = np.asarray([str(g) for g in self.adata.var_names], dtype=object)
+        sp = species
+        if sp is None and isinstance(types, dict):
+            sp = types.get('species')
+        ann = self._gene_type_annotation(sp)
+        out: dict[str, Any] = {
+            'species': None, 'available_species': list(gt.SPECIES), 'source': None,
+            'n_genes': int(len(names)), 'matched': None, 'classes': [], 'sets': [],
+            'selection': None,
+        }
+        if ann is not None:
+            out['species'] = ann.source['species']
+            out['source'] = dict(ann.source)
+            out['matched'] = {key: int(v) for key, v in ann.matched.items()}
+            cls = np.asarray(ann.gene_class, dtype=object)
+            for name in gt.class_names(ann):
+                hit = cls == name
+                out['classes'].append({'name': name, 'n': int(hit.sum()),
+                                       'examples': names[hit][:k].tolist()})
+            descriptions: dict[str, str] = {}
+            for s in ([out['species']] if out['species'] else list(gt.SPECIES)):
+                for key, d in gt.load_sets(s)[0].items():
+                    descriptions.setdefault(key, d['description'])
+            for name, hit in ann.sets.items():
+                out['sets'].append({'name': name, 'description': descriptions.get(name, ''),
+                                    'n': int(hit.sum()), 'examples': names[hit][:k].tolist(),
+                                    'computed_by': ann.set_source[name]})
+        if gene_names or patterns or self._normalize_gene_types(types, sp) is not None:
+            sel_types = self._normalize_gene_types(types, sp)
+            total, type_mask, _ = self._exclusion_mask(gene_names, patterns, sel_types)
+            added = total & ~type_mask
+            out['selection'] = {
+                'n_removed': int(total.sum()),
+                'n_kept': int((~total).sum()),
+                'examples': names[total][:k].tolist(),
+                'n_added_by_names_patterns': int(added.sum()),
+                'added_examples': names[added][:k].tolist(),
+            }
+        return out
+
     def run_exclude_genes(
         self,
         gene_names: list[str] | None = None,
         patterns: list[str] | None = None,
+        types: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Remove genes by exact name or regex pattern.
+        """Remove genes by exact name, regex pattern, or gene type.
 
         Args:
             gene_names: List of gene names to remove (exact match)
             patterns: List of regex patterns to match against gene names
                 (e.g. "^mt-" for mitochondrial, "^Gm\\d+" for predicted genes)
+            types: ``{classes, sets, species}``: genes in any ticked GENCODE
+                class or named set (skopia/gene_types.py)
 
         Returns:
             Dict with before/after gene counts and removed gene names
         """
-        import re
-
         n_genes_before = self.n_genes
         names = self.adata.var_names
-
-        mask = np.zeros(len(names), dtype=bool)
-
-        # Exact name matches
-        if gene_names:
-            name_set = set(gene_names)
-            mask |= names.isin(name_set)
-
-        # Pattern matches
-        if patterns:
-            for pattern in patterns:
-                try:
-                    mask |= names.str.match(pattern)
-                except re.error as e:
-                    raise ValueError(f"Invalid regex pattern '{pattern}': {e}")
+        types = self._normalize_gene_types(types)
+        mask, type_mask, ann = self._exclusion_mask(gene_names, patterns, types)
 
         removed_genes = names[mask].tolist()
+        # The full list, not a count: the record and the code export must
+        # reproduce this run after the shipped tables are rebuilt.
+        type_removed_genes = names[type_mask].tolist()
         n_removed = int(mask.sum())
 
         if n_removed > 0:
@@ -8753,11 +8887,78 @@ class DataAdaptor:
             'n_genes_removed': n_removed,
             'removed_genes': removed_genes[:100],  # Cap list for large removals
             'removed_genes_total': n_removed,
+            'n_removed_by_types': int(type_mask.sum()),
+            'type_source': None if ann is None else dict(ann.source),
             'gene_mask_cleared': mask_cleared,
         }
         self._log_action('exclude_genes', {
             'gene_names': gene_names,
             'patterns': patterns,
+            'types': types,
+            'type_removed_genes': type_removed_genes,
+        }, result)
+        return result
+
+    def annotate_gene_types(
+        self,
+        types: dict[str, Any] | None,
+        column: str,
+        gene_names: list[str] | None = None,
+        patterns: list[str] | None = None,
+        species: str | None = None,
+        overwrite: bool = False,
+    ) -> dict[str, Any]:
+        """Mark, without removing: ``.var[column]`` is False for exactly the
+        genes the same arguments would make ``run_exclude_genes`` remove.
+
+        Also writes ``.var['gene_type']`` and ``.var['gene_class']`` from the
+        GENCODE tables, each only when absent: Mark never overwrites a
+        column, so a file with its own annotation keeps it.
+        """
+        from skopia import gene_types as gt  # noqa: PLC0415
+
+        column = (column or '').strip()
+        if not column:
+            raise ValueError("column name must be non-empty")
+        if column.startswith('highly_variable') or column in ('gene_type', 'gene_class'):
+            raise ValueError(f"'{column}' is a column skopia writes itself; choose another name")
+        var = self.adata.var
+        if column in var.columns:
+            if not pd.api.types.is_bool_dtype(var[column].dtype):
+                raise ValueError(f"'{column}' already exists and is not boolean; choose another name")
+            if not overwrite:
+                raise ValueError(f"'{column}' already exists; choose another name or overwrite it")
+        types = self._normalize_gene_types(types, species)
+        if not gene_names and not patterns and types is None:
+            raise ValueError("Provide gene names, a regex pattern or a gene type.")
+        mask, _, ann = self._exclusion_mask(gene_names, patterns, types)
+
+        if ann is None:
+            ann = self._gene_type_annotation(species)
+        wrote: list[str] = []
+        if ann is not None and ann.source['kind'] == 'gencode':
+            if 'gene_type' not in var.columns:
+                var['gene_type'] = pd.Categorical(ann.gene_type)
+                wrote.append('gene_type')
+            if 'gene_class' not in var.columns:
+                present = set(ann.gene_class)
+                order = [c for c in gt.class_names(ann) if c in present]
+                var['gene_class'] = pd.Categorical(ann.gene_class, categories=order)
+                wrote.append('gene_class')
+            if wrote:
+                record = self._plain(self.adata.uns.get(self._GENE_TYPE_UNS, {})) or {}
+                columns = sorted(set(record.get('columns') or []) | set(wrote))
+                self.adata.uns[self._GENE_TYPE_UNS] = {
+                    'columns': columns, 'source': ann.source['label'],
+                    'species': ann.source['species'],
+                }
+        var[column] = np.asarray(~mask, dtype=bool)
+
+        result = {'column': column, 'n_kept': int((~mask).sum()),
+                  'n_marked_out': int(mask.sum()), 'wrote_type_columns': wrote}
+        self._log_action('annotate_gene_types', {
+            'types': types, 'column': column, 'gene_names': gene_names,
+            'patterns': patterns, 'species': species, 'overwrite': bool(overwrite),
         }, result)
         return result
 
