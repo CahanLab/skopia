@@ -51,7 +51,7 @@ existing diffexp / marker-gene plumbing.
 ## Panels (multi-panel embedding figures)
 
 - **Save the figure.** A Panels figure lives only in the browser store
-  (`activeFigure`): *Close*, a page reload or a backend restart loses it, and
+  (`activeFigure`): *New figure*, a page reload or a backend restart loses it, and
   it never reaches the `.h5ad`. Persist it, most likely as a Figures-tab kind
   in `uns['skopia_figures']` (inputs: cells, embedding + dims; params: layout,
   per-panel colouring, overlay layers, titles, labels), so it reloads, exports

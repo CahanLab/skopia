@@ -103,6 +103,10 @@ export default function FigurePanel({ figure, panel, staticView = false, isActiv
   // computing its colours there when another dataset is active.
   const prefs = useStore((s) => s.datasets[figure.slot]?.displayPreferences ?? s.displayPreferences)
   const displayLayer = useStore((s) => s.datasets[figure.slot]?.displayLayer ?? 'X')
+  // Bumped when .obs values change under the same column name (a label
+  // rename or merge goes through refreshColorByColumn, a re-run through
+  // refreshObsSummaries), which a metadata panel's URL alone cannot see.
+  const obsVersion = useStore((s) => s.datasets[figure.slot]?.obsSummariesVersion ?? 0)
   const [colorData, setColorData] = useState<PanelColorData>({ kind: 'none' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -111,7 +115,9 @@ export default function FigurePanel({ figure, panel, staticView = false, isActiv
   // Refetch only when the request itself changes, not on every panel edit
   // (a title or a colour scale leaves it alone).
   const request = panelRequest(panel, prefs, displayLayer)
-  const requestKey = request ? `${figure.slot}|${request.url}|${String(request.init?.body ?? '')}` : ''
+  const requestKey = request
+    ? `${figure.slot}|${request.url}|${String(request.init?.body ?? '')}${panel.colorMode === 'metadata' ? `|obs${obsVersion}` : ''}`
+    : ''
   const latest = useRef({ panel, prefs, displayLayer })
   latest.current = { panel, prefs, displayLayer }
 
@@ -130,7 +136,12 @@ export default function FigurePanel({ figure, panel, staticView = false, isActiv
         if (!cancelled) setColorData(d)
       })
       .catch((err) => {
-        if (!cancelled) setError((err as Error).message)
+        // Drop the previous colours too: the title already names the new
+        // colouring, and the error box is not in the exported PNG.
+        if (!cancelled) {
+          setError((err as Error).message)
+          setColorData({ kind: 'none' })
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)

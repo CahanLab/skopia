@@ -1830,6 +1830,8 @@ export async function exportAnnotations(
  * name changes, so without this the plot keeps the old labels. */
 export async function refreshColorByColumn(column: string): Promise<void> {
   const st = useStore.getState()
+  // Panels keyed on this version re-read the column too (FigurePanel).
+  st.refreshObsSummaries()
   if (st.colorBy?.name !== column) return
   const data = await fetchJson<ObsColumnData>(appendDataset(`${API_BASE}/obs/${encodeURIComponent(column)}`))
   useStore.getState().setColorBy(data)
