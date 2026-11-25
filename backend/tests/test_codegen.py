@@ -454,3 +454,37 @@ def test_filter_cells_pct_mt_from_a_var_column_reads_that_column():
     assert "adata.var['mt']" in code
     assert 'pct_mt >= 1' in code and 'pct_mt <= 20' in code
     assert not any('sc.pp.filter_cells' in l for l in t.code)
+
+
+# --- Exclude Genes by type ---------------------------------------------------
+
+def test_exclude_genes_by_type_drops_exactly_the_recorded_genes():
+    """The export inlines the genes the types removed, so it reproduces the run
+    without the gene-type tables, which a later skopia may have rebuilt."""
+    import anndata as ad
+    import numpy as np
+
+    params = {'gene_names': None, 'patterns': ['^Rps'],
+              'types': {'classes': ['lncRNA'], 'sets': [], 'species': 'mouse'},
+              'type_removed_genes': ['Gm1', "it's"]}
+    t = translate(_step('exclude_genes', params, {'n_genes_removed': 3}))
+    assert t.fidelity == EXACT
+    names = ['Gm1', "it's", 'Rps6', 'Keep', 'xRps']
+    scope = {'adata': ad.AnnData(X=np.zeros((2, len(names)), dtype=np.float32),
+                                 var={'_': range(len(names))})}
+    scope['adata'].var_names = names
+    exec('\n'.join(t.code), scope)
+    assert list(scope['adata'].var_names) == ['Keep', 'xRps']
+    assert 'type' in t.summary
+
+
+def test_annotate_gene_types_uses_the_skopia_api():
+    params = {'types': {'classes': ['lncRNA'], 'sets': ['mt'], 'species': 'mouse'},
+              'column': 'analysis_genes', 'gene_names': None, 'patterns': ['^Rps'],
+              'species': None, 'overwrite': False}
+    t = translate(_step('annotate_gene_types', params, {'n_kept': 5, 'n_marked_out': 2}))
+    assert t.fidelity == SKOPIA
+    code = '\n'.join(t.code)
+    compile(code, '<annotate_gene_types>', 'exec')
+    assert 'xa.annotate_gene_types(' in code and "'analysis_genes'" in code
+    assert 'analysis_genes' in t.summary

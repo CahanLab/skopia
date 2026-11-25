@@ -255,8 +255,27 @@ def _code_exclude_genes(step: Step) -> list[str]:
     lines = [f'_drop = {ADATA}.var_names.isin({_lit(list(names))})']
     for pattern in patterns:
         lines.append(f'_drop = _drop | {ADATA}.var_names.str.match({_lit(pattern)})')
+    typed = step.params.get('type_removed_genes') or []
+    if typed:
+        # The genes the ticked gene types removed, listed rather than
+        # recomputed: the export must reproduce this run even after the
+        # shipped gene-type tables are rebuilt.
+        types = step.params.get('types') or {}
+        lines.append(f"# gene types: classes {_lit(list(types.get('classes') or []))}, "
+                     f"sets {_lit(list(types.get('sets') or []))}")
+        lines.append(f'_drop = _drop | {ADATA}.var_names.isin({_lit(list(typed))})')
     lines.append(f'{ADATA} = {ADATA}[:, ~_drop].copy()')
     return lines
+
+
+def _summary_exclude_genes(p: dict, r: dict) -> str:
+    counts = (f"{len(p.get('gene_names') or [])} names, {len(p.get('patterns') or [])} patterns")
+    types = p.get('types') or {}
+    if not types:
+        return f"Excluded {_n(r.get('n_genes_removed'))} genes by name/pattern ({counts})."
+    picked = ', '.join(list(types.get('classes') or []) + list(types.get('sets') or []))
+    return (f"Excluded {_n(r.get('n_genes_removed'))} genes by name, pattern and gene type "
+            f"({counts}; {len(p.get('type_removed_genes') or [])} by type: {picked}).")
 
 
 def _code_delete_cells(step: Step) -> list[str] | None:
@@ -516,9 +535,17 @@ REGISTRY: dict[str, ActionSpec] = {
     'exclude_genes': ActionSpec(
         label='Exclude genes', fidelity=EXACT, imports=(),
         code=_code_exclude_genes,
+        summary=_summary_exclude_genes,
+    ),
+    'annotate_gene_types': ActionSpec(
+        # The per-gene annotation is too large to inline and the step leaves
+        # the matrix alone, so the export calls skopia.
+        label='Mark genes by type', fidelity=SKOPIA, imports=SKOPIA_API,
+        code=_direct('annotate_gene_types',
+                     ('types', 'column', 'gene_names', 'patterns', 'species', 'overwrite')),
         summary=lambda p, r: (
-            f"Excluded {_n(r.get('n_genes_removed'))} genes by name/pattern "
-            f"({len(p.get('gene_names') or [])} names, {len(p.get('patterns') or [])} patterns)."
+            f"Marked the genes to keep in `.var['{p.get('column', 'analysis_genes')}']`: "
+            f"{_n(r.get('n_kept'))} kept, {_n(r.get('n_marked_out'))} marked out."
         ),
     ),
     'delete_cells': ActionSpec(
