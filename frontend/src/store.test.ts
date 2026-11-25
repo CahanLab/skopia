@@ -792,7 +792,22 @@ describe('the Panels figure', () => {
     useStore.getState().addHighlightLayer(layer('embedding'))
     makeFigure()
     useStore.getState().copyEmbeddingHighlightsToFigure()
-    expect(useStore.getState().activeFigure!.overlayLayers.map((l) => l.id)).toEqual(['embedding'])
+    const copied = useStore.getState().activeFigure!.overlayLayers
+    expect(copied.map((l) => l.source.label)).toEqual(['embedding'])
+    // fresh ids, so an edit to one list can never reach the other
+    expect(copied[0].id).not.toBe('embedding')
+  })
+
+  it("edits a dataset layer by id even while Panels shows (the cell-count sync does this)", () => {
+    useStore.getState().addHighlightLayer(layer('embedding'))
+    makeFigure()
+    useStore.getState().addHighlightLayer(layer('figure'))
+    useStore.getState().updateHighlightLayer('embedding', { intensity: 0.5 })
+    expect(useStore.getState().highlightLayers[0].intensity).toBe(0.5)
+    expect(useStore.getState().activeFigure!.overlayLayers[0].intensity).toBe(1)
+    useStore.getState().removeHighlightLayer('embedding')
+    expect(useStore.getState().highlightLayers).toEqual([])
+    expect(useStore.getState().activeFigure!.overlayLayers.map((l) => l.id)).toEqual(['figure'])
   })
 
   it('titles a panel after its colouring until the user names it', () => {

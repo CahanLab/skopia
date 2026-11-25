@@ -1484,9 +1484,16 @@ export const useStore = create<AppState>((set, get) => {
 
   // Helper: apply an edit to the highlight layers the Genes pane is editing —
   // the Panels figure's overlay while it routes, else the active dataset's.
-  function editHighlights(state: AppState, edit: (layers: HighlightLayer[]) => HighlightLayer[]): Partial<AppState> {
-    if (panelRouteTarget(state) && state.activeFigure) {
-      return { activeFigure: { ...state.activeFigure, overlayLayers: edit(state.activeFigure.overlayLayers) } }
+  // An edit naming a layer (`ownerId`) goes to the list that holds it, so the
+  // cell-count sync (useHighlightSync), which edits dataset layers by id,
+  // cannot reach the figure's overlay while Panels is showing.
+  function editHighlights(state: AppState, edit: (layers: HighlightLayer[]) => HighlightLayer[], ownerId?: string): Partial<AppState> {
+    const fig = state.activeFigure
+    const toFigure = ownerId !== undefined
+      ? !!fig && fig.overlayLayers.some((l) => l.id === ownerId)
+      : !!panelRouteTarget(state)
+    if (toFigure && fig) {
+      return { activeFigure: { ...fig, overlayLayers: edit(fig.overlayLayers) } }
     }
     return dsUpdate({ highlightLayers: edit(state.highlightLayers) })
   }
@@ -1748,7 +1755,7 @@ export const useStore = create<AppState>((set, get) => {
       set((state) => editHighlights(state, (layers) => [...layers, layer])),
 
     removeHighlightLayer: (id) =>
-      set((state) => editHighlights(state, (layers) => layers.filter((l) => l.id !== id))),
+      set((state) => editHighlights(state, (layers) => layers.filter((l) => l.id !== id), id)),
 
     updateHighlightLayer: (id, patch) =>
       set((state) => editHighlights(state, (layers) => layers.map((l) => {
@@ -1759,7 +1766,7 @@ export const useStore = create<AppState>((set, get) => {
           next.source = { ...l.source, ...patch.source } as HighlightSource
         }
         return next
-      }))),
+      }), id)),
 
     clearAllHighlights: () => set((state) => editHighlights(state, () => [])),
     // A diffusion map nobody has chosen axes on opens on DC1 × DC2: its column 0
@@ -3146,7 +3153,8 @@ export const useStore = create<AppState>((set, get) => {
         if (!state.activeFigure) return {}
         const ds = state.datasets[state.activeFigure.slot]
         const layers = ds ? ds.highlightLayers : []
-        return { activeFigure: { ...state.activeFigure, overlayLayers: layers.map((l) => ({ ...l })) } }
+        const stamp = Date.now().toString(36)
+        return { activeFigure: { ...state.activeFigure, overlayLayers: layers.map((l, i) => ({ ...l, id: `fig_${stamp}_${i}_${l.id}` })) } }
       }),
 
     setFigureLayout: (rows, cols) =>

@@ -1,10 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useStore } from '../store'
+import { editableHighlightLayers, panelRouteTarget } from '../lib/figurePanels'
 import {
   useObsSummaries,
   ObsSummary,
   CategoryValue,
   useDataActions,
+  onEmbedding,
   createAnnotation,
   labelCells,
   useDiffExp,
@@ -1053,7 +1055,7 @@ export default function CellPanel() {
   const cellSubsets = useCellSubsets()
   const { selectColorColumn, addCellSetHighlight, colorByGene, colorByGenes, selectEmbedding } = useDataActions()
   const { runComparison, isDiffExpLoading } = useDiffExp()
-  const highlightLayers = useStore((s) => s.highlightLayers)
+  const highlightLayers = useStore(editableHighlightLayers)
   const embedding = useStore((s) => s.embedding)
   const selectedEmbeddingName = useStore((s) => s.selectedEmbedding)
 
@@ -1226,8 +1228,13 @@ export default function CellPanel() {
   const hasGroup2 = comparison.group2 !== null && comparison.group2.length > 0
   const canCompare = hasGroup1 && hasGroup2
 
+  // The toggle reads whatever the click colours: the active panel while
+  // Panels routes colour there, else the Embedding.
   const handleColorBy = (columnName: string) => {
-    if (colorMode === 'metadata' && selectedColorColumn === columnName) {
+    const st = useStore.getState()
+    const panelId = panelRouteTarget(st)
+    const current = (panelId && st.activeFigure?.panels.find((p) => p.id === panelId)) || { colorMode, selectedColorColumn }
+    if (current.colorMode === 'metadata' && current.selectedColorColumn === columnName) {
       selectColorColumn(null)
     } else {
       selectColorColumn(columnName)
@@ -1414,7 +1421,7 @@ export default function CellPanel() {
       if (embeddingLabelColumn === columnName) {
         setEmbeddingLabelColumn(null)
       } else {
-        selectColorColumn(columnName)
+        onEmbedding(() => selectColorColumn(columnName))
         setEmbeddingLabelColumn(columnName)
       }
     },
@@ -1536,9 +1543,9 @@ export default function CellPanel() {
       // selectedGenes survives the delete; we just need to fetch fresh values.
       if (priorColorMode === 'expression' && priorGenes.length > 0) {
         if (priorGenes.length === 1) {
-          await colorByGene(priorGenes[0])
+          await onEmbedding(() => colorByGene(priorGenes[0]))
         } else {
-          await colorByGenes(priorGenes, undefined, priorSetName ?? undefined)
+          await onEmbedding(() => colorByGenes(priorGenes, undefined, priorSetName ?? undefined))
         }
       }
     } catch (err) {

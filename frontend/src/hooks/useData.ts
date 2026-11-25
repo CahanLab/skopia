@@ -6,6 +6,7 @@ import { mergePcaSubsetLists } from '../lib/pcaSubsets'
 import { useStore, DatasetSlot, Schema, EmbeddingData, ObsColumnData, DrawnLine, ExpressionData, BivariateExpressionData, DiffExpResult, LineAssociationResult, GeneMaskConfig, PCASubsetSummary, HighlightLayer, HighlightThresholdMode } from '../store'
 import { defaultThresholds } from '../utils/histogram'
 import { highlightSkipReason, nextHighlightColor } from '../lib/highlightLayers'
+import { editableHighlightLayers, panelRouteTarget, specForBivariate, specForColumn, specForGenes, specForScore, SPEC_NONE } from '../lib/figurePanels'
 import { assertJsonResponse } from '../lib/foreignServer'
 import { pollTaskLoop, TaskStatus } from '../lib/taskPolling'
 import { mirrorTargets } from '../lib/datasetSlots'
@@ -585,6 +586,21 @@ function mirrorSlots(activeSlot: DatasetSlot): DatasetSlot[] {
   return mirrorTargets(activeSlot, useStore.getState().datasets)
 }
 
+// While Panels is showing a figure of the active dataset, the colour actions
+// below colour the figure's active panel instead of the Embedding
+// (lib/figurePanels.panelRouteTarget). A caller that means the Embedding
+// whatever the centre view (re-colouring after a cell delete, the embedding
+// label toggle) wraps the call in `onEmbedding`. Each action decides its route
+// synchronously before its first await, so the flag only has to cover the call.
+let embeddingOnly = 0
+export function onEmbedding<T>(fn: () => T): T {
+  embeddingOnly += 1
+  try { return fn() } finally { embeddingOnly -= 1 }
+}
+function panelTarget(): string | null {
+  return embeddingOnly > 0 ? null : panelRouteTarget(useStore.getState())
+}
+
 export function useDataActions() {
   const {
     setSelectedEmbedding,
@@ -618,6 +634,8 @@ export function useDataActions() {
 
   const selectColorColumn = useCallback(
     (name: string | null) => {
+      const panel = panelTarget()
+      if (panel) { useStore.getState().colorFigurePanel(panel, specForColumn(name)); return }
       setSelectedColorColumn(name)
       if (name) {
         setColorMode('metadata')
@@ -632,6 +650,8 @@ export function useDataActions() {
 
   const colorByGene = useCallback(
     async (gene: string, transform?: string) => {
+      const panel = panelTarget()
+      if (panel) { useStore.getState().colorFigurePanel(panel, specForGenes([gene])); return }
       setLoading(true)
       try {
         // Use provided transform or fall back to display preferences
@@ -671,6 +691,11 @@ export function useDataActions() {
 
   const colorByGenes = useCallback(
     async (genes: string[], transform?: string, geneSetName?: string, genesDown?: string[]) => {
+      const panel = panelTarget()
+      if (panel) {
+        useStore.getState().colorFigurePanel(panel, genes.length === 0 ? SPEC_NONE : specForGenes(genes, geneSetName ?? null, genesDown ?? []))
+        return
+      }
       if (genes.length === 0) {
         clearSelectedGenes()
         // Mirror clear to other slot in dual mode
@@ -779,6 +804,8 @@ export function useDataActions() {
   // same continuous-color pipeline as gene-set coloring.
   const colorByScore = useCallback(
     async (obsmName: string, column: string) => {
+      const panel = panelTarget()
+      if (panel) { useStore.getState().colorFigurePanel(panel, specForScore(obsmName, column)); return }
       setLoading(true)
       try {
         const data = await fetchJson<{ values: (number | null)[]; min: number; max: number }>(
@@ -806,8 +833,13 @@ export function useDataActions() {
   )
 
   const colorByBivariate = useCallback(
-    async (genes1: string[], genes2: string[]) => {
+    async (genes1: string[], genes2: string[], label1?: string, label2?: string) => {
       if (genes1.length === 0 || genes2.length === 0) {
+        return
+      }
+      const panel = panelTarget()
+      if (panel) {
+        useStore.getState().colorFigurePanel(panel, specForBivariate(genes1, genes2, label1 || null, label2 || null))
         return
       }
 
@@ -910,7 +942,7 @@ export function useDataActions() {
           id,
           // Picked now, after the fetch: picked before it, two adds in flight
           // would both see the same free colour.
-          color: opts.color ?? nextHighlightColor(useStore.getState().highlightLayers),
+          color: opts.color ?? nextHighlightColor(editableHighlightLayers(useStore.getState())),
           intensity: opts.intensity,
           source: {
             kind: 'geneset',
