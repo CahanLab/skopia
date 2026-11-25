@@ -265,8 +265,10 @@ export default function FigureBuilder() {
               style={{
                 position: 'relative',
                 cursor: 'pointer',
+                // Outside the panel (in the grid gap): an inset outline is
+                // painted under the positioned panel inside and never shows.
                 outline: p.id === activePanel?.id ? '2px solid #4ecdc4' : 'none',
-                outlineOffset: '-2px',
+                outlineOffset: '2px',
               }}
             >
               <FigurePanel figure={figure} panel={p} isActive={p.id === activePanel?.id} />
@@ -612,12 +614,17 @@ const containerStyle = {
   display: 'flex',
   flexDirection: 'column' as const,
   width: '100%',
+  minWidth: 0,
   height: '100%',
   backgroundColor: '#0f1625',
 }
 
+// Wraps rather than widening the pane: with both side panes open the
+// controls do not fit on one line, and a non-wrapping row pushed the panel
+// grid off the left edge.
 const toolbarStyle = {
   display: 'flex',
+  flexWrap: 'wrap' as const,
   alignItems: 'center',
   gap: '6px',
   padding: '8px 12px',
@@ -718,6 +725,7 @@ const colorInputStyle = {
 }
 
 const primaryButtonStyle = {
+  whiteSpace: 'nowrap' as const,
   padding: '4px 12px',
   fontSize: '12px',
   fontWeight: 500,
@@ -729,6 +737,7 @@ const primaryButtonStyle = {
 }
 
 const secondaryButtonStyle = {
+  whiteSpace: 'nowrap' as const,
   padding: '4px 12px',
   fontSize: '12px',
   backgroundColor: 'transparent',
